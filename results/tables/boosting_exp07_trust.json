@@ -1,0 +1,225 @@
+{
+  "drift": {
+    "feature_drift": {
+      "reference": "train (2010-2014H1)",
+      "current": "production (2016-2018)",
+      "n_features": 43,
+      "n_moderate": 1,
+      "n_significant": 1,
+      "max_psi": 0.5471412465867445,
+      "worst_features": [
+        "application_type",
+        "initial_list_status",
+        "addr_state",
+        "credit_history_months",
+        "open_acc_ratio"
+      ]
+    },
+    "prediction_drift": {
+      "psi": 0.0010723392916169906,
+      "severity": "stable",
+      "reference_mean": 0.1572501343239107,
+      "current_mean": 0.15766292394421919,
+      "reference_quantiles": {
+        "q10": 0.05994697261008976,
+        "q25": 0.08065668483880897,
+        "q50": 0.13349651982650446,
+        "q75": 0.21054756516623058,
+        "q90": 0.3040650026664924,
+        "q99": 0.3977107271094677
+      },
+      "current_quantiles": {
+        "q10": 0.06017254942149452,
+        "q25": 0.08047214037460332,
+        "q50": 0.1337277933129043,
+        "q75": 0.2129288149769894,
+        "q90": 0.3042158078379191,
+        "q99": 0.3950992382243808
+      },
+      "approval_rate_shift": {
+        "tau=0.05": 0.0017659295641253535,
+        "tau=0.1": 0.0035837481794715464,
+        "tau=0.15": -0.002033076022384339,
+        "tau=0.2": -0.004936606197882498,
+        "tau=0.3": 6.77528826542595e-05
+      }
+    }
+  },
+  "calibration_drift": [
+    {
+      "vintage": "2010",
+      "n": 1375,
+      "observed_rate": 0.1338181818181818,
+      "mean_predicted": 0.15736972142597253,
+      "observed_expected": 0.8503426237627962,
+      "roc_auc": 0.7575977439491841,
+      "brier": 0.1044200372340888,
+      "ece": 0.0426751747373488,
+      "calibration_slope": 1.4550469598040177
+    },
+    {
+      "vintage": "2011",
+      "n": 2363,
+      "observed_rate": 0.14388489208633093,
+      "mean_predicted": 0.15611678393941977,
+      "observed_expected": 0.9216490915042462,
+      "roc_auc": 0.7233316856154227,
+      "brier": 0.11298922828905601,
+      "ece": 0.01879175382633846,
+      "calibration_slope": 1.2171788527982934
+    },
+    {
+      "vintage": "2012",
+      "n": 4139,
+      "observed_rate": 0.13312394298139646,
+      "mean_predicted": 0.15683656743518598,
+      "observed_expected": 0.8488067875905984,
+      "roc_auc": 0.7474385276997129,
+      "brier": 0.10475243873240504,
+      "ece": 0.03491746339260406,
+      "calibration_slope": 1.40055891311397
+    },
+    {
+      "vintage": "2013",
+      "n": 7021,
+      "observed_rate": 0.15054835493519442,
+      "mean_predicted": 0.1572019904940048,
+      "observed_expected": 0.95767460998489,
+      "roc_auc": 0.730480486196904,
+      "brier": 0.11616410935155698,
+      "ece": 0.02097532555924221,
+      "calibration_slope": 1.258329021468765
+    },
+    {
+      "vintage": "2014",
+      "n": 12499,
+      "observed_rate": 0.15777262180974477,
+      "mean_predicted": 0.1577747702815407,
+      "observed_expected": 0.9999863826656691,
+      "roc_auc": 0.7034676214605888,
+      "brier": 0.12292551972839998,
+      "ece": 0.010322833220202093,
+      "calibration_slope": 1.0770276494436166
+    },
+    {
+      "vintage": "2015",
+      "n": 20078,
+      "observed_rate": 0.16565394959657337,
+      "mean_predicted": 0.1574042456459584,
+      "observed_expected": 1.052410936673021,
+      "roc_auc": 0.696007398224518,
+      "brier": 0.1289755688521342,
+      "ece": 0.012252109057265446,
+      "calibration_slope": 1.0208713176433057
+    }
+  ],
+  "top_shap": [
+    {
+      "feature": "fico_range_low",
+      "mean_abs_shap": 0.32355771932465044,
+      "mean_shap": 0.007563296750472209
+    },
+    {
+      "feature": "fico_range_high",
+      "mean_abs_shap": 0.09670601007546384,
+      "mean_shap": 0.0028662417488509043
+    },
+    {
+      "feature": "dti",
+      "mean_abs_shap": 0.09599618499189647,
+      "mean_shap": -0.007809898572774049
+    },
+    {
+      "feature": "addr_state",
+      "mean_abs_shap": 0.07299626067588234,
+      "mean_shap": 0.0014156882964274427
+    },
+    {
+      "feature": "fico_mid",
+      "mean_abs_shap": 0.034927366516018216,
+      "mean_shap": 0.0004833066252376195
+    },
+    {
+      "feature": "revol_util",
+      "mean_abs_shap": 0.031971917921529217,
+      "mean_shap": -0.001523937262641498
+    },
+    {
+      "feature": "loan_to_income",
+      "mean_abs_shap": 0.030506656604694312,
+      "mean_shap": -0.0020947128286480455
+    },
+    {
+      "feature": "revol_bal_to_income",
+      "mean_abs_shap": 0.02296390703547523,
+      "mean_shap": -0.0002910395338755204
+    },
+    {
+      "feature": "dti_clean",
+      "mean_abs_shap": 0.02048328346198961,
+      "mean_shap": -0.0021229757294033667
+    },
+    {
+      "feature": "emp_length",
+      "mean_abs_shap": 0.01733828406095525,
+      "mean_shap": 0.00022734326560416612
+    },
+    {
+      "feature": "revol_util_clipped",
+      "mean_abs_shap": 0.015845897676126205,
+      "mean_shap": -0.0006598321941398519
+    },
+    {
+      "feature": "loan_amnt",
+      "mean_abs_shap": 0.015226188675227847,
+      "mean_shap": -0.0013456784311906892
+    },
+    {
+      "feature": "credit_history_months",
+      "mean_abs_shap": 0.013024632492741961,
+      "mean_shap": -0.00014828017412706545
+    },
+    {
+      "feature": "initial_list_status",
+      "mean_abs_shap": 0.012242680631585946,
+      "mean_shap": 0.005420656450405031
+    },
+    {
+      "feature": "annual_inc",
+      "mean_abs_shap": 0.007350763800718101,
+      "mean_shap": -0.0005740076355072458
+    },
+    {
+      "feature": "revol_bal",
+      "mean_abs_shap": 0.007288324300588599,
+      "mean_shap": -0.00040270990983453785
+    },
+    {
+      "feature": "total_acc",
+      "mean_abs_shap": 0.006397227034323927,
+      "mean_shap": 9.508186941212349e-05
+    },
+    {
+      "feature": "open_acc_ratio",
+      "mean_abs_shap": 0.004022654006672081,
+      "mean_shap": -0.00011881705921524459
+    },
+    {
+      "feature": "purpose",
+      "mean_abs_shap": 0.00398229786313634,
+      "mean_shap": -8.712326481023013e-06
+    },
+    {
+      "feature": "mths_since_last_delinq",
+      "mean_abs_shap": 0.003368378492419679,
+      "mean_shap": 7.058180084220026e-05
+    }
+  ],
+  "risk_bands": {
+    "Very low": 429,
+    "Low": 6684,
+    "Medium": 6338,
+    "High": 3925,
+    "Very high": 2702
+  }
+}

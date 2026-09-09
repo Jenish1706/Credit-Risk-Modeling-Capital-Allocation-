@@ -1,0 +1,61 @@
+{
+  "n_nodes": 108085,
+  "n_edges": 2035795,
+  "relations": [
+    {
+      "relation": "zip3",
+      "key_column": "zip3",
+      "cohorts": 900,
+      "edges": 1022193,
+      "mean_degree": 9.457306749317667,
+      "median_degree": 10.0,
+      "isolated_share": 0.008863394550585187,
+      "at_cap_share": 0.8982374982652542
+    },
+    {
+      "relation": "emp",
+      "key_column": "emp_norm",
+      "cohorts": 40,
+      "edges": 1013602,
+      "mean_degree": 9.377823009668317,
+      "median_degree": 10.0,
+      "isolated_share": 0.06050793357080076,
+      "at_cap_share": 0.9360040708701485
+    }
+  ],
+  "information_gap": [
+    {
+      "relation": "zip3",
+      "mean_prior_applications": 42.628116607666016,
+      "mean_resolved_outcomes": 16.739667892456055,
+      "share_of_predecessors_with_known_outcome": 0.3926907777786255
+    },
+    {
+      "relation": "emp",
+      "mean_prior_applications": 847.9238891601562,
+      "mean_resolved_outcomes": 332.8596496582031,
+      "share_of_predecessors_with_known_outcome": 0.39255839586257935
+    }
+  ],
+  "cohort_prior_default_rate": 0.1471624266144814,
+  "cohort_features": [
+    "cohort_zip3_n_prior",
+    "cohort_zip3_n_resolved",
+    "cohort_zip3_default_rate",
+    "cohort_zip3_evidence_weight",
+    "cohort_zip3_default_lift",
+    "cohort_zip3_mean_fico_mid",
+    "cohort_zip3_mean_dti_clean",
+    "cohort_zip3_mean_loan_amnt",
+    "cohort_zip3_mean_annual_inc",
+    "cohort_emp_n_prior",
+    "cohort_emp_n_resolved",
+    "cohort_emp_default_rate",
+    "cohort_emp_evidence_weight",
+    "cohort_emp_default_lift",
+    "cohort_emp_mean_fico_mid",
+    "cohort_emp_mean_dti_clean",
+    "cohort_emp_mean_loan_amnt",
+    "cohort_emp_mean_annual_inc"
+  ]
+}

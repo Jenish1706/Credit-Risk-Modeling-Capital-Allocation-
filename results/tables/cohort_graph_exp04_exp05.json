@@ -1,0 +1,145 @@
+{
+  "arms": {
+    "A_tabular": {
+      "n": 20078,
+      "positive_rate": 0.16565394959657337,
+      "mean_prediction": 0.15743913442991822,
+      "roc_auc": 0.6934517579075111,
+      "pr_auc": 0.28808691348391163,
+      "gini": 0.38690351581502225,
+      "ks": 0.2932965417902193,
+      "brier": 0.1292653933700849,
+      "log_loss": 0.4178164095188641,
+      "ece": 0.00931359566810338,
+      "mce": 0.030826649080744034,
+      "calibration_slope": 0.9733174919823627,
+      "calibration_intercept": 0.024197859803759107,
+      "observed_expected_ratio": 0.9504097838496386,
+      "extras": {}
+    },
+    "B_tabular_plus_graph": {
+      "n": 20078,
+      "positive_rate": 0.16565394959657337,
+      "mean_prediction": 0.16077197217189104,
+      "roc_auc": 0.6895280648946307,
+      "pr_auc": 0.28398097420672036,
+      "gini": 0.3790561297892614,
+      "ks": 0.29236885618274244,
+      "brier": 0.12968944393255494,
+      "log_loss": 0.41834036000195035,
+      "ece": 0.010800835797543725,
+      "mce": 0.037469565477555256,
+      "calibration_slope": 0.9971861695367153,
+      "calibration_intercept": 0.033950417073055635,
+      "observed_expected_ratio": 0.9705290611146207,
+      "extras": {
+        "graph_gain_share": 0.13845323890421143
+      }
+    },
+    "C_graphsage": {
+      "n": 20078,
+      "positive_rate": 0.16565394959657337,
+      "mean_prediction": 0.15740697679583762,
+      "roc_auc": 0.6890346172036934,
+      "pr_auc": 0.2848818934580251,
+      "gini": 0.3780692344073868,
+      "ks": 0.290414736201879,
+      "brier": 0.12951402877422083,
+      "log_loss": 0.4192838583119283,
+      "ece": 0.012805183027107876,
+      "mce": 0.037700435213663064,
+      "calibration_slope": 0.9691969186990611,
+      "calibration_intercept": 0.017651244444689792,
+      "observed_expected_ratio": 0.9502156584807059,
+      "extras": {}
+    }
+  },
+  "cohort_features": [
+    "cohort_zip3_n_prior",
+    "cohort_zip3_n_resolved",
+    "cohort_zip3_default_rate",
+    "cohort_zip3_evidence_weight",
+    "cohort_zip3_default_lift",
+    "cohort_zip3_mean_fico_mid",
+    "cohort_zip3_mean_dti_clean",
+    "cohort_zip3_mean_loan_amnt",
+    "cohort_zip3_mean_annual_inc",
+    "cohort_emp_n_prior",
+    "cohort_emp_n_resolved",
+    "cohort_emp_default_rate",
+    "cohort_emp_evidence_weight",
+    "cohort_emp_default_lift",
+    "cohort_emp_mean_fico_mid",
+    "cohort_emp_mean_dti_clean",
+    "cohort_emp_mean_loan_amnt",
+    "cohort_emp_mean_annual_inc"
+  ],
+  "gnn": {
+    "device": "cuda",
+    "best_epoch": 6,
+    "best_valid_auc": 0.6825776473709053,
+    "n_node_features": 132,
+    "history": [
+      {
+        "epoch": 0,
+        "train_loss": 0.591612920165062,
+        "valid_auc": 0.5600469576826654
+      },
+      {
+        "epoch": 1,
+        "train_loss": 0.49646210223436354,
+        "valid_auc": 0.5744904459391973
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.43999817669391633,
+        "valid_auc": 0.6005095851957203
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.41991711854934693,
+        "valid_auc": 0.6575374677597928
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.4161886438727379,
+        "valid_auc": 0.6734221913502217
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.4057451128959656,
+        "valid_auc": 0.6796522883541709
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.3931678980588913,
+        "valid_auc": 0.6825776473709053
+      },
+      {
+        "epoch": 7,
+        "train_loss": 0.3872353479266167,
+        "valid_auc": 0.6802205784369524
+      },
+      {
+        "epoch": 8,
+        "train_loss": 0.3817779466509819,
+        "valid_auc": 0.6788598268649505
+      },
+      {
+        "epoch": 9,
+        "train_loss": 0.37706943303346635,
+        "valid_auc": 0.673875048726146
+      },
+      {
+        "epoch": 10,
+        "train_loss": 0.37058454304933547,
+        "valid_auc": 0.6692628777132523
+      },
+      {
+        "epoch": 11,
+        "train_loss": 0.3638042539358139,
+        "valid_auc": 0.6627781749209485
+      }
+    ]
+  }
+}
