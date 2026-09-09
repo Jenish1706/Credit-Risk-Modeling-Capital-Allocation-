@@ -48,6 +48,8 @@ class KaggleCredentials:
     key: str
 
     def auth_header(self) -> str:
+        if self.key.startswith("KGAT_"):
+            return f"Bearer {self.key}"
         token = base64.b64encode(f"{self.username}:{self.key}".encode()).decode("ascii")
         return f"Basic {token}"
 
@@ -57,9 +59,19 @@ class KaggleCredentials:
 
 def load_credentials() -> KaggleCredentials:
     """Resolve Kaggle credentials, preferring environment variables over the JSON file."""
+    env_token = os.environ.get("KAGGLE_API_TOKEN")
+    if env_token:
+        return KaggleCredentials("", env_token)
+
     env_user, env_key = os.environ.get("KAGGLE_USERNAME"), os.environ.get("KAGGLE_KEY")
     if env_user and env_key:
         return KaggleCredentials(env_user, env_key)
+
+    token_file = Path.home() / ".kaggle" / "access_token"
+    if token_file.exists():
+        token = token_file.read_text(encoding="utf-8").strip()
+        if token:
+            return KaggleCredentials("", token)
 
     for candidate in (
         Path(os.environ.get("KAGGLE_CONFIG_DIR", "")) / "kaggle.json"
@@ -80,8 +92,9 @@ def load_credentials() -> KaggleCredentials:
     raise KaggleAuthError(
         "No Kaggle credentials found.\n"
         "  1. Sign in at https://www.kaggle.com, open Settings -> API -> Create New Token.\n"
-        f"  2. Save the downloaded kaggle.json to {Path.home() / '.kaggle' / 'kaggle.json'}.\n"
-        "  Alternatively set KAGGLE_USERNAME and KAGGLE_KEY in the environment.\n"
+        f"  2. Save the downloaded kaggle.json to {Path.home() / '.kaggle' / 'kaggle.json'},\n"
+        f"     or save the API token string to {Path.home() / '.kaggle' / 'access_token'}.\n"
+        "  Alternatively set KAGGLE_API_TOKEN, or KAGGLE_USERNAME/KAGGLE_KEY in the environment.\n"
         "  No credentials yet? Run with --synthetic to generate a schema-faithful stand-in."
     )
 

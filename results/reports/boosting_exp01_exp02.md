@@ -1,27 +1,27 @@
-> **Computed on SYNTHETIC data.** These numbers exercise the pipeline and say nothing about consumer credit. Re-run against the real extract before quoting anything here.
+> Computed on **real** data.
 
 # boosting: EXP01 and EXP02
 
-Feature set: **primary** (46 features, 39 dropped by the availability guard and constancy checks).
-Out-of-time test window: 20,078 loans, observed default rate 0.1657.
+Feature set: **primary** (40 features, 42 dropped by the availability guard and constancy checks).
+Out-of-time test window: 283,026 loans, observed default rate 0.1489.
 
 ## EXP01 - does non-linear modelling improve default prediction?
 
-|          |     n |   positive_rate |   mean_prediction |   roc_auc |   pr_auc |    gini |      ks |   brier |   log_loss |     ece |     mce |   calibration_slope |   calibration_intercept |   observed_expected_ratio |
-|:---------|------:|----------------:|------------------:|----------:|---------:|--------:|--------:|--------:|-----------:|--------:|--------:|--------------------:|------------------------:|--------------------------:|
-| logistic | 20078 |         0.16565 |           0.14935 |   0.69728 |  0.29468 | 0.39457 | 0.305   | 0.12923 |    0.4166  | 0.01747 | 0.04411 |             0.98311 |                 0.10472 |                   0.90158 |
-| lightgbm | 20078 |         0.16565 |           0.14689 |   0.69601 |  0.29876 | 0.39201 | 0.30391 | 0.12953 |    0.41759 | 0.02234 | 0.05356 |             1.13228 |                 0.36604 |                   0.8867  |
+|          |      n |   positive_rate |   mean_prediction |   roc_auc |   pr_auc |    gini |      ks |   brier |   log_loss |     ece |     mce |   calibration_slope |   calibration_intercept |   observed_expected_ratio |
+|:---------|-------:|----------------:|------------------:|----------:|---------:|--------:|--------:|--------:|-----------:|--------:|--------:|--------------------:|------------------------:|--------------------------:|
+| lightgbm | 283026 |         0.14886 |           0.12973 |   0.6705  |  0.25019 | 0.34101 | 0.24634 | 0.12124 |    0.39864 | 0.01931 | 0.02822 |             0.99098 |                 0.15153 |                   0.87147 |
+| logistic | 283026 |         0.14886 |           0.12857 |   0.65806 |  0.23663 | 0.31613 | 0.22797 | 0.1223  |    0.40263 | 0.02044 | 0.03359 |             0.97228 |                 0.12721 |                   0.86368 |
 
-**Verdict.** LightGBM moves out-of-time ROC-AUC by -0.0013 against logistic regression (0.6973 -> 0.6960). That is a small margin for the extra complexity, and the logistic scorecard remains defensible.
+**Verdict.** LightGBM moves out-of-time ROC-AUC by +0.0124 against logistic regression (0.6581 -> 0.6705). That is a material margin and justifies the non-linear model.
 
 ## EXP02 - does calibration improve the reliability of PD estimates?
 
-| method   |     n |   positive_rate |   mean_prediction |   roc_auc |   pr_auc |      ks |   brier |   log_loss |     ece |     mce |   calibration_slope |   calibration_intercept |   observed_expected_ratio |
-|:---------|------:|----------------:|------------------:|----------:|---------:|--------:|--------:|-----------:|--------:|--------:|--------------------:|------------------------:|--------------------------:|
-| identity | 20078 |         0.16565 |           0.14689 |   0.69601 |  0.29876 | 0.30391 | 0.12953 |    0.41759 | 0.02234 | 0.05356 |             1.13228 |                 0.36604 |                   0.8867  |
-| platt    | 20078 |         0.16565 |           0.1574  |   0.69601 |  0.29876 | 0.30391 | 0.12898 |    0.41602 | 0.01225 | 0.04303 |             1.02087 |                 0.09717 |                   0.9502  |
-| isotonic | 20078 |         0.16565 |           0.1569  |   0.69526 |  0.28818 | 0.29902 | 0.12907 |    0.41874 | 0.01198 | 0.0477  |             0.94198 |                -0.01965 |                   0.94716 |
+| method   |      n |   positive_rate |   mean_prediction |   roc_auc |   pr_auc |      ks |   brier |   log_loss |     ece |     mce |   calibration_slope |   calibration_intercept |   observed_expected_ratio |
+|:---------|-------:|----------------:|------------------:|----------:|---------:|--------:|--------:|-----------:|--------:|--------:|--------------------:|------------------------:|--------------------------:|
+| identity | 283026 |         0.14886 |           0.12973 |   0.6705  |  0.25019 | 0.24634 | 0.12124 |    0.39864 | 0.01931 | 0.02822 |             0.99098 |                 0.15153 |                   0.87147 |
+| platt    | 283026 |         0.14886 |           0.13827 |   0.6705  |  0.25019 | 0.24634 | 0.12095 |    0.39749 | 0.01111 | 0.0181  |             1.00487 |                 0.09863 |                   0.92885 |
+| isotonic | 283026 |         0.14886 |           0.13829 |   0.67023 |  0.24563 | 0.24496 | 0.12098 |    0.39759 | 0.01057 | 0.03183 |             0.98252 |                 0.06048 |                   0.929   |
 
-**Verdict.** platt reduced Brier by 0.43% (0.12953 -> 0.12898) and moved ROC-AUC by +0.00000; ECE 0.0223 -> 0.0123, calibration slope 1.132 -> 1.021
+**Verdict.** platt reduced Brier by 0.24% (0.12124 -> 0.12095) and moved ROC-AUC by +0.00000; ECE 0.0193 -> 0.0111, calibration slope 0.991 -> 1.005
 
 Note the ROC-AUC column: it barely moves. That is the whole point. Calibration is a monotone transform of the score, so every ranking metric is blind to it, while the probabilities the decision layer multiplies by an exposure become materially more accurate. A model that ranks well but is mis-calibrated will systematically mis-state expected loss.

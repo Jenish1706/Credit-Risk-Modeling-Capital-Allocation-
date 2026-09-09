@@ -1,68 +1,68 @@
-> **Computed on SYNTHETIC data.** These numbers exercise the pipeline and say nothing about consumer credit. Re-run against the real extract before quoting anything here.
+> Computed on **real** data.
 
 # Data profile
 
-Rows read from raw file: **150,000**
-After the 36-month term filter: **108,139**
-After the issue-window filter: **108,139**
-Final modelling table: **108,085** rows x 162 columns
+Rows read from raw file: **2,260,701**
+After the 36-month term filter: **1,609,754**
+After the issue-window filter: **1,609,754**
+Final modelling table: **1,609,607** rows x 162 columns
 
 ## Rows dropped
 
-- malformed / non-numeric id: 0
-- non-terminal status inside a matured window: 54
+- malformed / non-numeric id: 33
+- non-terminal status inside a matured window: 147
 - unmapped loan_status: 0
 
 ## Splits
 
 | split | window | rows | default rate |
 |---|---|---|---|
-| history | 2007-06 .. 2009-12 | 1,447 | n/a (unlabelled by design) |
-| train | 2010-01 .. 2014-06 | 20,440 | 0.1472 |
-| valid | 2014-07 .. 2014-12 | 6,957 | 0.1575 |
-| test | 2015-01 .. 2015-12 | 20,078 | 0.1657 |
-| monitor | 2016-01 .. 2018-12 | 59,163 | n/a (unlabelled by design) |
+| history | 2007-06 .. 2009-12 | 8,277 | n/a (unlabelled by design) |
+| train | 2010-01 .. 2014-06 | 239,104 | 0.1267 |
+| valid | 2014-07 .. 2014-12 | 90,615 | 0.1413 |
+| test | 2015-01 .. 2015-12 | 283,026 | 0.1489 |
+| monitor | 2016-01 .. 2018-12 | 988,585 | n/a (unlabelled by design) |
 
 ## Default rate by vintage
 
 | year | default rate |
 |---|---|
-| 2010 | 0.1338 |
-| 2011 | 0.1439 |
-| 2012 | 0.1331 |
-| 2013 | 0.1505 |
-| 2014 | 0.1578 |
-| 2015 | 0.1657 |
+| 2010 | 0.1092 |
+| 2011 | 0.1063 |
+| 2012 | 0.1358 |
+| 2013 | 0.1233 |
+| 2014 | 0.1373 |
+| 2015 | 0.1489 |
 
 ## Highest missingness
 
 | column | missing |
 |---|---|
 | `member_id` | 100.0% |
-| `url` | 100.0% |
-| `desc` | 100.0% |
-| `title` | 100.0% |
-| `next_pymnt_d` | 100.0% |
-| `annual_inc_joint` | 100.0% |
-| `dti_joint` | 100.0% |
-| `verification_status_joint` | 100.0% |
-| `revol_bal_joint` | 100.0% |
-| `sec_app_fico_range_low` | 100.0% |
-| `sec_app_fico_range_high` | 100.0% |
-| `sec_app_earliest_cr_line` | 100.0% |
-| `sec_app_inq_last_6mths` | 100.0% |
-| `sec_app_mort_acc` | 100.0% |
-| `sec_app_open_acc` | 100.0% |
-| `sec_app_revol_util` | 100.0% |
-| `sec_app_open_act_il` | 100.0% |
-| `sec_app_num_rev_accts` | 100.0% |
-| `sec_app_chargeoff_within_12_mths` | 100.0% |
-| `sec_app_collections_12_mths_ex_med` | 100.0% |
-| `sec_app_mths_since_last_major_derog` | 100.0% |
-| `hardship_type` | 100.0% |
-| `hardship_reason` | 100.0% |
-| `hardship_status` | 100.0% |
-| `hardship_loan_status` | 100.0% |
+| `orig_projected_additional_accrued_interest` | 99.7% |
+| `hardship_type` | 99.6% |
+| `hardship_reason` | 99.6% |
+| `hardship_status` | 99.6% |
+| `deferral_term` | 99.6% |
+| `hardship_amount` | 99.6% |
+| `hardship_start_date` | 99.6% |
+| `hardship_end_date` | 99.6% |
+| `payment_plan_start_date` | 99.6% |
+| `hardship_length` | 99.6% |
+| `hardship_dpd` | 99.6% |
+| `hardship_loan_status` | 99.6% |
+| `hardship_payoff_balance_amount` | 99.6% |
+| `hardship_last_payment_amount` | 99.6% |
+| `debt_settlement_flag_date` | 98.7% |
+| `settlement_status` | 98.7% |
+| `settlement_date` | 98.7% |
+| `settlement_amount` | 98.7% |
+| `settlement_percentage` | 98.7% |
+| `settlement_term` | 98.7% |
+| `sec_app_mths_since_last_major_derog` | 98.6% |
+| `sec_app_revol_util` | 96.2% |
+| `revol_bal_joint` | 96.1% |
+| `sec_app_fico_range_low` | 96.1% |
 
 ## Availability shift (train -> test)
 
@@ -72,34 +72,34 @@ The feature builder's availability guard drops them; see docs/LEAKAGE.md section
 
 | column | shift in missing rate |
 |---|---|
-| `acc_open_past_24mths` | -30.5% |
-| `avg_cur_bal` | -30.5% |
-| `bc_open_to_buy` | -30.5% |
-| `bc_util` | -30.5% |
-| `mo_sin_old_il_acct` | -30.5% |
-| `mo_sin_old_rev_tl_op` | -30.5% |
-| `mo_sin_rcnt_rev_tl_op` | -30.5% |
-| `mo_sin_rcnt_tl` | -30.5% |
-| `mort_acc` | -30.5% |
-| `num_accts_ever_120_pd` | -30.5% |
-| `num_actv_bc_tl` | -30.5% |
-| `num_actv_rev_tl` | -30.5% |
-| `num_bc_sats` | -30.5% |
-| `num_bc_tl` | -30.5% |
-| `num_il_tl` | -30.5% |
-| `num_op_rev_tl` | -30.5% |
-| `num_rev_accts` | -30.5% |
-| `num_rev_tl_bal_gt_0` | -30.5% |
-| `num_sats` | -30.5% |
-| `num_tl_120dpd_2m` | -30.5% |
-| `num_tl_30dpd` | -30.5% |
-| `num_tl_90g_dpd_24m` | -30.5% |
-| `num_tl_op_past_12m` | -30.5% |
-| `pct_tl_nvr_dlq` | -30.5% |
-| `percent_bc_gt_75` | -30.5% |
+| `pct_tl_nvr_dlq` | -19.2% |
+| `avg_cur_bal` | -19.2% |
+| `mo_sin_old_rev_tl_op` | -19.2% |
+| `mo_sin_rcnt_rev_tl_op` | -19.2% |
+| `tot_coll_amt` | -19.2% |
+| `tot_cur_bal` | -19.2% |
+| `total_rev_hi_lim` | -19.2% |
+| `mo_sin_rcnt_tl` | -19.2% |
+| `num_accts_ever_120_pd` | -19.2% |
+| `num_actv_bc_tl` | -19.2% |
+| `num_actv_rev_tl` | -19.2% |
+| `num_bc_tl` | -19.2% |
+| `num_il_tl` | -19.2% |
+| `num_op_rev_tl` | -19.2% |
+| `num_rev_tl_bal_gt_0` | -19.2% |
+| `num_tl_30dpd` | -19.2% |
+| `num_tl_90g_dpd_24m` | -19.2% |
+| `num_tl_op_past_12m` | -19.2% |
+| `tot_hi_cred_lim` | -19.2% |
+| `total_il_high_credit_limit` | -19.2% |
+| `num_rev_accts` | -19.2% |
+| `mo_sin_old_il_acct` | -19.0% |
+| `num_tl_120dpd_2m` | -15.8% |
+| `num_bc_sats` | -15.2% |
+| `num_sats` | -15.2% |
 
 ## Notes
 
-- dropped 54 labelled rows (0.11%) with a non-terminal or unmapped status inside a window that should be fully matured
+- dropped 147 labelled rows (0.02%) with a non-terminal or unmapped status inside a window that should be fully matured
 
-Data source: **synthetic**.
+Data source: **real**.

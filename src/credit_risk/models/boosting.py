@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
-from credit_risk.utils.runtime import get_logger
+from credit_risk.utils.runtime import default_n_jobs, get_logger
 
 LOG = get_logger("models.boosting")
 
@@ -48,7 +48,9 @@ class BoostingConfig:
     #: ``None`` preserves the base rate and therefore the calibration. Set to ``"balanced"``
     #: only to measure the cost in EXP01.
     class_weight: str | None = None
-    n_jobs: int = -1
+    #: -1 means every core. `default_n_jobs()` honours the thread cap instead, so a run
+    #: launched with --max-threads does not quietly claim the whole machine anyway.
+    n_jobs: int = field(default_factory=default_n_jobs)
     verbose: int = -1
 
     def lgb_params(self, seed: int) -> dict[str, Any]:

@@ -148,7 +148,7 @@ class CalibrationComparison:
         order = [
             "n", "positive_rate", "mean_prediction", "roc_auc", "pr_auc", "ks",
             "brier", "log_loss", "ece", "mce", "calibration_slope",
-            "calibration_intercept", "observed_expected_ratio",
+            "calibration_intercept", "predicted_observed_ratio",
         ]
         return frame[[c for c in order if c in frame.columns]]
 

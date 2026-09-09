@@ -59,12 +59,25 @@ def test_calibration_slope_detects_overconfidence(rng):
     assert metrics.calibration_slope < 0.9
 
 
-def test_observed_expected_ratio_detects_level_bias(rng):
+def test_level_bias_ratios_point_in_opposite_directions(rng):
+    """The two ratios are reciprocals, and their names must match their direction.
+
+    `predicted_observed_ratio` above 1 means the model OVER-states risk. The conventional
+    credit-risk O/E (observed over expected) above 1 means it UNDER-states. These were previously
+    conflated: one field computed predicted/observed under the name `observed_expected_ratio`.
+    """
     n = 20_000
     p = rng.beta(2, 8, n)
     y = (rng.random(n) < p).astype(int)
-    metrics = compute_metrics(y, np.clip(p * 2.0, 1e-6, 1 - 1e-6))
-    assert metrics.observed_expected_ratio > 1.5
+
+    over = compute_metrics(y, np.clip(p * 2.0, 1e-6, 1 - 1e-6))
+    assert over.predicted_observed_ratio > 1.5      # predicts twice the risk
+    assert over.observed_expected_ratio < 0.7       # so observed/expected is well below 1
+    assert over.observed_expected_ratio == pytest.approx(1.0 / over.predicted_observed_ratio)
+
+    under = compute_metrics(y, np.clip(p * 0.5, 1e-6, 1 - 1e-6))
+    assert under.predicted_observed_ratio < 0.7
+    assert under.observed_expected_ratio > 1.4
 
 
 def test_perfect_predictions_score_perfectly():

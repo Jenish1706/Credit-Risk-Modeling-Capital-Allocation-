@@ -21,7 +21,6 @@ import pandas as pd
 import pytest
 
 from credit_risk.graph.construction import (
-    DEFAULT_RELATIONS,
     PAD_INDEX,
     RelationSpec,
     assert_no_future_edges,

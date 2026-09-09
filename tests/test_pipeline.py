@@ -305,7 +305,7 @@ def test_explanation_renders_and_bands(rng):
 
 @pytest.mark.needs_torch
 def test_graphsage_trains_and_predicts(enriched, split_frames):
-    torch = pytest.importorskip("torch")
+    pytest.importorskip("torch")  # guard only; the symbol itself is not needed here
     from credit_risk.features.build import FeatureBuilder, FeatureSpec, to_numeric_matrix
     from credit_risk.graph.construction import build_graph
     from credit_risk.models.gnn import GNNConfig, GraphSAGETrainer

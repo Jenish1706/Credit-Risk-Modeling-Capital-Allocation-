@@ -322,7 +322,7 @@ def _outcome_observed_period(df: pd.DataFrame) -> pd.Series:
     out = pd.Series(pd.NaT, index=df.index, dtype="period[M]")
     if valid.any():
         shifted = pd.PeriodIndex(
-            [p + int(l) for p, l in zip(base[valid], lag[valid], strict=True)], freq="M"
+            [max(p + int(l), i + 1) for p, l, i in zip(base[valid], lag[valid], df.loc[valid, "issue_period"], strict=True)], freq="M"
         )
         out.loc[valid] = shifted
     return out
@@ -371,6 +371,8 @@ def write_processed(
     path = out_dir / filename
 
     out = df.copy()
+    if "id" in out.columns:
+        out["id"] = out["id"].astype("string")
     for col in out.columns:
         if isinstance(out[col].dtype, pd.PeriodDtype):
             out[col] = out[col].astype("string")

@@ -15,7 +15,12 @@ from typing import Any
 import pandas as pd
 
 from credit_risk.utils.config import Config, Paths, load_config, parse_overrides
-from credit_risk.utils.runtime import RunManifest, get_logger, set_seed
+from credit_risk.utils.runtime import (
+    RunManifest,
+    configure_threads,
+    get_logger,
+    set_seed,
+)
 
 LOG = get_logger("cli")
 
@@ -46,11 +51,21 @@ def base_parser(description: str, default_config: str | None = None) -> argparse
     parser.add_argument(
         "--no-figures", action="store_true", help="Skip figure generation (headless / fast runs)."
     )
+    parser.add_argument(
+        "--max-threads",
+        type=int,
+        default=None,
+        help="Cap numeric-library threads so a long run leaves the machine usable. "
+             "Also settable via CREDIT_RISK_MAX_THREADS or CREDIT_RISK_THREAD_FRACTION.",
+    )
     return parser
 
 
 def resolve(args: argparse.Namespace) -> tuple[Config, Paths, str, int]:
     """Load the config with overrides applied and seed everything."""
+    # Before anything imports a BLAS-backed array: thread pools are read at import time.
+    configure_threads(getattr(args, "max_threads", None))
+
     if not args.config:
         raise SystemExit("--config is required")
     config = load_config(args.config, parse_overrides(args.overrides))

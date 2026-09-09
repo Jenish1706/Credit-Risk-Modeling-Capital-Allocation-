@@ -73,6 +73,32 @@ from credit_risk.utils.runtime import get_logger  # noqa: E402
 LOG = get_logger("scripts.policy")
 
 
+def _score_split(paths, pd_run: str, frame: pd.DataFrame) -> np.ndarray | None:
+    """Score an arbitrary split with the saved model, or return None if artefacts are absent.
+
+    Needed so that learning policies can be trained on a *disjoint* applicant pool. Without this
+    they train and are evaluated on the same borrowers, which lets them memorise realised outcomes
+    that the static policies they are compared against never see.
+    """
+    from credit_risk.features.build import FeatureBuilder
+    from credit_risk.models.boosting import BoostingModel
+    from credit_risk.models.calibration import ProbabilityCalibrator
+
+    builder_path = paths.artifacts / f"{pd_run}_features.pkl"
+    model_path = paths.artifacts / f"{pd_run}_boosting.pkl"
+    if not builder_path.exists() or not model_path.exists():
+        return None
+
+    builder = FeatureBuilder.load(builder_path)
+    model = BoostingModel.load(model_path)
+    raw = model.predict_proba(builder.transform(frame))
+    for method in ("platt", "isotonic"):
+        calibrator_path = paths.artifacts / f"{pd_run}_calibrator_{method}.pkl"
+        if calibrator_path.exists():
+            return ProbabilityCalibrator.load(calibrator_path).transform(raw)
+    return raw
+
+
 def _load_pd(paths, pd_run: str, test: pd.DataFrame, train: pd.DataFrame,
              valid: pd.DataFrame, seed: int) -> np.ndarray:
     """Load calibrated PDs from a completed baseline run, or fit one if absent."""
@@ -134,6 +160,24 @@ def main() -> int:
     n_steps = int(scfg.get("n_steps", 2000))
     seeds = list(config.get_path("evaluation.seeds", list(range(12))))
 
+    # Learning policies are trained on the VALIDATION window and evaluated on the test window.
+    # Training them on the evaluation pool would let them memorise the realised outcomes of the
+    # very borrowers they are scored on -- an advantage the static policies do not have, which
+    # makes the comparison meaningless. If the validation PDs cannot be produced, the learning
+    # policies are skipped rather than trained unfairly.
+    pd_valid = _score_split(paths, args.pd_run, valid)
+    train_pool = build_applicant_pool(valid, pd_valid, cashflow) if pd_valid is not None else None
+    if train_pool is None:
+        LOG.warning(
+            "could not score the validation window; learning policies will be SKIPPED rather "
+            "than trained on the evaluation pool"
+        )
+    else:
+        LOG.info(
+            "learning policies train on %s validation applicants, evaluate on %s test applicants",
+            f"{len(train_pool):,}", f"{len(pool):,}",
+        )
+
     # Capital that approving every applicant at medium exposure would consume.
     medium = action_space.names.index("approve_medium")
     exposures = action_space.exposures(pool.requested_amount)[:, medium]
@@ -144,9 +188,9 @@ def main() -> int:
         DecisionContext(pool.pd_estimate, pool.requested_amount, pool.apr)
     )
 
-    def make_env(budget: float | None) -> LendingEnvironment:
+    def make_env(budget: float | None, on_pool=None) -> LendingEnvironment:
         return LendingEnvironment(
-            pool, cashflow, economics, action_space,
+            on_pool if on_pool is not None else pool, cashflow, economics, action_space,
             SimulationConfig(
                 n_steps=n_steps,
                 capital_budget=budget,
@@ -191,6 +235,7 @@ def main() -> int:
     # =====================================================================
     sweep_rows: list[dict] = []
     budget_reports: dict[str, dict] = {}
+    degenerate: list[dict] = []
     fractions = list(config.get_path("budget_sweep.fractions", [1.0, 0.6, 0.35, 0.2]))
     training_curves: dict[str, list[float]] = {}
 
@@ -205,6 +250,10 @@ def main() -> int:
             LOG.info("EXP06 | %s | analytical shadow price lambda=%.4f", label, shadow)
 
             env = make_env(budget)
+            # Learning happens here; scoring happens in `env`. Different borrowers, same rules.
+            train_env = (
+                make_env(budget, on_pool=train_pool) if train_pool is not None else None
+            )
             encoder = StateEncoder(
                 cashflow, economics, action_space,
                 total_budget=budget or full_demand, total_steps=n_steps,
@@ -224,34 +273,70 @@ def main() -> int:
                     seed=seed,
                 ),
             )
-            report = train_policy(
-                env, q_policy,
-                int(config.get_path("rl.train_episodes", 400)),
-                seed_offset=int(config.get_path("rl.seed_offset", 10000)),
-            )
-            training_curves[label] = report.episode_rewards
-            policies.append(q_policy.greedy())
+            if train_env is not None:
+                report = train_policy(
+                    train_env, q_policy,
+                    int(config.get_path("rl.train_episodes", 400)),
+                    seed_offset=int(config.get_path("rl.seed_offset", 10000)),
+                )
+                training_curves[label] = report.episode_rewards
+                policies.append(q_policy.greedy())
 
             bandit_cfg = BanditConfig(
                 alpha=float(config.get_path("rl.bandit.alpha", 1.0)),
                 ridge_lambda=float(config.get_path("rl.bandit.ridge_lambda", 1.0)),
                 reward_scale=float(config.get_path("rl.bandit.reward_scale", 1000.0)),
             )
-            for bandit in (
-                LinUCBPolicy(encoder, action_space, bandit_cfg),
-                ThompsonSamplingPolicy(encoder, action_space, bandit_cfg, seed=seed),
-            ):
-                train_policy(env, bandit, int(config.get_path("rl.bandit_episodes", 120)),
-                             seed_offset=int(config.get_path("rl.seed_offset", 10000)))
-                policies.append(bandit)
+            if train_env is not None:
+                for bandit in (
+                    LinUCBPolicy(encoder, action_space, bandit_cfg),
+                    ThompsonSamplingPolicy(encoder, action_space, bandit_cfg, seed=seed),
+                ):
+                    train_policy(train_env, bandit,
+                                 int(config.get_path("rl.bandit_episodes", 120)),
+                                 seed_offset=int(config.get_path("rl.seed_offset", 10000)))
+                    # A bandit that has collapsed onto a single action is not a policy result.
+                    # Report it as degenerate rather than quoting its reward alongside the others.
+                    chosen = int((bandit.counts > 0).sum())
+                    if chosen <= 1:
+                        LOG.warning(
+                            "%s collapsed onto %d action(s) during training and is reported as "
+                            "degenerate rather than compared", bandit.name, chosen,
+                        )
+                        degenerate.append({"condition": label, "policy": bandit.name,
+                                           "actions_used": chosen,
+                                           "action_counts": bandit.counts.tolist()})
+                    policies.append(bandit)
 
             evals = compare_policies(env, policies, seeds)
             summary = summary_table(evals)
             diffs = difference_table(evals, "expected_profit")
+            # The control: with unconstrained capital the myopic expected-profit rule is
+            # optimal for the objective it optimises, so a learner beating it does not
+            # demonstrate that RL helps -- it demonstrates that the myopic policy's *inputs*
+            # are wrong (its cashflow coefficients are fitted on the training vintage and
+            # applied to a later one). This check states that plainly instead of leaving the
+            # reader to notice.
+            control_breach = None
+            if budget is None and len(diffs):
+                beaten = diffs[(diffs["mean_difference"] > 0) & diffs["significant"]]
+                learners = [n for n in beaten.index if "q(" in n or "linucb" in n or "thompson" in n]
+                if learners:
+                    control_breach = (
+                        f"CONTROL BREACHED: {', '.join(learners)} significantly beat the myopic "
+                        f"expected-profit policy with unconstrained capital, where it should be "
+                        f"optimal. This does not support an RL claim. It indicates the myopic "
+                        f"policy is optimising a misspecified objective -- its good-loan yield "
+                        f"and loss-rate coefficients are fitted on the 2010-2014 training window "
+                        f"and applied to the 2015 test vintage."
+                    )
+                    LOG.warning(control_breach)
+
             budget_reports[label] = {
                 "shadow_price": shadow,
                 "budget": budget,
                 "verdict": verdict(diffs, "expected_profit"),
+                "control_breach": control_breach,
                 "q_implied_threshold": q_policy.implied_threshold(),
             }
             for name, row in summary.iterrows():
@@ -279,6 +364,15 @@ def main() -> int:
         "",
         f"Applicant pool: {len(pool):,} out-of-time loans; {n_steps:,} processed per episode; "
         f"{len(seeds)} seeds under common random numbers.",
+        (
+            f"Learning policies are trained on {len(train_pool):,} **validation-window** "
+            f"applicants and evaluated on the test window, so they never see the borrowers they "
+            f"are scored on. An earlier version trained them on the evaluation pool itself, which "
+            f"gave them an advantage the static policies did not have."
+            if train_pool is not None
+            else "Learning policies were SKIPPED: validation-window PDs were unavailable, and "
+            "training them on the evaluation pool would have made the comparison invalid."
+        ),
         f"Estimated from training-window cashflows: good-loan yield "
         f"{cashflow.good_intercept:.3f}{cashflow.good_slope:+.3f}*APR, defaulted-loan loss rate "
         f"{cashflow.bad_intercept:.3f}{cashflow.bad_slope:+.3f}*APR, "
@@ -311,6 +405,31 @@ def main() -> int:
         ]
         for label, payload in budget_reports.items():
             lines.append(f"| {label} | {payload['shadow_price']:.4f} | {payload['verdict']} |")
+
+        breaches = [p["control_breach"] for p in budget_reports.values() if p.get("control_breach")]
+        if breaches:
+            lines += ["", "### Control check", ""]
+            lines += [f"> {b}" for b in breaches]
+            lines += [
+                "",
+                "Learning-policy results in the unconstrained condition should therefore **not** "
+                "be read as evidence for reinforcement learning. The correct reading is that the "
+                "myopic policy's economic inputs are stale relative to the test vintage.",
+            ]
+        if degenerate:
+            lines += [
+                "",
+                "### Degenerate policies",
+                "",
+                "The following collapsed onto a single action during training. Their rewards are "
+                "shown in the table for completeness but are **not** policy results:",
+                "",
+            ]
+            lines += [
+                f"- `{d['policy']}` under {d['condition']}: used {d['actions_used']} of "
+                f"{len(action_space)} actions (counts {d['action_counts']})"
+                for d in degenerate
+            ]
         lines += [
             "",
             sweep.pivot_table(index="policy", columns="condition", values="mean_reward")
@@ -337,6 +456,8 @@ def main() -> int:
             "full_demand": full_demand,
             "exp03": exp03_summary.to_dict(),
             "exp06": budget_reports,
+            "degenerate_policies": degenerate,
+            "training_pool": "validation window" if train_pool is not None else None,
         },
         paths, f"{run_name}_exp03_exp06",
     )

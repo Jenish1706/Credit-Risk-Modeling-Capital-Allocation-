@@ -1,15 +1,15 @@
-> **Computed on SYNTHETIC data.** These numbers exercise the pipeline and say nothing about consumer credit. Re-run against the real extract before quoting anything here.
+> Computed on **real** data.
 
 # cohort_graph: graph construction
 
-Nodes: **108,085**. Edges: **2,035,795** across 2 relations.
+Nodes: **1,609,607**. Edges: **26,060,254** across 2 relations.
 
 ## Relations
 
-| relation   | key_column   |   cohorts |   edges |   mean_degree |   median_degree |   isolated_share |   at_cap_share |
-|:-----------|:-------------|----------:|--------:|--------------:|----------------:|-----------------:|---------------:|
-| zip3       | zip3         |       900 | 1022193 |        9.4573 |              10 |           0.0089 |         0.8982 |
-| emp        | emp_norm     |        40 | 1013602 |        9.3778 |              10 |           0.0605 |         0.936  |
+| relation   | key_column   |   cohorts |    edges |   mean_degree |   median_degree |   isolated_share |   at_cap_share |
+|:-----------|:-------------|----------:|---------:|--------------:|----------------:|-----------------:|---------------:|
+| zip3       | zip3         |       939 | 16037403 |        9.9636 |              10 |           0.0008 |         0.9936 |
+| emp        | emp_norm     |    308446 | 10022851 |        6.2269 |              10 |           0.2806 |         0.5742 |
 
 ## The two information sets
 
@@ -19,8 +19,8 @@ later. Those are different information sets, and the gap between them is large:
 
 | relation   |   mean_prior_applications |   mean_resolved_outcomes |   share_of_predecessors_with_known_outcome |
 |:-----------|--------------------------:|-------------------------:|-------------------------------------------:|
-| zip3       |                   42.6281 |                  16.7397 |                                     0.3927 |
-| emp        |                  847.924  |                 332.86   |                                     0.3926 |
+| zip3       |                   1951.66 |                 1014.27  |                                     0.5197 |
+| emp        |                   1433.48 |                  568.433 |                                     0.3965 |
 
 Feature aggregates use the first column; label aggregates use the second. Using the
 first for a label aggregate is the standard way graph credit models leak, and it would

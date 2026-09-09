@@ -46,17 +46,34 @@ class RiskMetrics:
     calibration_slope: float
     calibration_intercept: float
     #: mean predicted / observed default rate. 1.0 is unbiased; 1.2 means 20% over-prediction.
-    observed_expected_ratio: float
+    #: Named for what it computes. Note this is the *reciprocal* of the ratio credit risk
+    #: conventionally calls "O/E" (observed over expected), which is exposed as
+    #: :attr:`observed_expected_ratio` below. The two were previously conflated: the field was
+    #: named `observed_expected_ratio` while computing predicted/observed.
+    predicted_observed_ratio: float
     extras: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["observed_expected_ratio"] = self.observed_expected_ratio
+        return payload
+
+    @property
+    def observed_expected_ratio(self) -> float:
+        """Observed over expected, the conventional credit-risk A/E ratio.
+
+        Above 1.0 means the model **under-states** risk. This is the reciprocal of
+        :attr:`predicted_observed_ratio`.
+        """
+        if not np.isfinite(self.predicted_observed_ratio) or self.predicted_observed_ratio == 0:
+            return float("nan")
+        return 1.0 / self.predicted_observed_ratio
 
     def summary_line(self) -> str:
         return (
             f"n={self.n:,} rate={self.positive_rate:.4f} | "
             f"AUC={self.roc_auc:.4f} PR-AUC={self.pr_auc:.4f} KS={self.ks:.4f} | "
-            f"Brier={self.brier:.5f} ECE={self.ece:.4f} O/E={self.observed_expected_ratio:.3f}"
+            f"Brier={self.brier:.5f} ECE={self.ece:.4f} P/O={self.predicted_observed_ratio:.3f}"
         )
 
 
@@ -155,7 +172,7 @@ def compute_metrics(y_true, y_prob, n_bins: int = 20) -> RiskMetrics:
         mce=mce,
         calibration_slope=slope,
         calibration_intercept=intercept,
-        observed_expected_ratio=float(predicted / observed) if observed > 0 else float("nan"),
+        predicted_observed_ratio=float(predicted / observed) if observed > 0 else float("nan"),
     )
 
 

@@ -20,7 +20,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import numpy as np  # noqa: E402
 
 from credit_risk.data.home_credit import (  # noqa: E402
     build_matrix,

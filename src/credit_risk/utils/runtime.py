@@ -56,6 +56,62 @@ def set_seed(seed: int, deterministic_torch: bool = True) -> int:
     return seed
 
 
+def configure_threads(max_threads: int | None = None, fraction: float | None = None) -> int:
+    """Cap the thread pools every numeric library spins up.
+
+    By default these libraries each claim every core, which makes a training run monopolise the
+    machine. ``CREDIT_RISK_MAX_THREADS`` (absolute) or ``CREDIT_RISK_THREAD_FRACTION`` (a share of
+    the available cores) bound them, so a long run can be left going while the machine stays
+    usable.
+
+    Must be called **before** numpy/LightGBM/torch read their environment, which is why
+    ``utils.cli.resolve`` calls it first thing. Returns the cap applied.
+    """
+    total = os.cpu_count() or 1
+
+    if max_threads is None:
+        env_absolute = os.environ.get("CREDIT_RISK_MAX_THREADS")
+        env_fraction = os.environ.get("CREDIT_RISK_THREAD_FRACTION")
+        if env_absolute:
+            max_threads = int(env_absolute)
+        elif fraction is not None or env_fraction:
+            share = fraction if fraction is not None else float(env_fraction)
+            max_threads = max(1, int(round(total * share)))
+        else:
+            return total  # no cap requested; leave the libraries alone
+
+    max_threads = max(1, min(int(max_threads), total))
+    for var in (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+    ):
+        os.environ[var] = str(max_threads)
+
+    try:
+        import torch
+
+        torch.set_num_threads(max_threads)
+    except ImportError:
+        pass
+
+    get_logger("runtime").info(
+        "thread cap: %d of %d cores (set CREDIT_RISK_MAX_THREADS to change)", max_threads, total
+    )
+    return max_threads
+
+
+def default_n_jobs() -> int:
+    """Worker count for libraries that take an explicit ``n_jobs`` (LightGBM, sklearn).
+
+    Environment variables alone do not bound LightGBM, which defaults to all cores regardless.
+    """
+    capped = os.environ.get("OMP_NUM_THREADS")
+    return int(capped) if capped else (os.cpu_count() or 1)
+
+
 def resolve_device(preference: str = "auto") -> str:
     """Pick a torch device string.
 
