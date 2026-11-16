@@ -254,3 +254,30 @@ def test_marginal_table_reports_the_calibration_gap():
     assert np.allclose(
         table["calibration_gap"], table["default_rate"] - table["mean_pd"], atol=1e-9
     )
+
+
+def test_placebo_exclusion_controls():
+    """Verify that placebo controls (random and APR-matched) test whether risk drop is attributable to signal."""
+    from credit_risk.decision.blindspot import evaluate_placebo_controls
+
+    n = 1000
+    rng = np.random.default_rng(42)
+    exposure = pd.Series(rng.uniform(1000, 5000, size=n))
+    apr = pd.Series(rng.uniform(0.08, 0.25, size=n))
+    defaults = pd.Series((rng.random(n) < 0.15).astype(float))
+    realised_profits = exposure * (apr * 1.5 - defaults * 0.6)
+    density = pd.Series(realised_profits / exposure)
+    budget = float(exposure.sum() * 0.7)
+
+    # 19% flagged
+    flagged = np.zeros(n, dtype=bool)
+    flagged[:190] = True
+
+    comp = evaluate_placebo_controls(
+        density, exposure, defaults, realised_profits, flagged, apr, budget,
+        signal_default_rate=0.14, n_draws=20, seed=42,
+    )
+    assert isinstance(comp.random_default_ci, tuple)
+    assert comp.random_default_ci[0] <= comp.random_default_ci[1]
+    assert isinstance(comp.apr_matched_default_ci, tuple)
+    assert comp.apr_matched_default_ci[0] <= comp.apr_matched_default_ci[1]

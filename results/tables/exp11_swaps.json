@@ -1,52 +1,76 @@
 {
-  "budget": 1922008880.0,
+  "budget": 1673463380.0,
   "flag_quantile": 0.9,
   "n_flagged": 53666,
   "portfolios": [
     {
       "policy": "A_pd_ranked",
-      "n_loans": 131570,
-      "capital_deployed": 1921989925.0,
-      "observed_profit": 156971329.37638226,
-      "return_on_capital": 0.08167125505425439,
-      "default_rate": 0.17302576575207115,
-      "mean_apr": 0.13266341035190393,
-      "budget_utilisation": 0.9999901379227759
+      "n_loans": 112078,
+      "capital_deployed": 1673462150.0,
+      "observed_profit": 117337520.29352017,
+      "return_on_capital": 0.07011662635663446,
+      "default_rate": 0.16883777369332073,
+      "mean_apr": 0.1332883581077464,
+      "budget_utilisation": 0.9999992649973614
     },
     {
       "policy": "B_blindspot_aware",
-      "n_loans": 133378,
-      "capital_deployed": 1890596825.0,
-      "observed_profit": 153764315.59368113,
-      "return_on_capital": 0.08133109796885496,
-      "default_rate": 0.16322032119240054,
-      "mean_apr": 0.12657379103000496,
-      "budget_utilisation": 0.9836566545936042
+      "n_loans": 112792,
+      "capital_deployed": 1637768100.0,
+      "observed_profit": 115832797.57363781,
+      "return_on_capital": 0.07072600667557136,
+      "default_rate": 0.15981629902829989,
+      "mean_apr": 0.1277845290446131,
+      "budget_utilisation": 0.9786698170831799
     },
     {
       "policy": "C_exposure_capped",
-      "n_loans": 148186,
-      "capital_deployed": 1922002962.5,
-      "observed_profit": 156621515.8686607,
-      "return_on_capital": 0.08148869638834425,
-      "default_rate": 0.16787685746291822,
-      "mean_apr": 0.1292506032958579,
-      "budget_utilisation": 0.9999969211900832
+      "n_loans": 126581,
+      "capital_deployed": 1673461537.5,
+      "observed_profit": 118028321.2144678,
+      "return_on_capital": 0.07052944962857731,
+      "default_rate": 0.16376865406340604,
+      "mean_apr": 0.1299984089239301,
+      "budget_utilisation": 0.9999988989899498
     }
   ],
-  "n_swapped_out": 26541,
-  "n_swapped_in": 28349,
-  "swapped_out_return": 0.07686315882867559,
-  "swapped_in_return": 0.07476189365236165,
+  "n_swapped_out": 23287,
+  "n_swapped_in": 24001,
+  "swapped_out_return": 0.06661182427429599,
+  "swapped_in_return": 0.06926501309291752,
   "cashflow_model": {
-    "good_slope": 1.3512258459896551,
-    "good_intercept": -0.0007928498347327377,
-    "bad_slope": -0.3719344086549998,
-    "bad_intercept": 0.3532005434462575,
+    "good_slope": 1.3512258459896571,
+    "good_intercept": -0.0007928498347327224,
+    "bad_slope": -0.17893368472809207,
+    "bad_intercept": 0.39291106787670727,
     "n_good": 208809,
-    "n_bad": 30288,
-    "observed_lgd_mean": 0.5181314706974557,
-    "observed_lgd_median": 0.5322395941060878,
+    "n_bad": 30295,
+    "observed_lgd_mean": 0.5180117506018993,
+    "observed_lgd_median": 0.5322032699999999,
     "notes": {}
+  },
+  "placebo_controls": {
+    "random_default_mean": 0.16010987141867006,
+    "random_default_ci": [
+      0.1593689679290226,
+      0.16093183660978816
+    ],
+    "random_roc_mean": 0.06963313919489438,
+    "random_roc_ci": [
+      0.06898056813675284,
+      0.07023129181209072
+    ],
+    "apr_matched_default_mean": 0.16081014075529929,
+    "apr_matched_default_ci": [
+      0.15979914500817655,
+      0.1616223970825165
+    ],
+    "apr_matched_roc_mean": 0.06968141668805482,
+    "apr_matched_roc_ci": [
+      0.06908691317147321,
+      0.0703883425440609
+    ],
+    "signal_beats_random": false,
+    "signal_beats_apr_matched": false
   }
 }

@@ -22,7 +22,7 @@ Two distinct claims are involved, and they need separate evidence:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 import numpy as np
@@ -405,3 +405,109 @@ def exposure_capped_policy(
     adjusted[flagged] = adjusted[flagged] * cap_multiplier
     approve = greedy_allocate(density, adjusted, budget)
     return approve, adjusted.where(approve, 0.0)
+
+
+@dataclass
+class PlaceboComparison:
+    random_default_mean: float
+    random_default_ci: tuple[float, float]
+    random_roc_mean: float
+    random_roc_ci: tuple[float, float]
+    apr_matched_default_mean: float
+    apr_matched_default_ci: tuple[float, float]
+    apr_matched_roc_mean: float
+    apr_matched_roc_ci: tuple[float, float]
+    signal_beats_random: bool
+    signal_beats_apr_matched: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def evaluate_placebo_controls(
+    density: pd.Series,
+    exposure: pd.Series,
+    defaults: pd.Series,
+    realised_profits: pd.Series,
+    flagged: np.ndarray,
+    apr: pd.Series,
+    budget: float,
+    signal_default_rate: float,
+    n_draws: int = 200,
+    seed: int = 42,
+) -> PlaceboComparison:
+    """Compare the signal-exclusion policy against random and APR-matched placebo exclusions.
+
+    P0-3 Control:
+    A claim that excluding flagged borrowers improves default rates requires ruling out the boring
+    explanation: that refilling the portfolio to the same budget simply brings in lower-APR, lower-default
+    loans.
+    """
+    rng = np.random.default_rng(seed)
+    n = len(density)
+    n_flag = int(np.sum(flagged))
+
+    order = density.sort_values(ascending=False, kind="mergesort").index.to_numpy()
+    exposure_arr = exposure.to_numpy()
+    defaults_arr = pd.to_numeric(defaults, errors="coerce").fillna(0.0).to_numpy(dtype=float)
+    profit_arr = pd.to_numeric(realised_profits, errors="coerce").fillna(0.0).to_numpy(dtype=float)
+
+    # 1. Random placebo
+    rand_defs = np.empty(n_draws)
+    rand_rocs = np.empty(n_draws)
+
+    for i in range(n_draws):
+        perm = rng.permutation(n)
+        exclude_set = set(perm[:n_flag])
+        valid_order = [idx for idx in order if idx not in exclude_set]
+        cum_exp = exposure_arr[valid_order].cumsum()
+        fits = cum_exp <= budget
+        approved = [idx for idx, f in zip(valid_order, fits, strict=True) if f]
+        rand_defs[i] = defaults_arr[approved].mean() if approved else float("nan")
+        total_exp = exposure_arr[approved].sum()
+        rand_rocs[i] = profit_arr[approved].sum() / total_exp if total_exp > 0 else float("nan")
+
+    # 2. APR-decile matched placebo
+    apr_clean = pd.to_numeric(apr, errors="coerce").fillna(0.13)
+    deciles = pd.qcut(apr_clean, 10, labels=False, duplicates="drop")
+    decile_indices = [np.where(deciles == d)[0] for d in range(10)]
+    decile_n_flags = [int(flagged[idx].sum()) for idx in decile_indices]
+
+    apr_defs = np.empty(n_draws)
+    apr_rocs = np.empty(n_draws)
+
+    for i in range(n_draws):
+        flagged_apr = np.zeros(n, dtype=bool)
+        for idxs, k in zip(decile_indices, decile_n_flags, strict=True):
+            if len(idxs) > 0 and k > 0:
+                chosen = rng.choice(idxs, size=min(k, len(idxs)), replace=False)
+                flagged_apr[chosen] = True
+        exclude_set = set(np.where(flagged_apr)[0])
+        valid_order = [idx for idx in order if idx not in exclude_set]
+        cum_exp = exposure_arr[valid_order].cumsum()
+        fits = cum_exp <= budget
+        approved = [idx for idx, f in zip(valid_order, fits, strict=True) if f]
+        apr_defs[i] = defaults_arr[approved].mean() if approved else float("nan")
+        total_exp = exposure_arr[approved].sum()
+        apr_rocs[i] = profit_arr[approved].sum() / total_exp if total_exp > 0 else float("nan")
+
+    rand_ci = (float(np.percentile(rand_defs, 2.5)), float(np.percentile(rand_defs, 97.5)))
+    rand_roc_ci = (float(np.percentile(rand_rocs, 2.5)), float(np.percentile(rand_rocs, 97.5)))
+    apr_ci = (float(np.percentile(apr_defs, 2.5)), float(np.percentile(apr_defs, 97.5)))
+    apr_roc_ci = (float(np.percentile(apr_rocs, 2.5)), float(np.percentile(apr_rocs, 97.5)))
+
+    beats_rand = bool(signal_default_rate < rand_ci[0])
+    beats_apr = bool(signal_default_rate < apr_ci[0])
+
+    return PlaceboComparison(
+        random_default_mean=float(np.mean(rand_defs)),
+        random_default_ci=rand_ci,
+        random_roc_mean=float(np.mean(rand_rocs)),
+        random_roc_ci=rand_roc_ci,
+        apr_matched_default_mean=float(np.mean(apr_defs)),
+        apr_matched_default_ci=apr_ci,
+        apr_matched_roc_mean=float(np.mean(apr_rocs)),
+        apr_matched_roc_ci=apr_roc_ci,
+        signal_beats_random=beats_rand,
+        signal_beats_apr_matched=beats_apr,
+    )
