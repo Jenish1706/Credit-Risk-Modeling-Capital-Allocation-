@@ -262,8 +262,8 @@ def build_portfolio(
     """Summarise an approved book using **observed** cashflows.
 
     Realised profit is read from the data, never modelled: it is
-    ``total_pymnt + recoveries - collection_recovery_fee - funded_amnt``. Using an assumed LGD
-    here is what inverted the original EXP11 conclusion.
+    ``total_pymnt - collection_recovery_fee - funded_amnt`` (total_pymnt already includes recoveries).
+    Using an assumed LGD here is what inverted the original EXP11 conclusion.
     """
     mask = np.asarray(approve, dtype=bool)
     book = df.loc[mask]

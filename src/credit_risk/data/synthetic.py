@@ -252,7 +252,6 @@ def generate(spec: SyntheticSpec | None = None) -> pd.DataFrame:
     # Fully paid loans repay principal exactly, by definition.
     fp = loan_status == "Fully Paid"
     total_rec_prncp = np.where(fp, loan_amnt.astype(float), total_rec_prncp)
-    total_pymnt = np.round(total_rec_prncp + total_rec_int, 2)
 
     out_prncp = np.where(
         np.isin(loan_status, ["Fully Paid", "Charged Off"]),
@@ -268,6 +267,9 @@ def generate(spec: SyntheticSpec | None = None) -> pd.DataFrame:
     )
     collection_recovery_fee = np.round(recoveries * 0.16, 2)
     total_rec_late_fee = np.where(co, np.round(rng.gamma(1.1, 12.0, n), 2), 0.0)
+
+    # In LendingClub data, total_pymnt is the sum of principal, interest, late fees, and recoveries.
+    total_pymnt = np.round(total_rec_prncp + total_rec_int + total_rec_late_fee + recoveries, 2)
 
     last_pymnt_period = np.array(
         [p + int(m) for p, m in zip(issue_period, np.maximum(paid_months, 1), strict=True)]

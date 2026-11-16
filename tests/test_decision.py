@@ -25,7 +25,6 @@ from credit_risk.decision.policies import (
     RiskBandPolicy,
 )
 
-
 # ---------------------------------------------------------------------------
 # Amortisation
 # ---------------------------------------------------------------------------
@@ -50,17 +49,48 @@ def test_weighted_average_life_rises_with_term():
 # ---------------------------------------------------------------------------
 
 def test_realised_profit_is_arithmetic(loans):
-    """Recoveries are reported separately from `total_pymnt` and must be added, not assumed in."""
+    """total_pymnt already includes recoveries; net cashflow received is total_pymnt minus collection fee."""
     import pandas as pd
 
     frame = loans.head(200)
     expected = (
         pd.to_numeric(frame["total_pymnt"], errors="coerce").fillna(0)
-        + pd.to_numeric(frame["recoveries"], errors="coerce").fillna(0)
         - pd.to_numeric(frame["collection_recovery_fee"], errors="coerce").fillna(0)
         - pd.to_numeric(frame["funded_amnt"], errors="coerce")
     )
     assert np.allclose(realised_profit(frame).to_numpy(), expected.to_numpy(), equal_nan=True)
+
+
+def test_realised_profit_never_double_counts_recoveries(loans):
+    """Verify on loans with recoveries > 0 that realised profit equals cash received minus cash lent.
+
+    total_pymnt is mathematically identical to total_rec_prncp + total_rec_int + total_rec_late_fee + recoveries.
+    Adding recoveries a second time double-counts recoveries and must fail.
+    """
+    import pandas as pd
+
+    rec_loans = loans[pd.to_numeric(loans["recoveries"], errors="coerce") > 0].head(100)
+    if len(rec_loans) > 0:
+        # Cash components received directly
+        components_sum = (
+            pd.to_numeric(rec_loans["total_rec_prncp"], errors="coerce").fillna(0)
+            + pd.to_numeric(rec_loans["total_rec_int"], errors="coerce").fillna(0)
+            + pd.to_numeric(rec_loans["total_rec_late_fee"], errors="coerce").fillna(0)
+            + pd.to_numeric(rec_loans["recoveries"], errors="coerce").fillna(0)
+            - pd.to_numeric(rec_loans["collection_recovery_fee"], errors="coerce").fillna(0)
+            - pd.to_numeric(rec_loans["funded_amnt"], errors="coerce")
+        )
+        actual = realised_profit(rec_loans)
+        assert np.allclose(actual.to_numpy(), components_sum.to_numpy(), atol=0.02)
+
+        # Fails if recoveries are double-counted
+        flawed = (
+            pd.to_numeric(rec_loans["total_pymnt"], errors="coerce").fillna(0)
+            + pd.to_numeric(rec_loans["recoveries"], errors="coerce").fillna(0)
+            - pd.to_numeric(rec_loans["collection_recovery_fee"], errors="coerce").fillna(0)
+            - pd.to_numeric(rec_loans["funded_amnt"], errors="coerce")
+        )
+        assert not np.allclose(actual.to_numpy(), flawed.to_numpy(), atol=0.02)
 
 
 def test_fully_paid_loans_are_profitable_on_average(split_frames):

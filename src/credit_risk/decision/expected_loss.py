@@ -90,15 +90,14 @@ def weighted_average_life(apr: float = 0.13, term_months: int = 36) -> float:
 def realised_profit(df: pd.DataFrame) -> pd.Series:
     """Net cash the lender actually received, minus what it lent. An arithmetic fact.
 
-    ``total_pymnt`` covers everything received while the loan was performing; ``recoveries`` is
-    collected after charge-off and is reported separately, so it must be added rather than assumed
-    to be included. ``collection_recovery_fee`` is what the collection agency kept.
+    ``total_pymnt`` records all cash received to date, which already includes recoveries,
+    principal, interest, and late fees. Adding ``recoveries`` again would double-count them.
+    ``collection_recovery_fee`` is what the collection agency kept and is deducted from cash received.
     """
     funded = pd.to_numeric(df["funded_amnt"], errors="coerce")
     received = pd.to_numeric(df["total_pymnt"], errors="coerce").fillna(0.0)
-    recovered = pd.to_numeric(df.get("recoveries", 0.0), errors="coerce").fillna(0.0)
     fee = pd.to_numeric(df.get("collection_recovery_fee", 0.0), errors="coerce").fillna(0.0)
-    return received + recovered - fee - funded
+    return received - fee - funded
 
 
 def realised_return(df: pd.DataFrame) -> pd.Series:
@@ -275,11 +274,11 @@ def breakeven_pd(
     apr = np.asarray(apr, dtype=float)
 
     y = cashflow_model.good_yield(apr)
-    l = cashflow_model.bad_loss_rate(apr)
+    loss_rate = cashflow_model.bad_loss_rate(apr)
     fixed = funding_cost(exposure, config, apr) + operating_cost(exposure, config)
 
     numerator = y * exposure - fixed
-    denominator = (y + l) * exposure
+    denominator = (y + loss_rate) * exposure
     with np.errstate(divide="ignore", invalid="ignore"):
         result = np.where(denominator > 0, numerator / denominator, 0.0)
     return np.clip(result, 0.0, 1.0)
