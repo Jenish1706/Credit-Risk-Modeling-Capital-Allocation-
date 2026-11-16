@@ -47,45 +47,42 @@ under the assumptions in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 |---|---|---|---|
 | **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6581 → 0.6705** (+0.0124) `OBSERVED` | Material. Boosting justified |
 | **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0193 → 0.0111**; calibration slope 0.991 → 1.005 `OBSERVED` | The point of the project in one row: ranking metrics are blind to calibration |
-| **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | +12,991/episode, 95% CI **[−17,702, +44,103]** `SIMULATED` | **Null result.** Interval includes zero |
-| **EXP04** | Do graph cohort features add signal? | AUC **−0.0010**. But with matched configs, ECE **0.0105 → 0.0032**, O/E **0.930 → 0.999** `OBSERVED` | No discrimination gain; **real calibration gain** |
+| **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | *Pending rerun* (cashflow recovery double-counting fix in progress) `SIMULATED` | Expected-profit optimization under audit |
+| **EXP04** | Do graph cohort features add signal? | AUC **−0.0010**. ECE **0.0105 → 0.0032**, O/E **0.930 → 0.999** `OBSERVED` | No discrimination gain; **calibration gain pending non-graph controls** (see `.audit/FINDINGS.md`) |
 | **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6616** vs 0.6679 (aggregates) vs 0.6690 (tabular) `OBSERVED` | **No.** The GNN loses to both |
-| **EXP06** | Can a budget-aware learned policy beat static policies? | **No learned policy wins in any of 4 budget conditions** — every interval includes zero. The analytical shadow-price policy leads each constrained condition `SIMULATED` | **Null result for RL** |
+| **EXP06** | Can a budget-aware learned policy beat static policies? | *Pending rerun* (validation-fitted shadow price $\lambda$ and corrected cashflows under rerun) `SIMULATED` | Analytical shadow price vs learned policies under audit |
 | **EXP07** | How does the model degrade under vintage drift? | O/E **0.860 (2010) → 1.077 (2015)** while AUC moves 0.7475 → 0.6705 `OBSERVED` | Calibration drifts before ranking does |
 | **EXP08** | Does autoencoder anomaly flag untrustworthy PDs? | Survives PD control in **10/10** deciles, sign-test **p=0.0010**, odds ratio 1.032/SD `OBSERVED` | **KEEP** |
 | **EXP09** | Does VGAE relational uncertainty flag them? | Fails PD control (**5/10** deciles, sign-test **p=0.6230**), odds ratio 1.002/SD `OBSERVED` | **REJECT** |
 | **EXP10** | Does model disagreement flag them? | Survives in **9/10** deciles, **p=0.0107**, odds ratio 1.043/SD `OBSERVED` | **KEEP** |
-| **EXP11** | Does acting on those signals improve the book? | Return on capital **8.17% → 8.13%**; book default rate **17.30% → 16.32%** `OBSERVED` cashflows | **Risk reduction at constant profitability** — not a profit gain |
+| **EXP11** | Does acting on those signals improve the book? | *Pending rerun* (portfolio cashflows and risk attribution under audit with placebo controls; see `.audit/STATE.md`) `OBSERVED` | Decision-swap attribution under audit |
 
 ### Four results worth reading twice
 
 **Calibration is where the graph pays.** EXP04/EXP05 show the graph adds nothing to *discrimination*
-— GraphSAGE is the worst of the three arms. But with matched model configurations the graph features
-cut expected calibration error by two-thirds and move observed/expected from 0.930 to 0.999. For a
-decision engine that multiplies PD by an exposure, that is the property that matters.
+— GraphSAGE is the worst of the three arms. But with matched model configurations the cohort features
+cut expected calibration error by two-thirds and move observed/expected from 0.930 to 0.999. (Testing
+against non-graph controls — recent portfolio default rate and shuffled keys — is currently in progress;
+see `.audit/FINDINGS.md`).
 
 **The blind-spot signals are real but small.** Both survive a conditional test against the PD level
 — the test the first version of these experiments did not run — but the odds ratios are 1.03–1.04
 per standard deviation. They flag *miscalibration*, not bad borrowers.
 
 **Acting on them buys risk reduction, not profit.** EXP11's earlier claim of a $9.8M effect was an
-artefact of an assumed-LGD profit formula and a swap-set comparison; on observed cashflows at equal
-capital the profit effect is a fraction of a percentage point. What survives is a genuine
-risk/return trade-off: roughly one point of book default rate, for free.
+artefact of an assumed-LGD profit formula and a swap-set comparison. On observed cashflows, the profit
+difference is minimal. An audit showed that the risk reduction was driven by lower-APR replacement loans
+and that cashflow calculations counted recoveries twice; placebo-controlled reruns and corrected cashflow
+figures are pending.
 
 **RL does not earn its place here, and that is the finding.** The RL experiment carries a control:
 with unconstrained capital the myopic expected-profit rule is optimal, so a learner beating it
 indicates a problem rather than a success. In the pre-audit run LinUCB beat it by 35% — because
 learning policies were being trained on the *evaluation pool*. After training them on the validation
-window instead, LinUCB fell from 199,117 to **119,252** and now loses to the myopic rule
-significantly. The control holds, and across all four budget conditions **no learned policy beats
-the myopic baseline significantly**.
-
-What does help under a binding budget is pricing capital *analytically*: the shadow-price policy
-`expected_profit(lambda)` leads every constrained condition (153,856 vs 133,529 at 60% budget). The
-capital-constrained problem here is a knapsack with a closed-form solution, so the defensible
-conclusion is that the analytical policy is preferable to the learned one. The RL layer is retained
-as a documented negative result, not as a recommendation.
+window instead, LinUCB fell from 199,117 to **119,252** and loses to the myopic rule. However, an audit
+found that the reported analytical policy computed its shadow price from the test pool (an oracle) and
+the cashflow formula counted recoveries twice; reruns with validation-fitted $\lambda$ and corrected
+cashflows are pending.
 
 ---
 
@@ -96,9 +93,10 @@ as a documented negative result, not as a recommendation.
 - **Layer B — Graph.** A time-respecting cohort graph (`zip3`, normalised `emp_title`) and a
   GraphSAGE written directly in PyTorch — no `torch-geometric`, so message passing is explainable
   line by line. Neighbour *features* and neighbour *labels* are gated separately and strictly.
-- **Layer C — Decision.** Economics estimated from observed cashflows (empirical LGD **0.518**, not
-  assumed), a policy ladder from fixed threshold to budget-aware Q-learning, and a simulator whose
-  conditional coupling reproduces real outcomes exactly at the funded exposure.
+- **Layer C — Decision.** Economics estimated from observed cashflows (empirical loss rate; cashflow
+  figures pending rerun after double-counting fix), a policy ladder from fixed threshold to
+  budget-aware Q-learning, and a simulator whose conditional coupling reproduces real outcomes
+  exactly at the funded exposure.
 - **Layer D — Trust.** Leakage tests that fail the build, SHAP reason codes, PSI/calibration drift on
   unlabelled production traffic, and a fairness slice over proxy groups.
 - **Blind-spot layer.** Autoencoder anomaly, VGAE relational uncertainty and model disagreement,
@@ -186,4 +184,3 @@ python -m pytest -q
 | [`docs/RL_FORMULATION.md`](docs/RL_FORMULATION.md) | Why capital constraints make lending sequential — and when they do not |
 | [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) | Observed vs estimated vs assumed, itemised |
 | [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md) | Column-by-column decision-time rulings |
-| [`docs/INTERVIEW_GUIDE.md`](docs/INTERVIEW_GUIDE.md) | Q&A companion |
