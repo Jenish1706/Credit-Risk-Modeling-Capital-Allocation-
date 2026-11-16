@@ -200,7 +200,7 @@ def main() -> int:
             ),
         )
 
-    def static_policies(space: ActionSpace, shadow: float = 0.0):
+    def static_policies(space: ActionSpace, shadow_val: float = 0.0, shadow_oracle: float = 0.0):
         pols = [
             ApproveAllPolicy(space),
             FixedThresholdPolicy(float(config.get_path("policies.fixed_threshold.threshold", 0.15)),
@@ -212,10 +212,14 @@ def main() -> int:
             ),
             ExpectedProfitPolicy(cashflow, economics, space),
         ]
-        if shadow > 0:
-            priced = ExpectedProfitPolicy(cashflow, economics, space, capital_shadow_price=shadow)
-            priced.name = f"expected_profit(lambda={shadow:.4f})"
-            pols.append(priced)
+        if shadow_val > 0:
+            priced_val = ExpectedProfitPolicy(cashflow, economics, space, capital_shadow_price=shadow_val)
+            priced_val.name = f"expected_profit(lambda={shadow_val:.4f})"
+            pols.append(priced_val)
+        if shadow_oracle > 0:
+            oracle = ExpectedProfitPolicy(cashflow, economics, space, capital_shadow_price=shadow_oracle)
+            oracle.name = f"oracle_ceiling(lambda={shadow_oracle:.4f})"
+            pols.append(oracle)
         return pols
 
     # =====================================================================
@@ -243,11 +247,25 @@ def main() -> int:
         for fraction in fractions:
             budget = None if fraction >= 0.999 else fraction * full_demand
             label = "unconstrained" if budget is None else f"budget={fraction:.2f}"
-            shadow = (
+            if train_pool is not None and budget is not None:
+                val_exposures = action_space.exposures(train_pool.requested_amount)[:, medium]
+                val_densities = encoder0.profit_density(
+                    DecisionContext(train_pool.pd_estimate, train_pool.requested_amount, train_pool.apr)
+                )
+                val_demand = float(val_exposures[:n_steps].sum())
+                val_budget = fraction * val_demand
+                shadow_val = analytical_shadow_price(val_densities[:n_steps], val_exposures[:n_steps], val_budget)
+            else:
+                shadow_val = 0.0
+
+            shadow_oracle = (
                 0.0 if budget is None
                 else analytical_shadow_price(densities[:n_steps], exposures[:n_steps], budget)
             )
-            LOG.info("EXP06 | %s | analytical shadow price lambda=%.4f", label, shadow)
+            LOG.info(
+                "EXP06 | %s | validation shadow price lambda=%.4f (oracle ceiling=%.4f)",
+                label, shadow_val, shadow_oracle,
+            )
 
             env = make_env(budget)
             # Learning happens here; scoring happens in `env`. Different borrowers, same rules.
@@ -258,7 +276,7 @@ def main() -> int:
                 cashflow, economics, action_space,
                 total_budget=budget or full_demand, total_steps=n_steps,
             )
-            policies = static_policies(action_space, shadow)
+            policies = static_policies(action_space, shadow_val=shadow_val, shadow_oracle=shadow_oracle)
 
             q_policy = BudgetAwareQPolicy(
                 encoder, action_space,
@@ -333,7 +351,8 @@ def main() -> int:
                     LOG.warning(control_breach)
 
             budget_reports[label] = {
-                "shadow_price": shadow,
+                "shadow_price_val": shadow_val,
+                "shadow_price_oracle": shadow_oracle,
                 "budget": budget,
                 "verdict": verdict(diffs, "expected_profit"),
                 "control_breach": control_breach,

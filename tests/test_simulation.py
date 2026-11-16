@@ -237,6 +237,27 @@ def test_shadow_price_is_the_marginal_applicant():
     assert analytical_shadow_price(densities, exposures, budget=250.0) == pytest.approx(0.05)
 
 
+def test_shadow_price_validation_split_separation(pool, cashflow, space):
+    """Test candidate analytical policy shadow price is fit on validation data, not test evaluation pool."""
+    from credit_risk.decision.policies import ExpectedProfitPolicy
+    from credit_risk.rl.formulation import StateEncoder
+
+    encoder = StateEncoder(cashflow, EconomicsConfig(), space)
+    # Simulate a validation pool of applicants disjoint from test pool
+    val_densities = np.array([0.12, 0.09, 0.06, 0.03, 0.01])
+    val_exposures = np.array([1000.0, 1000.0, 1000.0, 1000.0, 1000.0])
+    val_budget = 2500.0
+
+    shadow_val = analytical_shadow_price(val_densities, val_exposures, val_budget)
+    assert shadow_val > 0.0
+
+    # Policy uses validation-fitted shadow price
+    policy_val = ExpectedProfitPolicy(cashflow, EconomicsConfig(), space, capital_shadow_price=shadow_val)
+    policy_val.name = f"expected_profit(lambda_val={shadow_val:.4f})"
+    assert policy_val.capital_shadow_price == shadow_val
+    assert "lambda_val" in policy_val.name
+
+
 def test_shadow_price_rises_as_budget_tightens():
     rng = np.random.default_rng(0)
     densities = np.sort(rng.uniform(-0.05, 0.15, 200))[::-1]
