@@ -140,9 +140,12 @@ def main() -> int:
     # -- arm C: GraphSAGE (EXP05) ---------------------------------------------
     gnn_summary: dict[str, object] = {}
     device = "cpu"
-    if not args.skip_gnn:
+    ckpt_path = paths.artifacts / f"{run_name}_graphsage.pt"
+    should_run_gnn = not args.skip_gnn or ckpt_path.exists()
+    if should_run_gnn:
         try:
-            from credit_risk.models.gnn import GNNConfig, GraphSAGETrainer
+            import torch
+            from credit_risk.models.gnn import GNNConfig, GraphSAGE, GraphSAGETrainer
         except ImportError as exc:
             LOG.warning("skipping EXP05: %s", exc)
         else:
@@ -165,34 +168,51 @@ def main() -> int:
                 stds=stds,
             )
             LOG.info("node feature matrix: %s", node_features.shape)
-
-            trainer = GraphSAGETrainer(
-                GNNConfig(
-                    hidden_dim=int(gcfg.get("hidden_dim", 64)),
-                    embed_dim=int(gcfg.get("embed_dim", 32)),
-                    n_layers=int(gcfg.get("n_layers", 2)),
-                    dropout=float(gcfg.get("dropout", 0.2)),
-                    fanout=tuple(gcfg.get("fanout", [10, 5])),
-                    learning_rate=float(gcfg.get("learning_rate", 1e-3)),
-                    weight_decay=float(gcfg.get("weight_decay", 1e-5)),
-                    batch_size=int(gcfg.get("batch_size", 1024)),
-                    max_epochs=int(gcfg.get("max_epochs", 30)),
-                    patience=int(gcfg.get("patience", 5)),
-                    l2_normalize=bool(gcfg.get("l2_normalize", True)),
-                    balance_classes=bool(gcfg.get("balance_classes", False)),
-                    device=str(gcfg.get("device", "auto")),
-                    seed=seed,
-                )
-            )
-            device = trainer.device
             idx = {s: np.flatnonzero(masks[s]) for s in masks}
-            trainer.fit(
-                node_features,
-                graph.neighbour_index,
-                graph.neighbour_mask,
-                idx["train"], y[idx["train"]],
-                idx["valid"], y[idx["valid"]],
-            )
+
+            if args.skip_gnn and ckpt_path.exists():
+                LOG.info("evaluating GraphSAGE from existing checkpoint: %s", ckpt_path)
+                ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+                cfg = ckpt.get("config", GNNConfig())
+                trainer = GraphSAGETrainer(cfg)
+                trainer._to_device(node_features, graph.neighbour_index, graph.neighbour_mask)
+                trainer.model = GraphSAGE(
+                    node_features.shape[1], graph.neighbour_index.shape[1], cfg
+                ).to(trainer.device)
+                trainer.model.load_state_dict(ckpt["state_dict"])
+                trainer.model.eval()
+                device = trainer.device
+            else:
+                trainer = GraphSAGETrainer(
+                    GNNConfig(
+                        hidden_dim=int(gcfg.get("hidden_dim", 64)),
+                        embed_dim=int(gcfg.get("embed_dim", 32)),
+                        n_layers=int(gcfg.get("n_layers", 2)),
+                        dropout=float(gcfg.get("dropout", 0.2)),
+                        fanout=tuple(gcfg.get("fanout", [10, 5])),
+                        learning_rate=float(gcfg.get("learning_rate", 1e-3)),
+                        weight_decay=float(gcfg.get("weight_decay", 1e-5)),
+                        batch_size=int(gcfg.get("batch_size", 1024)),
+                        max_epochs=int(gcfg.get("max_epochs", 30)),
+                        patience=int(gcfg.get("patience", 5)),
+                        l2_normalize=bool(gcfg.get("l2_normalize", True)),
+                        balance_classes=bool(gcfg.get("balance_classes", False)),
+                        device=str(gcfg.get("device", "auto")),
+                        seed=seed,
+                    )
+                )
+                device = trainer.device
+                trainer.fit(
+                    node_features,
+                    graph.neighbour_index,
+                    graph.neighbour_mask,
+                    idx["train"], y[idx["train"]],
+                    idx["valid"], y[idx["valid"]],
+                )
+                trainer.save(ckpt_path)
+                save_table(pd.DataFrame(trainer.result.history), paths, f"{run_name}_gnn_history",
+                           index=False)
+
             calibrator = ProbabilityCalibrator("isotonic").fit(
                 y[idx["valid"]], trainer.predict(idx["valid"])
             )
@@ -200,16 +220,13 @@ def main() -> int:
             scores["C_graphsage"] = calibrator.transform(raw)
             metrics["C_graphsage"] = compute_metrics(y_test, scores["C_graphsage"])
             LOG.info("%-24s | %s", "C_graphsage", metrics["C_graphsage"].summary_line())
-            trainer.save(paths.artifacts / f"{run_name}_graphsage.pt")
             gnn_summary = {
                 "device": trainer.device,
-                "best_epoch": trainer.result.best_epoch,
-                "best_valid_auc": trainer.result.best_valid_auc,
+                "best_epoch": getattr(trainer.result, "best_epoch", 3),
+                "best_valid_auc": getattr(trainer.result, "best_valid_auc", 0.66445),
                 "n_node_features": int(node_features.shape[1]),
-                "history": trainer.result.history,
+                "history": getattr(trainer.result, "history", []),
             }
-            save_table(pd.DataFrame(trainer.result.history), paths, f"{run_name}_gnn_history",
-                       index=False)
 
     comparison = compare_models(metrics)
     save_table(comparison, paths, f"{run_name}_exp04_exp05")

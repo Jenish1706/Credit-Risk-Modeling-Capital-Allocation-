@@ -15,7 +15,7 @@ Flagged as blind spots: 53,666 borrowers (19.0%) above the 90th percentile of th
 
 ## Verdict
 
-B_blindspot_aware changed realised profit by **$-1,504,723** on a $1,673,462,150 book, deploying $-35,694,050 of capital (a +0.06% change in return on capital). That is **below 50bp of return on capital and should be read as no material difference in profitability**. The book default rate moved from 16.88% to 15.98% at essentially unchanged return, so the defensible claim is risk reduction at constant profitability -- not a profit improvement.
+B_blindspot_aware changed realised profit by **$-1,504,723** on a $1,673,462,150 book, deploying $-35,694,050 of capital (a +0.06% change in return on capital). That is **below 50bp of return on capital and represents no material difference in profitability**. While the raw book default rate moved from 16.88% to 15.98%, placebo controls demonstrate that this risk reduction is **not attributable to the blind-spot signals**, but is rather a mechanical artifact of budget refilling after arbitrary exclusions (refilling draws in lower-APR applicants with naturally lower base default rates). Neither profit improvement nor risk reduction is attributable to the blind-spot signals.
 
 The swap involved 23,287 loans out (realised return +6.66%, default 16.87%) and 24,001 loans in (realised return +6.93%, default 12.63%).
 

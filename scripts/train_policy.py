@@ -243,18 +243,20 @@ def main() -> int:
     fractions = list(config.get_path("budget_sweep.fractions", [1.0, 0.6, 0.35, 0.2]))
     training_curves: dict[str, list[float]] = {}
 
+    if train_pool is not None:
+        val_exposures_all = action_space.exposures(train_pool.requested_amount)[:, medium]
+        val_densities_all = encoder0.profit_density(
+            DecisionContext(train_pool.pd_estimate, train_pool.requested_amount, train_pool.apr)
+        )
+        val_demand_total = float(val_exposures_all.sum())
+
     if not args.skip_rl:
         for fraction in fractions:
             budget = None if fraction >= 0.999 else fraction * full_demand
             label = "unconstrained" if budget is None else f"budget={fraction:.2f}"
             if train_pool is not None and budget is not None:
-                val_exposures = action_space.exposures(train_pool.requested_amount)[:, medium]
-                val_densities = encoder0.profit_density(
-                    DecisionContext(train_pool.pd_estimate, train_pool.requested_amount, train_pool.apr)
-                )
-                val_demand = float(val_exposures[:n_steps].sum())
-                val_budget = fraction * val_demand
-                shadow_val = analytical_shadow_price(val_densities[:n_steps], val_exposures[:n_steps], val_budget)
+                val_budget = fraction * val_demand_total
+                shadow_val = analytical_shadow_price(val_densities_all, val_exposures_all, val_budget)
             else:
                 shadow_val = 0.0
 

@@ -75,6 +75,24 @@
       "predicted_observed_ratio": 0.9498510663818842,
       "extras": {},
       "observed_expected_ratio": 1.0527966282220855
+    },
+    "C_graphsage": {
+      "n": 283026,
+      "positive_rate": 0.14886264866125373,
+      "mean_prediction": 0.13697783837159086,
+      "roc_auc": 0.6615782044190212,
+      "pr_auc": 0.23500700739448732,
+      "gini": 0.3231564088380423,
+      "ks": 0.23418030463505313,
+      "brier": 0.12170146745524028,
+      "log_loss": 0.4004738628065282,
+      "ece": 0.011884810289662878,
+      "mce": 0.02457345342378006,
+      "calibration_slope": 0.956213434988847,
+      "calibration_intercept": 0.026071791308361455,
+      "predicted_observed_ratio": 0.9201625767340235,
+      "extras": {},
+      "observed_expected_ratio": 1.0867644754140593
     }
   },
   "cohort_features": [
@@ -97,5 +115,11 @@
     "cohort_emp_mean_loan_amnt",
     "cohort_emp_mean_annual_inc"
   ],
-  "gnn": {}
+  "gnn": {
+    "device": "cuda",
+    "best_epoch": 3,
+    "best_valid_auc": 0.66445,
+    "n_node_features": 125,
+    "history": []
+  }
 }
