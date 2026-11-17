@@ -58,6 +58,33 @@ def test_calibration_slope_detects_overconfidence(rng):
     assert metrics.calibration_slope < 0.9
 
 
+def test_intercept_only_calibration_isolates_base_rate_shift(rng):
+    """P1-6: An intercept-only calibrator shifts the base-rate in log-odds while preserving slope=1.0.
+
+    When the portfolio experiences a macro base-rate shift from train to validation/test,
+    fitting a pure intercept aligns mean predicted probability with observed default rate,
+    leaving borrower ranking (ROC-AUC) perfectly intact.
+    """
+    n = 20_000
+    p = rng.beta(2, 10, n)  # mean ~ 0.166
+    # Induce a base-rate shift: true outcome rate is higher (~0.22)
+    y = (rng.random(n) < np.clip(p * 1.35, 0, 1)).astype(int)
+
+    calibrator = ProbabilityCalibrator("intercept_only").fit(y, p)
+    p_cal = calibrator.transform(p)
+
+    m_raw = compute_metrics(y, p)
+    m_cal = compute_metrics(y, p_cal)
+
+    # Ranking is perfectly preserved
+    assert m_cal.roc_auc == pytest.approx(m_raw.roc_auc, abs=1e-9)
+    # Mean predicted probability matches observed target base rate within 1 bp
+    assert m_cal.mean_prediction == pytest.approx(float(y.mean()), abs=1e-3)
+    # ECE and Brier improve
+    assert m_cal.brier < m_raw.brier
+    assert m_cal.ece < m_raw.ece
+
+
 def test_level_bias_ratios_point_in_opposite_directions(rng):
     """The two ratios are reciprocals, and their names must match their direction.
 

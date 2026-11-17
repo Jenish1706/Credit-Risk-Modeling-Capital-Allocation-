@@ -37,7 +37,7 @@ from credit_risk.utils.runtime import get_logger
 
 LOG = get_logger("models.calibration")
 
-Method = Literal["identity", "platt", "isotonic"]
+Method = Literal["identity", "intercept_only", "platt", "isotonic"]
 
 _EPS = 1e-9
 
@@ -55,6 +55,11 @@ class ProbabilityCalibrator:
     ``identity``
         No transform. The control condition -- without it there is no way to show calibration
         changed anything.
+    ``intercept_only``
+        A pure base-rate shift in log-odds: logit(p_cal) = logit(p) + b with slope fixed to 1.
+        Solves for the scalar intercept b that aligns mean predicted probability with the
+        validation base rate. Serves as a vital econometric baseline to isolate how much of the
+        calibration gain is a simple portfolio base-rate shift vs. probability curve reshaping.
     ``platt``
         A one-parameter-plus-intercept logistic regression on the predicted log-odds. Parametric,
         so it is stable on small validation sets and cannot invent non-monotonicity, but it can
@@ -67,9 +72,10 @@ class ProbabilityCalibrator:
     """
 
     def __init__(self, method: Method = "isotonic") -> None:
-        if method not in ("identity", "platt", "isotonic"):
+        if method not in ("identity", "intercept_only", "platt", "isotonic"):
             raise ValueError(f"unknown calibration method {method!r}")
         self.method: Method = method
+        self._intercept: float | None = None
         self._platt: LogisticRegression | None = None
         self._isotonic: IsotonicRegression | None = None
         self._fitted = False
@@ -82,7 +88,23 @@ class ProbabilityCalibrator:
         if len(np.unique(y)) < 2:
             raise ValueError("calibration needs both classes present in the fitting window")
 
-        if self.method == "platt":
+        if self.method == "intercept_only":
+            from scipy.optimize import brentq
+            from scipy.special import expit
+
+            target = float(y.mean())
+            lp = _logit(p)
+
+            def f(b: float) -> float:
+                return float(expit(lp + b).mean() - target)
+
+            self._intercept = float(brentq(f, -15.0, 15.0))
+            LOG.info(
+                "intercept_only fitted: intercept=%.4f (target base rate=%.4f)",
+                self._intercept,
+                target,
+            )
+        elif self.method == "platt":
             self._platt = LogisticRegression(C=np.inf, solver="lbfgs", max_iter=1000)
             self._platt.fit(_logit(p).reshape(-1, 1), y)
             LOG.info(
@@ -106,6 +128,11 @@ class ProbabilityCalibrator:
             return np.clip(p, _EPS, 1 - _EPS)
         if not self._fitted:
             raise RuntimeError("ProbabilityCalibrator.transform called before fit")
+        if self.method == "intercept_only":
+            assert self._intercept is not None
+            from scipy.special import expit
+
+            return np.clip(expit(_logit(p) + self._intercept), _EPS, 1 - _EPS)
         if self.method == "platt":
             assert self._platt is not None
             return self._platt.predict_proba(_logit(p).reshape(-1, 1))[:, 1]
@@ -180,7 +207,7 @@ def compare_calibrations(
     p_valid,
     y_test,
     p_test,
-    methods: tuple[Method, ...] = ("identity", "platt", "isotonic"),
+    methods: tuple[Method, ...] = ("identity", "intercept_only", "platt", "isotonic"),
 ) -> CalibrationComparison:
     """Fit each calibrator on validation, score all of them on the out-of-time window.
 
