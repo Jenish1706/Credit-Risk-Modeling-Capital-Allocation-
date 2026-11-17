@@ -14,8 +14,9 @@
       "mce": 0.026559062594748162,
       "calibration_slope": 0.9714237855762221,
       "calibration_intercept": 0.04069966757142242,
-      "observed_expected_ratio": 0.9297630288083881,
-      "extras": {}
+      "predicted_observed_ratio": 0.9297630288083881,
+      "extras": {},
+      "observed_expected_ratio": 1.0755428738456396
     },
     "B_tabular_plus_graph": {
       "n": 283026,
@@ -31,27 +32,49 @@
       "mce": 0.011268942356227829,
       "calibration_slope": 0.9761696996089689,
       "calibration_intercept": -0.036030232580935406,
-      "observed_expected_ratio": 0.9986980332473798,
+      "predicted_observed_ratio": 0.9986980332473798,
       "extras": {
         "graph_gain_share": 0.10701958927931196
-      }
+      },
+      "observed_expected_ratio": 1.001303664079909
     },
-    "C_graphsage": {
+    "Control_macro_default": {
       "n": 283026,
       "positive_rate": 0.14886264866125373,
-      "mean_prediction": 0.13697783837159086,
-      "roc_auc": 0.6615782044190212,
-      "pr_auc": 0.23500700739448732,
-      "gini": 0.3231564088380423,
-      "ks": 0.23418030463505313,
-      "brier": 0.12170146745524028,
-      "log_loss": 0.4004738628065282,
-      "ece": 0.011884810289662878,
-      "mce": 0.02457345342378006,
-      "calibration_slope": 0.956213434988847,
-      "calibration_intercept": 0.026071791308361455,
-      "observed_expected_ratio": 0.9201625767340235,
-      "extras": {}
+      "mean_prediction": 0.13854498070936924,
+      "roc_auc": 0.6690870236020434,
+      "pr_auc": 0.24267411441819864,
+      "gini": 0.33817404720408684,
+      "ks": 0.24360947119657994,
+      "brier": 0.12108070240896135,
+      "log_loss": 0.39813771808447007,
+      "ece": 0.01031766795188447,
+      "mce": 0.026492863914878373,
+      "calibration_slope": 0.9646092742650896,
+      "calibration_intercept": 0.02799090507047512,
+      "predicted_observed_ratio": 0.9306900149589371,
+      "extras": {
+        "graph_gain_share": 0.0
+      },
+      "observed_expected_ratio": 1.0744716113067152
+    },
+    "Control_shuffled_cohort": {
+      "n": 283026,
+      "positive_rate": 0.14886264866125373,
+      "mean_prediction": 0.14139734557532363,
+      "roc_auc": 0.6677245504447482,
+      "pr_auc": 0.2424591089399311,
+      "gini": 0.3354491008894964,
+      "ks": 0.2422281650524255,
+      "brier": 0.12112129031472411,
+      "log_loss": 0.39805952169079073,
+      "ece": 0.007665545891123949,
+      "mce": 0.02091586034904902,
+      "calibration_slope": 0.9788005991881316,
+      "calibration_intercept": 0.02757417830804273,
+      "predicted_observed_ratio": 0.9498510663818842,
+      "extras": {},
+      "observed_expected_ratio": 1.0527966282220855
     }
   },
   "cohort_features": [
@@ -74,57 +97,5 @@
     "cohort_emp_mean_loan_amnt",
     "cohort_emp_mean_annual_inc"
   ],
-  "gnn": {
-    "device": "cuda",
-    "best_epoch": 3,
-    "best_valid_auc": 0.6644530491992224,
-    "n_node_features": 125,
-    "history": [
-      {
-        "epoch": 0,
-        "train_loss": 0.39858742096485233,
-        "valid_auc": 0.65799645894911
-      },
-      {
-        "epoch": 1,
-        "train_loss": 0.3656361736038811,
-        "valid_auc": 0.6628567179568529
-      },
-      {
-        "epoch": 2,
-        "train_loss": 0.36441041121625495,
-        "valid_auc": 0.6621347075194371
-      },
-      {
-        "epoch": 3,
-        "train_loss": 0.36343077627512127,
-        "valid_auc": 0.6644530491992224
-      },
-      {
-        "epoch": 4,
-        "train_loss": 0.3626872204307817,
-        "valid_auc": 0.663386478546874
-      },
-      {
-        "epoch": 5,
-        "train_loss": 0.3620125680652439,
-        "valid_auc": 0.6632785723751847
-      },
-      {
-        "epoch": 6,
-        "train_loss": 0.36165754484315205,
-        "valid_auc": 0.6625839084487246
-      },
-      {
-        "epoch": 7,
-        "train_loss": 0.36094127213343596,
-        "valid_auc": 0.6637976284898477
-      },
-      {
-        "epoch": 8,
-        "train_loss": 0.3610071906676659,
-        "valid_auc": 0.6630538396356743
-      }
-    ]
-  }
+  "gnn": {}
 }

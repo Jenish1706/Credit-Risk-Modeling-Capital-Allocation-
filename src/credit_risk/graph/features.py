@@ -283,3 +283,63 @@ def save_cohort_features(features: pd.DataFrame, path: str | Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     features.to_parquet(path, index=False, compression="snappy")
     return path
+
+
+def compute_macro_default_rate(
+    df: pd.DataFrame,
+    period_column: str = "issue_period",
+    observed_column: str = "outcome_observed_period",
+    label_column: str = "default_observed",
+    window_months: int = 36,
+    default_prior: float = 0.1267,
+) -> np.ndarray:
+    """Compute portfolio-wide time-respecting recent default rate for each loan (Control arm a).
+
+    Looks back over `window_months` of historical resolutions observable at decision time.
+    """
+    months = _period_to_int(df[period_column])
+    observed = _period_to_int(df[observed_column], allow_na=True)
+    labels = pd.to_numeric(df[label_column], errors="coerce").to_numpy(dtype=float)
+
+    res_mask = ~np.isnan(observed)
+    res_positions = np.where(res_mask)[0]
+    if len(res_positions) == 0:
+        return np.full(len(df), default_prior, dtype=np.float32)
+
+    res_order = np.argsort(observed[res_positions], kind="stable")
+    pos_by_res = res_positions[res_order]
+    o_sorted = observed[pos_by_res]
+    lab_sorted = labels[pos_by_res]
+
+    present = ~np.isnan(lab_sorted)
+    csum_bad = np.concatenate([[0.0], np.cumsum(np.where(present, lab_sorted, 0.0))])
+    ccnt_res = np.concatenate([[0.0], np.cumsum(present.astype(float))])
+
+    hi = np.searchsorted(o_sorted, months, side="right")
+    lo = np.searchsorted(o_sorted, months - window_months, side="left")
+    macro_res = np.maximum(ccnt_res[hi] - ccnt_res[lo], 0)
+    macro_bad = np.maximum(csum_bad[hi] - csum_bad[lo], 0)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rate = np.where(macro_res > 0, macro_bad / macro_res, default_prior)
+    return rate.astype(np.float32)
+
+
+def shuffle_keys_within_period(
+    df: pd.DataFrame,
+    keys: tuple[str, ...] = ("zip3", "emp_norm"),
+    period_col: str = "issue_period",
+    seed: int = 42,
+) -> pd.DataFrame:
+    """Shuffle cohort keys within each issue period to destroy cohort identity (Control arm b)."""
+    rng = np.random.default_rng(seed)
+    df_shuffled = df.copy()
+    grouped = df.groupby(period_col).indices
+    for period, indices in grouped.items():
+        for k in keys:
+            if k in df_shuffled.columns:
+                vals = df_shuffled.loc[indices, k].to_numpy().copy()
+                rng.shuffle(vals)
+                df_shuffled.loc[indices, k] = vals
+    return df_shuffled
+

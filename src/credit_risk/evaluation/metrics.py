@@ -244,3 +244,65 @@ def compare_models(results: dict[str, RiskMetrics]) -> pd.DataFrame:
     frame = frame.drop(columns=["extras"], errors="ignore")
     numeric = frame.apply(pd.to_numeric, errors="coerce")
     return numeric.sort_values("roc_auc", ascending=False)
+
+
+def paired_bootstrap_calibration_comparison(
+    y_true: np.ndarray,
+    p_candidate: np.ndarray,
+    p_control: np.ndarray,
+    n_resamples: int = 2000,
+    seed: int = 42,
+) -> dict[str, object]:
+    """Paired bootstrap comparison between candidate model and control on ECE and O/E.
+
+    Tests whether candidate achieves lower ECE and closer O/E to 1.0 than control.
+    Returns delta estimates, 95% bootstrap confidence intervals, and empirical p-values.
+    """
+    rng = np.random.default_rng(seed)
+    y_arr = np.asarray(y_true, dtype=float)
+    pb_arr = np.asarray(p_candidate, dtype=float)
+    pc_arr = np.asarray(p_control, dtype=float)
+    n = len(y_arr)
+
+    ece_b_orig, _ = expected_calibration_error(y_arr, pb_arr)
+    ece_c_orig, _ = expected_calibration_error(y_arr, pc_arr)
+    delta_ece_orig = float(ece_b_orig - ece_c_orig)
+
+    oe_b_orig = float(y_arr.mean() / pb_arr.mean()) if pb_arr.mean() > 0 else float("nan")
+    oe_c_orig = float(y_arr.mean() / pc_arr.mean()) if pc_arr.mean() > 0 else float("nan")
+    gap_b_orig = abs(oe_b_orig - 1.0)
+    gap_c_orig = abs(oe_c_orig - 1.0)
+    delta_oe_gap_orig = float(gap_b_orig - gap_c_orig)
+
+    delta_eces = np.empty(n_resamples, dtype=float)
+    delta_oe_gaps = np.empty(n_resamples, dtype=float)
+
+    for i in range(n_resamples):
+        idx = rng.choice(n, size=n, replace=True)
+        y_samp = y_arr[idx]
+        pb_samp = pb_arr[idx]
+        pc_samp = pc_arr[idx]
+
+        eb, _ = expected_calibration_error(y_samp, pb_samp)
+        if np.isnan(eb):
+            eb, _ = expected_calibration_error(y_samp, pb_samp, strategy="uniform")
+        ec, _ = expected_calibration_error(y_samp, pc_samp)
+        if np.isnan(ec):
+            ec, _ = expected_calibration_error(y_samp, pc_samp, strategy="uniform")
+        delta_eces[i] = eb - ec
+
+        y_m = y_samp.mean()
+        oeb = y_m / pb_samp.mean() if pb_samp.mean() > 0 else 1.0
+        oec = y_m / pc_samp.mean() if pc_samp.mean() > 0 else 1.0
+        delta_oe_gaps[i] = abs(oeb - 1.0) - abs(oec - 1.0)
+
+
+    return {
+        "delta_ece": delta_ece_orig,
+        "delta_ece_ci": (float(np.percentile(delta_eces, 2.5)), float(np.percentile(delta_eces, 97.5))),
+        "p_val_ece": float((delta_eces >= 0).mean()),
+        "delta_oe_gap": delta_oe_gap_orig,
+        "delta_oe_gap_ci": (float(np.percentile(delta_oe_gaps, 2.5)), float(np.percentile(delta_oe_gaps, 97.5))),
+        "p_val_oe_gap": float((delta_oe_gaps >= 0).mean()),
+    }
+

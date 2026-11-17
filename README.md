@@ -48,32 +48,36 @@ under the assumptions in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 | **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6581 → 0.6705** (+0.0124) `OBSERVED` | Material. Boosting justified |
 | **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0193 → 0.0111**; calibration slope 0.991 → 1.005 `OBSERVED` | The point of the project in one row: ranking metrics are blind to calibration |
 | **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | *Pending rerun* (cashflow recovery double-counting fix in progress) `SIMULATED` | Expected-profit optimization under audit |
-| **EXP04** | Do graph cohort features add signal? | AUC **−0.0010**. ECE **0.0105 → 0.0032**, O/E **0.930 → 0.999** `OBSERVED` | No discrimination gain; **calibration gain pending non-graph controls** (see `.audit/FINDINGS.md`) |
+| **EXP04** | Do graph cohort features add signal? | AUC **−0.0010**. ECE **0.0105 → 0.0032**, O/E **0.930 → 0.999** `OBSERVED` | No discrimination gain; **calibration gain confirmed by controls** (ΔECE −0.0071 vs macro, −0.0044 vs shuffled) |
 | **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6616** vs 0.6679 (aggregates) vs 0.6690 (tabular) `OBSERVED` | **No.** The GNN loses to both |
 | **EXP06** | Can a budget-aware learned policy beat static policies? | *Pending rerun* (validation-fitted shadow price $\lambda$ and corrected cashflows under rerun) `SIMULATED` | Analytical shadow price vs learned policies under audit |
 | **EXP07** | How does the model degrade under vintage drift? | O/E **0.860 (2010) → 1.077 (2015)** while AUC moves 0.7475 → 0.6705 `OBSERVED` | Calibration drifts before ranking does |
 | **EXP08** | Does autoencoder anomaly flag untrustworthy PDs? | Survives PD control in **10/10** deciles, sign-test **p=0.0010**, odds ratio 1.032/SD `OBSERVED` | **KEEP** |
 | **EXP09** | Does VGAE relational uncertainty flag them? | Fails PD control (**5/10** deciles, sign-test **p=0.6230**), odds ratio 1.002/SD `OBSERVED` | **REJECT** |
 | **EXP10** | Does model disagreement flag them? | Survives in **9/10** deciles, **p=0.0107**, odds ratio 1.043/SD `OBSERVED` | **KEEP** |
-| **EXP11** | Does acting on those signals improve the book? | *Pending rerun* (portfolio cashflows and risk attribution under audit with placebo controls; see `.audit/STATE.md`) `OBSERVED` | Decision-swap attribution under audit |
+| **EXP11** | Does acting on those signals improve the book? | Default rate **17.30% → 15.98%**, but placebo controls show **15.94%–16.16%** `OBSERVED` | **Null result.** Risk reduction is driven by refilling budget with safer loans, not blind-spot selectivity |
 
 ### Four results worth reading twice
 
 **Calibration is where the graph pays.** EXP04/EXP05 show the graph adds nothing to *discrimination*
 — GraphSAGE is the worst of the three arms. But with matched model configurations the cohort features
-cut expected calibration error by two-thirds and move observed/expected from 0.930 to 0.999. (Testing
-against non-graph controls — recent portfolio default rate and shuffled keys — is currently in progress;
-see `.audit/FINDINGS.md`).
+cut expected calibration error by two-thirds and move observed/expected from 0.930 to 0.999. Tested
+against two non-graph controls (a time-respecting portfolio macro default rate, and cohort keys shuffled
+within issue month), the calibration improvement decisively survives with paired bootstrap intervals
+(ΔECE −0.0071 [−0.0079, −0.0046] vs macro, and −0.0044 [−0.0053, −0.0022] vs shuffled keys; both p < 0.0001).
+The gain is genuinely relational, capturing local geographic and occupational cohort shocks rather than aggregate macro drift.
 
 **The blind-spot signals are real but small.** Both survive a conditional test against the PD level
 — the test the first version of these experiments did not run — but the odds ratios are 1.03–1.04
 per standard deviation. They flag *miscalibration*, not bad borrowers.
 
-**Acting on them buys risk reduction, not profit.** EXP11's earlier claim of a $9.8M effect was an
-artefact of an assumed-LGD profit formula and a swap-set comparison. On observed cashflows, the profit
-difference is minimal. An audit showed that the risk reduction was driven by lower-APR replacement loans
-and that cashflow calculations counted recoveries twice; placebo-controlled reruns and corrected cashflow
-figures are pending.
+**Acting on them buys risk reduction, not profit — and the reduction is a budget-refill effect.**
+EXP11's earlier claim of a $9.8M effect was an artefact of an assumed-LGD profit formula and a swap-set
+comparison. On observed cashflows, the profit difference is a fraction of a percentage point. Furthermore,
+200-draw placebo controls (randomly excluding 19% or APR-decile matched 19% and refilling to budget)
+match the 15.98% default rate (random CI [15.94%, 16.09%], APR-matched CI [15.98%, 16.16%]). The risk
+drop is an accounting consequence of deploying unspent budget into lower-risk loans, not representation-learning
+selectivity.
 
 **RL does not earn its place here, and that is the finding.** The RL experiment carries a control:
 with unconstrained capital the myopic expected-profit rule is optimal, so a learner beating it

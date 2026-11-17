@@ -269,3 +269,38 @@ def test_ungated_cohort_rate_leaks_measurably():
         f"(naive {naive_corr:.4f} vs gated {gated_corr:.4f}). If it is not, the resolution "
         f"gating is not restricting anything."
     )
+
+
+def test_macro_default_rate_and_shuffled_controls_interface(enriched):
+    """P0-4: Verify non-graph controls (macro default rate, monthly key shuffle) and bootstrap."""
+    from credit_risk.graph.features import compute_macro_default_rate, shuffle_keys_within_period
+    from credit_risk.evaluation.metrics import paired_bootstrap_calibration_comparison
+
+    # 1. Macro default rate is finite and valid
+    rate = compute_macro_default_rate(enriched)
+    assert len(rate) == len(enriched)
+    assert np.isfinite(rate).all()
+    assert (rate >= 0.0).all() and (rate <= 1.0).all()
+
+    # 2. Shuffled cohort keys preserve within-period marginal distribution
+    shuffled = shuffle_keys_within_period(enriched, keys=("zip3",), seed=42)
+    assert len(shuffled) == len(enriched)
+    for period, grp in enriched.groupby("issue_period"):
+        orig_counts = grp["zip3"].value_counts().to_dict()
+        shuf_counts = shuffled.loc[grp.index, "zip3"].value_counts().to_dict()
+        assert orig_counts == shuf_counts
+
+    # 3. Paired bootstrap comparison returns valid intervals and p-values
+    rng = np.random.default_rng(42)
+    n = 200
+    p1 = rng.beta(2, 5, n)
+    p2 = rng.beta(3, 4, n)
+    y = (rng.random(n) < p1).astype(float)
+    comp = paired_bootstrap_calibration_comparison(y, p1, p2, n_resamples=50, seed=42)
+    assert isinstance(comp["delta_ece_ci"], tuple)
+    assert comp["delta_ece_ci"][0] <= comp["delta_ece_ci"][1]
+    assert isinstance(comp["delta_oe_gap_ci"], tuple)
+    assert comp["delta_oe_gap_ci"][0] <= comp["delta_oe_gap_ci"][1]
+    assert 0.0 <= comp["p_val_ece"] <= 1.0
+
+
