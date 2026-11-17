@@ -106,6 +106,20 @@ def assign_split(issue_period: pd.Series, windows: SplitWindows) -> pd.Series:
     return out
 
 
+def assign_test_holdout(issue_period: pd.Series, cutoff: str = "2015-06") -> pd.Series:
+    """Freeze 2015-07..2015-12 as an untouched final holdout split within the test book.
+
+    P1-6c: Prevents test-set reuse. Decisions regarding threshold selection, 90th-percentile
+    flags, and capital allocation caps tuned on 2015 H1 (or validation) are tested on 2015 H2
+    without contamination.
+    """
+    idx = pd.PeriodIndex(issue_period, freq="M")
+    cutoff_p = pd.Period(cutoff, freq="M")
+    out = pd.Series("test_holdout", index=issue_period.index, dtype="object")
+    out[idx <= cutoff_p] = "test_dev"
+    return out
+
+
 def assert_temporal_ordering(df: pd.DataFrame, split_col: str = "split",
                              period_col: str = "issue_period") -> None:
     """Fail if any training row was issued after any test row.
