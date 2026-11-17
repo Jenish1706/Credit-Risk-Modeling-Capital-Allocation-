@@ -7,8 +7,8 @@ headless run produces every table without touching this module.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import matplotlib
 

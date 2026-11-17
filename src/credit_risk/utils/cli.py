@@ -102,7 +102,7 @@ def write_manifest(
 
 def save_table(frame: pd.DataFrame, paths: Paths, name: str, index: bool = True) -> Path:
     path = paths.results_tables / f"{name}.csv"
-    frame.to_csv(path, index=index)
+    frame.to_csv(path, index=index, float_format="%.6g", encoding="ascii")
     LOG.info("wrote %s (%d rows)", path.name, len(frame))
     return path
 

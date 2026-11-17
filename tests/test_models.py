@@ -23,7 +23,6 @@ from credit_risk.models.baseline import LogisticBaseline, LogisticConfig
 from credit_risk.models.boosting import BoostingConfig, BoostingModel
 from credit_risk.models.calibration import ProbabilityCalibrator, compare_calibrations
 
-
 # ---------------------------------------------------------------------------
 # The calibration argument
 # ---------------------------------------------------------------------------

@@ -101,7 +101,7 @@ class ActionSpace:
         requested = np.asarray(requested, dtype=float)[:, None]
         return np.minimum(requested * self.multipliers[None, :], self.max_exposure)
 
-    def without_review(self) -> "ActionSpace":
+    def without_review(self) -> ActionSpace:
         """The action set with manual review removed.
 
         Used for the headline policy comparisons (EXP03, EXP06). The value of a manual review

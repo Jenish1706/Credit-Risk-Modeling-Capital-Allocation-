@@ -322,7 +322,7 @@ def _outcome_observed_period(df: pd.DataFrame) -> pd.Series:
     out = pd.Series(pd.NaT, index=df.index, dtype="period[M]")
     if valid.any():
         shifted = pd.PeriodIndex(
-            [max(p + int(l), i + 1) for p, l, i in zip(base[valid], lag[valid], df.loc[valid, "issue_period"], strict=True)], freq="M"
+            [max(p + int(lag_val), i + 1) for p, lag_val, i in zip(base[valid], lag[valid], df.loc[valid, "issue_period"], strict=True)], freq="M"
         )
         out.loc[valid] = shifted
     return out

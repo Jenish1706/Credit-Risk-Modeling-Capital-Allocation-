@@ -26,8 +26,9 @@ under these assumptions", and ``docs/RL_FORMULATION.md`` makes no larger one.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd

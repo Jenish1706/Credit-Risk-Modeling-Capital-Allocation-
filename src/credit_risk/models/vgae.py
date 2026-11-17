@@ -83,11 +83,11 @@ if TORCH_AVAILABLE:
 
         def encode(
             self,
-            features: "torch.Tensor",
-            batch_nodes: "torch.Tensor",
-            neighbour_index: "torch.Tensor",
-            neighbour_mask: "torch.Tensor",
-        ) -> tuple["torch.Tensor", "torch.Tensor"]:
+            features: torch.Tensor,
+            batch_nodes: torch.Tensor,
+            neighbour_index: torch.Tensor,
+            neighbour_mask: torch.Tensor,
+        ) -> tuple[torch.Tensor, torch.Tensor]:
             fan = self.config.fanout
             k1 = min(fan[0], neighbour_index.shape[2])
             idx1 = neighbour_index[batch_nodes][:, :, :k1]
@@ -118,7 +118,7 @@ if TORCH_AVAILABLE:
             # reported sigma comparable across nodes, which is the quantity the experiment uses.
             return mu, logstd.clamp(-6.0, 2.0)
 
-        def reparameterise(self, mu: "torch.Tensor", logstd: "torch.Tensor") -> "torch.Tensor":
+        def reparameterise(self, mu: torch.Tensor, logstd: torch.Tensor) -> torch.Tensor:
             if not self.training:
                 return mu
             return mu + torch.randn_like(mu) * torch.exp(logstd)
@@ -131,7 +131,7 @@ if TORCH_AVAILABLE:
 class VGAETrainer:
     """Trains the VGAE by link reconstruction with negative sampling."""
 
-    def __init__(self, config: "VGAEConfig | None" = None) -> None:
+    def __init__(self, config: VGAEConfig | None = None) -> None:
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is required for the VGAE layer (EXP09).")
         self.config = config or VGAEConfig()
@@ -155,7 +155,7 @@ class VGAETrainer:
         }
 
     # -- loss ---------------------------------------------------------------
-    def _batch_loss(self, batch: "torch.Tensor", n_nodes: int) -> tuple["torch.Tensor", float]:
+    def _batch_loss(self, batch: torch.Tensor, n_nodes: int) -> tuple[torch.Tensor, float]:
         """Reconstruction + KL for one batch, using a single encode pass.
 
         The batch node, its sampled positive neighbours and an equal number of uniformly-drawn

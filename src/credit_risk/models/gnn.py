@@ -107,10 +107,10 @@ if TORCH_AVAILABLE:
 
         def forward(
             self,
-            h_self: "torch.Tensor",  # (..., D)
-            h_neighbours: "torch.Tensor",  # (..., R, K, D)
-            mask: "torch.Tensor",  # (..., R, K)
-        ) -> "torch.Tensor":
+            h_self: torch.Tensor,  # (..., D)
+            h_neighbours: torch.Tensor,  # (..., R, K, D)
+            mask: torch.Tensor,  # (..., R, K)
+        ) -> torch.Tensor:
             # Masked mean over the K sampled neighbours, per relation. Nodes with no eligible
             # predecessor in a relation get a zero vector, which the concatenation keeps
             # distinguishable from "neighbours whose features happen to average to zero"
@@ -145,18 +145,18 @@ if TORCH_AVAILABLE:
                 nn.Linear(config.hidden_dim, 1),
             )
 
-        def _activate(self, h: "torch.Tensor", last: bool) -> "torch.Tensor":
+        def _activate(self, h: torch.Tensor, last: bool) -> torch.Tensor:
             if last:
                 return nn.functional.normalize(h, p=2, dim=-1) if self.config.l2_normalize else h
             return torch.relu(h)
 
         def embed(
             self,
-            features: "torch.Tensor",  # (n_nodes, D) full feature table on device
-            batch_nodes: "torch.Tensor",  # (B,) int64
-            neighbour_index: "torch.Tensor",  # (n_nodes, R, K) int64
-            neighbour_mask: "torch.Tensor",  # (n_nodes, R, K) bool
-        ) -> "torch.Tensor":
+            features: torch.Tensor,  # (n_nodes, D) full feature table on device
+            batch_nodes: torch.Tensor,  # (B,) int64
+            neighbour_index: torch.Tensor,  # (n_nodes, R, K) int64
+            neighbour_mask: torch.Tensor,  # (n_nodes, R, K) bool
+        ) -> torch.Tensor:
             """Compute embeddings for ``batch_nodes`` by explicit nested neighbour gathering.
 
             Written for two layers, which is what the config uses. The nesting is deliberately
@@ -197,11 +197,11 @@ if TORCH_AVAILABLE:
 
         def forward(
             self,
-            features: "torch.Tensor",
-            batch_nodes: "torch.Tensor",
-            neighbour_index: "torch.Tensor",
-            neighbour_mask: "torch.Tensor",
-        ) -> "torch.Tensor":
+            features: torch.Tensor,
+            batch_nodes: torch.Tensor,
+            neighbour_index: torch.Tensor,
+            neighbour_mask: torch.Tensor,
+        ) -> torch.Tensor:
             return self.head(
                 self.embed(features, batch_nodes, neighbour_index, neighbour_mask)
             ).squeeze(-1)

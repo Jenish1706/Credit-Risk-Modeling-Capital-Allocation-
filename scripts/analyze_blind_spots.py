@@ -30,7 +30,10 @@ from credit_risk.decision.blindspot import (  # noqa: E402
     marginal_signal_table,
 )
 from credit_risk.features.build import FeatureBuilder  # noqa: E402
-from credit_risk.models.autoencoder import TabularAutoencoder, TabularAutoencoderConfig  # noqa: E402
+from credit_risk.models.autoencoder import (  # noqa: E402
+    TabularAutoencoder,
+    TabularAutoencoderConfig,
+)
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
     detect_source,

@@ -159,7 +159,11 @@ def main() -> int:
     # -- figures ---------------------------------------------------------------
     if not args.no_figures:
         from credit_risk.evaluation.plots import (
-            gains_chart, reliability_diagram, roc_curves, save, score_distribution,
+            gains_chart,
+            reliability_diagram,
+            roc_curves,
+            save,
+            score_distribution,
         )
         curves = {n: (y_test, s) for n, s in scores.items()}
         curves["lightgbm (calibrated)"] = (y_test, calibration.calibrated_test[best_method])

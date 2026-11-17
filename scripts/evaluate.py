@@ -225,7 +225,11 @@ def main() -> int:
     # =====================================================================
     if not args.no_figures:
         from credit_risk.evaluation.plots import (
-            drift_bars, save, score_distribution, shap_summary_bar, vintage_calibration,
+            drift_bars,
+            save,
+            score_distribution,
+            shap_summary_bar,
+            vintage_calibration,
         )
         save(shap_summary_bar(shap_result.global_importance()),
              paths.results_figures / f"{run_name}_shap.png")

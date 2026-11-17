@@ -122,9 +122,7 @@ class Config(Mapping):
         """Fetch a nested value by dotted path, e.g. ``cfg.get_path("model.params.num_leaves")``."""
         node: Any = self
         for part in dotted.split("."):
-            if isinstance(node, Config) and part in node:
-                node = node[part]
-            elif isinstance(node, Mapping) and part in node:
+            if isinstance(node, Mapping) and part in node:
                 node = node[part]
             else:
                 return default

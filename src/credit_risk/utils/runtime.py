@@ -16,7 +16,7 @@ import random
 import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -189,7 +189,7 @@ class RunManifest:
     data_source: str = "unknown"  # "real" | "synthetic" | "unknown"
     device: str = "cpu"
     notes: dict[str, Any] = field(default_factory=dict)
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     python: str = field(default_factory=lambda: sys.version.split()[0])
     platform_: str = field(default_factory=platform.platform)
     git_commit: str | None = field(default_factory=_git_commit)

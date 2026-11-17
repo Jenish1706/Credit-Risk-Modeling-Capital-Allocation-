@@ -16,7 +16,6 @@ from credit_risk.data import schema
 from credit_risk.data.splits import SplitWindows, assert_temporal_ordering
 from credit_risk.features.build import FeatureBuilder, FeatureSpec
 
-
 # ---------------------------------------------------------------------------
 # The deny-list itself
 # ---------------------------------------------------------------------------

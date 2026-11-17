@@ -91,7 +91,7 @@ if TORCH_AVAILABLE:
             decoder.append(nn.Linear(in_dim, input_dim))
             self.decoder = nn.Sequential(*decoder)
 
-        def forward(self, x: "torch.Tensor") -> tuple["torch.Tensor", "torch.Tensor"]:
+        def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
             latent = self.encoder(x)
             return latent, self.decoder(latent)
 
@@ -112,7 +112,7 @@ class TabularAutoencoder:
         self.feature_stds: pd.Series | None = None
 
     # -- preparation -------------------------------------------------------
-    def _prepare(self, X: pd.DataFrame, fit_stats: bool = False) -> "torch.Tensor":
+    def _prepare(self, X: pd.DataFrame, fit_stats: bool = False) -> torch.Tensor:
         numeric = X.select_dtypes(include=[np.number])
 
         if fit_stats:
