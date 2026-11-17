@@ -13,7 +13,6 @@ from credit_risk.data.splits import SplitWindows, assign_split
 from credit_risk.data.synthetic import SyntheticSpec, generate
 from credit_risk.utils.config import Config, load_config, parse_overrides
 
-
 # ---------------------------------------------------------------------------
 # Synthetic generator: it must be schema-faithful or it tests nothing
 # ---------------------------------------------------------------------------
@@ -155,7 +154,7 @@ def test_config_supports_attribute_and_item_access():
 
 def test_config_missing_key_error_lists_alternatives():
     with pytest.raises(AttributeError, match="available keys"):
-        Config({"a": 1}).nope
+        _ = Config({"a": 1}).nope
 
 
 def test_parse_overrides_builds_nested_typed_values():
@@ -363,3 +362,15 @@ def test_sage_layer_ignores_masked_neighbours():
     neighbours[:, :, 1:, :] = 1e6
     second = layer(h_self, neighbours, mask)
     assert torch.allclose(first, second)
+
+
+def test_deployment_realism_evaluates_on_synthetic_frame(enriched):
+    """P1-5: Test that deployment realism evaluation splits strictly on observable outcomes."""
+    from scripts.analyze_deployment_realism import evaluate_deployment_realism
+
+    table, details = evaluate_deployment_realism(enriched, seed=42)
+    assert len(table) == 3
+    assert "test_auc" in table.columns
+    assert "test_ece" in table.columns
+    assert details["n_test"] == len(enriched[enriched["split"] == "test"])
+
