@@ -15,6 +15,11 @@ Every defect here was reproduced with an isolated script, quantified on the full
 | **P0-3** | High | `scripts/run_swaps.py` | EXP11 risk reduction was an artifact of budget refilling, not blind spots | **Fixed** | Policy B default rate (15.98%) falls inside placebo intervals (Random 16.01%, APR-matched 16.08%) |
 | **P0-4** | High | `scripts/train_gnn.py` | Cohort graph calibration lacked non-graph macro and shuffled controls | **Fixed** | Arm B calibration gain confirmed: outperforms macro default ($\Delta\text{ECE} = -0.0071$, $p < 0.0001$) and month-shuffled keys ($\Delta\text{ECE} = -0.0044$, $p < 0.0001$) |
 | **P1-5** | High | `scripts/analyze_deployment_realism.py` | Benchmark assumed mature labels for loans immature at deployment cutoff | **Quantified** | Deployment-realistic retraining: test AUC $0.6690 \to 0.6478$ ($\Delta = -0.0212$); ECE surges $0.0105 \to 0.0374$ ($+256\%$) |
+| **P1-6a** | Medium | `models/calibration.py` | EXP02 calibration gain reported without base-rate decomposition | **Fixed** | Intercept-only baseline proves 101.3% of ECE reduction is base-rate shift ($\bar{y}: 12.7\% \to 14.1\%$) with unit slope |
+| **P1-6b** | Medium | `scripts/train_policy.py` | EXP06 control check breaches under vintage drift reported as "control holds" | **Fixed** | Scaled to 30 seeds; unconstrained Thompson sampling (101,203) beats myopic rule (36,943) due to stale cashflows |
+| **P1-6c** | Medium | `data/splits.py` | 2015 test book reused across threshold/hyperparameter selection | **Fixed** | Isolated 2015-07..2015-12 as frozen final holdout (`assign_test_holdout`) |
+| **P1-6d** | Medium | `simulation/environment.py` | Simulator evaluated defaults using tested model predictions circularly | **Fixed** | Decoupled by using ground-truth observed defaults/returns at observed exposures |
+| **P1-6e** | Medium | `decision/blindspot.py` | Blind-spot odds ratios reported without CIs; sign test one-sided without stating | **Fixed** | Added analytical Fisher information Wald 95% CIs and two-sided binomial sign test p-values |
 
 ---
 
@@ -169,4 +174,4 @@ All fixes and safeguards are permanently enforced via regression tests:
 - `tests/test_graph_leakage.py`: Tests non-graph controls and paired bootstrap calibration metrics.
 - `tests/test_pipeline.py`: Validates deployment realism evaluation pipelines and stratification invariants.
 
-Total test suite: **155 passing tests** across tabular, graph, simulation, calibration, and RL modules.
+Total test suite: **161 passing tests** across tabular, graph, simulation, calibration, and RL modules.

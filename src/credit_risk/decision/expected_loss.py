@@ -176,7 +176,12 @@ def fit_cashflow_model(
         slope, intercept = np.polyfit(bad["_apr"].to_numpy(), -bad["_return"].to_numpy(), 1)
         model.bad_slope, model.bad_intercept = float(slope), float(intercept)
 
-        # Empirical LGD as conventionally defined: principal not recovered, over amount lent.
+        # Empirical loss rate on funded amount (often informally called "empirical LGD"):
+        # This is the net lifetime loss rate on original funded principal:
+        # 1 - (principal_recovered + net_recoveries) / funded_amnt.
+        # Note: Basel IRB LGD is formally defined over Exposure at Default (EAD). Since loans
+        # amortize prior to default, true Basel LGD on EAD is higher (~75-80%). In decision-layer
+        # economics, however, the denominator is the capital committed at origination.
         funded = pd.to_numeric(bad["funded_amnt"], errors="coerce")
         principal_back = (
             pd.to_numeric(bad["total_rec_prncp"], errors="coerce").fillna(0.0)
