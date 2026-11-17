@@ -98,11 +98,12 @@ def render_results_table() -> str:
     # EXP06
     df_sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
     s60 = df_sweep[df_sweep["condition"] == "budget=0.60"].set_index("policy")
-    rew_val = float(s60.loc["expected_profit(lambda=0.0052)", "mean_reward"])
-    rew_orc = float(s60.loc["oracle_ceiling(lambda=0.0004)", "mean_reward"])
+    rew_thomp = float(s60.loc["thompson", "mean_reward"])
     rew_lucb = float(s60.loc["linucb@alpha=1", "mean_reward"])
+    rew_orc = float(s60.loc["oracle_ceiling(lambda=0.0004)", "mean_reward"])
+    rew_val = float(s60.loc["expected_profit(lambda=0.0052)", "mean_reward"])
     res_exp06 = (
-        f"At 60% budget: val $\\lambda$ **{rew_val:,.0f}** vs oracle **{rew_orc:,.0f}** vs LinUCB **{rew_lucb:,.0f}** `SIMULATED`"
+        f"At 60% budget: Thompson **{rew_thomp:,.0f}**, LinUCB **{rew_lucb:,.0f}**, oracle **{rew_orc:,.0f}**, val $\\lambda$ **{rew_val:,.0f}** `SIMULATED`"
     )
 
     # EXP07
@@ -144,7 +145,7 @@ def render_results_table() -> str:
         ("EXP03", "Does expected-profit optimisation beat a fixed PD threshold?", res_exp03, "**Null result.** Myopic rule underperforms threshold under vintage deterioration on observed cashflows"),
         ("EXP04", "Do graph cohort features add signal?", res_exp04, "No discrimination gain; **calibration gain confirmed by controls** (ΔECE −0.0071 vs macro, −0.0044 vs shuffled)"),
         ("EXP05", "Does GraphSAGE beat the aggregates?", res_exp05, "**No.** The GNN loses to both"),
-        ("EXP06", "Can a budget-aware learned policy beat static policies?", res_exp06, "**Analytical shadow price leads.** Validation-tuned $\\lambda$ outperforms bandit learners; oracle ceiling bounds performance"),
+        ("EXP06", "Can a budget-aware learned policy beat static policies?", res_exp06, "**Bandits adapt to vintage drift at 60%; capital shadow pricing dominates at 20%**"),
         ("EXP07", "How does the model degrade under vintage drift?", res_exp07, "Calibration drifts before ranking does"),
         ("EXP08", "Does autoencoder anomaly flag untrustworthy PDs?", res_exp08, "**KEEP**"),
         ("EXP09", "Does VGAE relational uncertainty flag them?", res_exp09, "**REJECT**"),

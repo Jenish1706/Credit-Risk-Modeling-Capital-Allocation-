@@ -22,85 +22,534 @@
   "full_demand": 14042550.0,
   "exp03": {
     "n_episodes": {
-      "fixed_threshold@0.150": 12.0,
-      "risk_band": 12.0,
-      "expected_profit": 12.0,
-      "approve_all": 12.0
+      "fixed_threshold@0.150": 30.0,
+      "expected_profit": 30.0,
+      "risk_band": 30.0,
+      "approve_all": 30.0
     },
     "mean_reward": {
-      "fixed_threshold@0.150": 54990.81520809685,
-      "risk_band": 1650.2651663100878,
-      "expected_profit": -8079.375360242809,
-      "approve_all": -111088.78947410367
+      "fixed_threshold@0.150": 63348.630015304916,
+      "expected_profit": 36943.3532074883,
+      "risk_band": 8162.7808693288525,
+      "approve_all": -67146.37932972955
     },
     "std_reward": {
-      "fixed_threshold@0.150": 69214.06354697094,
-      "risk_band": 67218.25872332706,
-      "expected_profit": 135372.7193625786,
-      "approve_all": 82891.35218213339
+      "fixed_threshold@0.150": 65507.1875811059,
+      "expected_profit": 131040.98660913351,
+      "risk_band": 60489.48597556364,
+      "approve_all": 103598.74000181547
     },
     "min_reward": {
       "fixed_threshold@0.150": -95939.23561495295,
-      "risk_band": -122070.67178380486,
       "expected_profit": -249139.54713451944,
-      "approve_all": -274899.76467180956
+      "risk_band": -122070.67178380486,
+      "approve_all": -301178.96552117774
     },
     "p05_reward": {
-      "fixed_threshold@0.150": -49801.115173559985,
-      "risk_band": -107934.62602912127,
-      "expected_profit": -208073.66336626193,
-      "approve_all": -231661.15373135824
+      "fixed_threshold@0.150": -55836.002282638,
+      "expected_profit": -200312.84414433446,
+      "risk_band": -107712.10963404193,
+      "approve_all": -239522.71935689484
     },
     "approval_rate": {
-      "fixed_threshold@0.150": 0.6136111111111112,
-      "risk_band": 0.9497916666666666,
-      "expected_profit": 0.5711805555555555,
+      "fixed_threshold@0.150": 0.6180555555555555,
+      "expected_profit": 0.5705833333333333,
+      "risk_band": 0.9529166666666666,
       "approve_all": 1.0
     },
     "default_rate_of_book": {
-      "fixed_threshold@0.150": 0.0999740370235676,
-      "risk_band": 0.1328458162820633,
-      "expected_profit": 0.16448144154960234,
-      "approve_all": 0.1507638888888889
+      "fixed_threshold@0.150": 0.09853236093665242,
+      "expected_profit": 0.15986800284128913,
+      "risk_band": 0.13114613613427153,
+      "approve_all": 0.14752777777777779
     },
     "capital_deployed": {
-      "fixed_threshold@0.150": 9915852.083333334,
-      "risk_band": 11067996.875,
-      "expected_profit": 13956919.791666666,
-      "approve_all": 15439547.916666666
+      "fixed_threshold@0.150": 10008090.833333334,
+      "expected_profit": 13918085.416666666,
+      "risk_band": 11086869.166666666,
+      "approve_all": 15411452.5
     },
     "return_on_capital": {
-      "fixed_threshold@0.150": 0.005686660645849397,
-      "risk_band": 0.0001326909122094615,
-      "expected_profit": -0.0003707770559141443,
-      "approve_all": -0.007173360527111501
+      "fixed_threshold@0.150": 0.006377382394948491,
+      "expected_profit": 0.002748160276617048,
+      "risk_band": 0.0007174536788357916,
+      "approve_all": -0.004346029184295454
     },
     "revenue": {
-      "fixed_threshold@0.150": 1103349.8230497509,
-      "risk_band": 1263000.8965508004,
-      "expected_profit": 1783001.1291139992,
-      "approve_all": 1859722.7251425844
+      "fixed_threshold@0.150": 1115865.711611978,
+      "expected_profit": 1788266.3063911751,
+      "risk_band": 1265396.7837148348,
+      "approve_all": 1862941.5997436119
     },
     "losses": {
-      "fixed_threshold@0.150": 377663.3651333207,
-      "risk_band": 465046.30794699024,
-      "expected_profit": 899702.0362450752,
-      "approve_all": 918477.0573250218
+      "fixed_threshold@0.150": 375809.9495133397,
+      "expected_profit": 862246.1271420204,
+      "risk_band": 459300.89492883964,
+      "approve_all": 879340.9128233418
     },
     "costs": {
-      "fixed_threshold@0.150": 670695.6427083333,
-      "risk_band": 796304.3234375002,
-      "expected_profit": 891378.4682291667,
-      "approve_all": 1052334.457291667
+      "fixed_threshold@0.150": 676707.1320833333,
+      "expected_profit": 889076.8260416668,
+      "risk_band": 797933.1079166665,
+      "approve_all": 1050747.06625
     },
     "review_rate": {
       "fixed_threshold@0.150": 0.0,
-      "risk_band": 0.0,
       "expected_profit": 0.0,
+      "risk_band": 0.0,
       "approve_all": 0.0
     }
   },
-  "exp06": {},
+  "exp06": {
+    "unconstrained": {
+      "shadow_price_val": 0.0,
+      "shadow_price_oracle": 0.0,
+      "budget": null,
+      "verdict": "thompson beat expected_profit by +64,260 per episode (+173.9%), 95% CI [+33,334, +94,402], winning on 80% of seeds.",
+      "control_breach": "CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. It indicates the myopic policy is optimising a misspecified objective -- its good-loan yield and loss-rate coefficients are fitted on the 2010-2014 training window and applied to the 2015 test vintage.",
+      "q_implied_threshold": {
+        "table": [
+          {
+            "budget_bin": 0,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 0,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 1,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 2,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 3,
+            "approve_from_profit_bin": 3
+          }
+        ],
+        "n_visited_states": 32
+      }
+    },
+    "budget=0.60": {
+      "shadow_price_val": 0.0052418394401775575,
+      "shadow_price_oracle": 0.0004452593009345492,
+      "budget": 8425530.0,
+      "verdict": "No policy beat expected_profit significantly. Best was thompson at +14,782 per episode, 95% CI [-12,622, +42,261] -- the interval includes zero, so this is a null result.",
+      "control_breach": null,
+      "q_implied_threshold": {
+        "table": [
+          {
+            "budget_bin": 0,
+            "time_bin": 0,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 1,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 0,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 1,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 2,
+            "approve_from_profit_bin": 0
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 0,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 1,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 2,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 0,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 1,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 2,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 3,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 2,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 3,
+            "approve_from_profit_bin": 3
+          }
+        ],
+        "n_visited_states": 109
+      }
+    },
+    "budget=0.35": {
+      "shadow_price_val": 0.029043620643181358,
+      "shadow_price_oracle": 0.02319407694734814,
+      "budget": 4914892.5,
+      "verdict": "No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0232) at +10,574 per episode, 95% CI [-13,394, +34,391] -- the interval includes zero, so this is a null result.",
+      "control_breach": null,
+      "q_implied_threshold": {
+        "table": [
+          {
+            "budget_bin": 0,
+            "time_bin": 0,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 1,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 2,
+            "approve_from_profit_bin": 0
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 1,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 2,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 3,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 1,
+            "approve_from_profit_bin": 1
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 2,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 3,
+            "approve_from_profit_bin": 0
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 2,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 3,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 2,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 3,
+            "approve_from_profit_bin": 3
+          }
+        ],
+        "n_visited_states": 93
+      }
+    },
+    "budget=0.20": {
+      "shadow_price_val": 0.049110759050788065,
+      "shadow_price_oracle": 0.041525856435293336,
+      "budget": 2808510.0,
+      "verdict": "No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0415) at -2,818 per episode, 95% CI [-26,767, +19,941] -- the interval includes zero, so this is a null result.",
+      "control_breach": null,
+      "q_implied_threshold": {
+        "table": [
+          {
+            "budget_bin": 0,
+            "time_bin": 0,
+            "approve_from_profit_bin": 1
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 1,
+            "approve_from_profit_bin": 5
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 2,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 0,
+            "time_bin": 3,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 2,
+            "approve_from_profit_bin": 1
+          },
+          {
+            "budget_bin": 1,
+            "time_bin": 3,
+            "approve_from_profit_bin": 4
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 2,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 2,
+            "time_bin": 3,
+            "approve_from_profit_bin": 3
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 3,
+            "time_bin": 3,
+            "approve_from_profit_bin": 2
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 0,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 1,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 2,
+            "approve_from_profit_bin": null
+          },
+          {
+            "budget_bin": 4,
+            "time_bin": 3,
+            "approve_from_profit_bin": 3
+          }
+        ],
+        "n_visited_states": 80
+      }
+    }
+  },
   "degenerate_policies": [],
   "training_pool": "validation window"
 }

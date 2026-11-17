@@ -2,7 +2,7 @@
 
 # exp06_rl: EXP03 and EXP06
 
-Applicant pool: 283,026 out-of-time loans; 1,200 processed per episode; 12 seeds under common random numbers.
+Applicant pool: 283,026 out-of-time loans; 1,200 processed per episode; 30 seeds under common random numbers.
 Learning policies are trained on 90,615 **validation-window** applicants and evaluated on the test window, so they never see the borrowers they are scored on. An earlier version trained them on the evaluation pool itself, which gave them an advantage the static policies did not have.
 Estimated from training-window cashflows: good-loan yield -0.001+1.351*APR, defaulted-loan loss rate 0.393-0.179*APR, **empirical LGD 0.518** (mean) / 0.532 (median).
 
@@ -10,17 +10,52 @@ Estimated from training-window cashflows: good-loan yield -0.001+1.351*APR, defa
 
 |                       |   n_episodes |   mean_reward |   std_reward |   min_reward |   p05_reward |   approval_rate |   default_rate_of_book |   capital_deployed |   return_on_capital |     revenue |   losses |            costs |   review_rate |
 |:----------------------|-------------:|--------------:|-------------:|-------------:|-------------:|----------------:|-----------------------:|-------------------:|--------------------:|------------:|---------:|-----------------:|--------------:|
-| fixed_threshold@0.150 |           12 |      54990.8  |      69214.1 |     -95939.2 |     -49801.1 |          0.6136 |                 0.1    |        9.91585e+06 |              0.0057 | 1.10335e+06 |   377663 | 670696           |             0 |
-| risk_band             |           12 |       1650.27 |      67218.3 |    -122071   |    -107935   |          0.9498 |                 0.1328 |        1.1068e+07  |              0.0001 | 1.263e+06   |   465046 | 796304           |             0 |
-| expected_profit       |           12 |      -8079.38 |     135373   |    -249140   |    -208074   |          0.5712 |                 0.1645 |        1.39569e+07 |             -0.0004 | 1.783e+06   |   899702 | 891378           |             0 |
-| approve_all           |           12 |    -111089    |      82891.4 |    -274900   |    -231661   |          1      |                 0.1508 |        1.54395e+07 |             -0.0072 | 1.85972e+06 |   918477 |      1.05233e+06 |             0 |
+| fixed_threshold@0.150 |           30 |      63348.6  |      65507.2 |     -95939.2 |       -55836 |          0.6181 |                 0.0985 |        1.00081e+07 |              0.0064 | 1.11587e+06 |   375810 | 676707           |             0 |
+| expected_profit       |           30 |      36943.4  |     131041   |    -249140   |      -200313 |          0.5706 |                 0.1599 |        1.39181e+07 |              0.0027 | 1.78827e+06 |   862246 | 889077           |             0 |
+| risk_band             |           30 |       8162.78 |      60489.5 |    -122071   |      -107712 |          0.9529 |                 0.1311 |        1.10869e+07 |              0.0007 | 1.2654e+06  |   459301 | 797933           |             0 |
+| approve_all           |           30 |     -67146.4  |     103599   |    -301179   |      -239523 |          1      |                 0.1475 |        1.54115e+07 |             -0.0043 | 1.86294e+06 |   879341 |      1.05075e+06 |             0 |
 
-| treatment       | baseline              |   n_pairs |   mean_difference |   ci_low |   ci_high |   win_rate | significant   |   relative_improvement |
-|:----------------|:----------------------|----------:|------------------:|---------:|----------:|-----------:|:--------------|-----------------------:|
-| risk_band       | fixed_threshold@0.150 |        12 |          -53340.6 |   -82149 |  -26059.6 |        0.2 | True          |                   -1   |
-| expected_profit | fixed_threshold@0.150 |        12 |          -63070.2 |  -115788 |   -8934.1 |        0.2 | True          |                   -1.1 |
-| approve_all     | fixed_threshold@0.150 |        12 |         -166080   |  -195998 | -136714   |        0   | True          |                   -3   |
+| treatment       | baseline              |   n_pairs |   mean_difference |    ci_low |   ci_high |   win_rate | significant   |   relative_improvement |
+|:----------------|:----------------------|----------:|------------------:|----------:|----------:|-----------:|:--------------|-----------------------:|
+| expected_profit | fixed_threshold@0.150 |        30 |          -26405.3 |  -59902.1 |    7655.2 |        0.4 | False         |                   -0.4 |
+| risk_band       | fixed_threshold@0.150 |        30 |          -55185.8 |  -71222.5 |  -38915.2 |        0.1 | True          |                   -0.9 |
+| approve_all     | fixed_threshold@0.150 |        30 |         -130495   | -155634   | -105070   |        0   | True          |                   -2.1 |
 
-**Verdict.** risk_band beat fixed_threshold@0.150 by -53,341 per episode (-97.0%), 95% CI [-82,149, -26,060], winning on 17% of seeds.
+**Verdict.** No policy beat fixed_threshold@0.150 significantly. Best was expected_profit at -26,405 per episode, 95% CI [-59,902, +7,655] -- the interval includes zero, so this is a null result.
 
 The mechanism is worth stating: the expected-profit policy typically runs a *higher* book default rate than the threshold policy and still earns more, because it approves high-rate loans whose price covers their risk and declines low-rate loans whose price does not. A single PD cut-off cannot express that, since the break-even PD moves with the interest rate. This is a failure of the decision rule, not of the risk model -- every policy here consumes identical PDs.
+
+## EXP06 - can a learned policy beat static policies?
+
+| condition | validation shadow price lambda | oracle ceiling lambda | verdict |
+|---|---|---|---|
+| unconstrained | 0.0000 | 0.0000 | thompson beat expected_profit by +64,260 per episode (+173.9%), 95% CI [+33,334, +94,402], winning on 80% of seeds. |
+| budget=0.60 | 0.0052 | 0.0004 | No policy beat expected_profit significantly. Best was thompson at +14,782 per episode, 95% CI [-12,622, +42,261] -- the interval includes zero, so this is a null result. |
+| budget=0.35 | 0.0290 | 0.0232 | No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0232) at +10,574 per episode, 95% CI [-13,394, +34,391] -- the interval includes zero, so this is a null result. |
+| budget=0.20 | 0.0491 | 0.0415 | No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0415) at -2,818 per episode, 95% CI [-26,767, +19,941] -- the interval includes zero, so this is a null result. |
+
+### Control check
+
+> CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. It indicates the myopic policy is optimising a misspecified objective -- its good-loan yield and loss-rate coefficients are fitted on the 2010-2014 training window and applied to the 2015 test vintage.
+
+Learning-policy results in the unconstrained condition should therefore **not** be read as evidence for reinforcement learning. The correct reading is that the myopic policy's economic inputs are stale relative to the test vintage.
+
+| policy                         |   budget=0.20 |   budget=0.35 |   budget=0.60 |   unconstrained |
+|:-------------------------------|--------------:|--------------:|--------------:|----------------:|
+| approve_all                    |          4714 |          1560 |        -12491 |          -67146 |
+| budget_aware_q(greedy)         |         20287 |         37113 |         45601 |           30444 |
+| expected_profit                |         36995 |         45654 |         69955 |           36943 |
+| expected_profit(lambda=0.0052) |           nan |           nan |         68316 |             nan |
+| expected_profit(lambda=0.0290) |           nan |         28595 |           nan |             nan |
+| expected_profit(lambda=0.0491) |         15900 |           nan |           nan |             nan |
+| fixed_threshold@0.150          |         30411 |         46368 |         65381 |           63349 |
+| linucb@alpha=1                 |         27005 |         31007 |         76908 |           93266 |
+| oracle_ceiling(lambda=0.0004)  |           nan |           nan |         72515 |             nan |
+| oracle_ceiling(lambda=0.0232)  |           nan |         56228 |           nan |             nan |
+| oracle_ceiling(lambda=0.0415)  |         34177 |           nan |           nan |             nan |
+| risk_band                      |         18279 |         22460 |         13858 |            8163 |
+| thompson                       |         18333 |         27355 |         84737 |          101203 |
+
+**Reading this table.** The `unconstrained` column is the control. There, the myopic expected-profit rule is optimal by construction and the learned policies should not beat it -- if they appear to, the simulator has a bug. As the budget tightens, the shadow price of capital rises and the ranking should change: pricing capital correctly (either analytically via `expected_profit(lambda=...)` or by learning it via `budget_aware_q`) starts to matter more than per-applicant accuracy.
+
+**What this does not establish.** That any of these policies is safe to deploy. Every number is generated inside a simulator whose assumptions are listed in docs/ASSUMPTIONS.md, on a population of already-approved LendingClub borrowers from a single credit cycle. The defensible claim is a ranking under stated assumptions.

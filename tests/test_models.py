@@ -199,9 +199,9 @@ def test_compare_calibrations_returns_every_method(rng):
     y = (rng.random(n) < p).astype(int)
     half = n // 2
     comparison = compare_calibrations(y[:half], p[:half], y[half:], p[half:])
-    assert set(comparison.per_method) == {"identity", "platt", "isotonic"}
+    assert set(comparison.per_method) == {"identity", "intercept_only", "platt", "isotonic"}
     assert "Brier" in comparison.verdict() or "reduced" in comparison.verdict()
-    assert len(comparison.table()) == 3
+    assert len(comparison.table()) == 4
 
 
 # ---------------------------------------------------------------------------
