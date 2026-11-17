@@ -158,7 +158,7 @@ python scripts/train_policy.py          --config configs/experiments/exp06_rl.ya
 python scripts/evaluate.py              --config configs/models/boosting.yaml
 ```
 
-Tests (150, all passing):
+Tests (157, all passing):
 
 ```bash
 python -m pytest -q
