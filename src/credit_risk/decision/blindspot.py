@@ -94,21 +94,27 @@ class ConditionalResult:
     sign_test_p: float
     odds_ratio_per_sd: float
     spearman_with_pd: float
+    odds_ratio_ci_lower: float = 0.0
+    odds_ratio_ci_upper: float = 0.0
+    sign_test_p_twosided: float = 1.0
+    sign_test_p_onesided: float = 1.0
 
     def verdict(self, name: str) -> str:
         direction = "under-states" if self.mean_gap_difference > 0 else "over-states"
         strength = (
-            "survives" if self.sign_test_p < 0.05 and self.mean_gap_difference > 0
+            "survives" if self.sign_test_p_twosided < 0.05 and self.mean_gap_difference > 0
             else "does not survive"
         )
         return (
             f"{name}: correlation with PD itself is {self.spearman_with_pd:+.3f}. "
             f"Within PD strata the high-signal half shows a larger gap in "
             f"{self.n_strata_positive}/{self.n_strata} strata "
-            f"(mean {self.mean_gap_difference:+.4f}, sign-test p={self.sign_test_p:.4f}), so the "
+            f"(mean {self.mean_gap_difference:+.4f}, sign-test two-sided p={self.sign_test_p_twosided:.4f}, "
+            f"one-sided p={self.sign_test_p_onesided:.4f}), so the "
             f"effect **{strength}** the PD control -- the model {direction} risk for high-signal "
             f"borrowers at a given PD. Holding PD fixed, a one-SD increase in the signal "
-            f"multiplies default odds by {self.odds_ratio_per_sd:.3f}."
+            f"multiplies default odds by {self.odds_ratio_per_sd:.3f} "
+            f"(95% CI [{self.odds_ratio_ci_lower:.3f}, {self.odds_ratio_ci_upper:.3f}])."
         )
 
 
@@ -168,20 +174,44 @@ def conditional_signal_table(
 
     positive = int((table["gap_difference"] > 0).sum())
     total = int(len(table))
-    sign_p = float(binomtest(positive, total, 0.5, alternative="greater").pvalue)
+    sign_p_onesided = float(binomtest(positive, total, 0.5, alternative="greater").pvalue)
+    sign_p_twosided = float(binomtest(positive, total, 0.5, alternative="two-sided").pvalue)
 
     logit_p = np.log(p / (1 - p))
     z = (s - s.mean()) / (s.std() if s.std() > 0 else 1.0)
-    model = LogisticRegression(C=1e6, max_iter=1000).fit(np.column_stack([logit_p, z]), y)
+    X = np.column_stack([logit_p, z])
+    model = LogisticRegression(C=1e6, max_iter=1000).fit(X, y)
+
+    # Wald 95% confidence interval for odds ratio from Fisher information matrix
+    pred_p = model.predict_proba(X)[:, 1]
+    w = pred_p * (1.0 - pred_p)
+    H = X.T @ (w[:, None] * X)
+    try:
+        cov = np.linalg.inv(H)
+        se = float(np.sqrt(cov[1, 1]))
+    except np.linalg.LinAlgError:
+        se = float("nan")
+
+    beta1 = float(model.coef_[0][1])
+    or_point = float(np.exp(beta1))
+    if np.isfinite(se):
+        ci_lower = float(np.exp(beta1 - 1.95996 * se))
+        ci_upper = float(np.exp(beta1 + 1.95996 * se))
+    else:
+        ci_lower, ci_upper = or_point, or_point
 
     return ConditionalResult(
         table=table,
         n_strata=total,
         n_strata_positive=positive,
         mean_gap_difference=float(table["gap_difference"].mean()),
-        sign_test_p=sign_p,
-        odds_ratio_per_sd=float(np.exp(model.coef_[0][1])),
+        sign_test_p=sign_p_onesided,
+        odds_ratio_per_sd=or_point,
         spearman_with_pd=float(pd.Series(s).corr(pd.Series(p), method="spearman")),
+        odds_ratio_ci_lower=ci_lower,
+        odds_ratio_ci_upper=ci_upper,
+        sign_test_p_twosided=sign_p_twosided,
+        sign_test_p_onesided=sign_p_onesided,
     )
 
 

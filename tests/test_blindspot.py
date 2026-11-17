@@ -180,6 +180,31 @@ def test_a_signal_that_is_pure_noise_fails_the_conditional_test():
     assert "does not survive" in result.verdict("noise")
 
 
+def test_conditional_signal_reports_confidence_intervals_and_twosided_p():
+    """P1-6e: Conditional signal test must provide Wald 95% CIs for odds ratio and two-sided sign test p."""
+    rng = np.random.default_rng(42)
+    n = 20_000
+    p = np.clip(rng.beta(2, 10, n), 1e-4, 1 - 1e-4)
+    # Signal with a true positive conditional odds effect
+    z = rng.standard_normal(n)
+    logit_p = np.log(p / (1 - p))
+    true_prob = 1.0 / (1.0 + np.exp(-(logit_p + 0.25 * z)))
+    y = (rng.random(n) < true_prob).astype(float)
+
+    result = conditional_signal_table(y, p, z, n_strata=10)
+
+    # Odds ratio point estimate > 1.0
+    assert result.odds_ratio_per_sd > 1.1
+    # Confidence intervals bracket the point estimate
+    assert result.odds_ratio_ci_lower < result.odds_ratio_per_sd < result.odds_ratio_ci_upper
+    assert result.odds_ratio_ci_lower > 1.0  # statistically significant at 95%
+    # Two-sided p-value is computed and consistent
+    assert 0.0 <= result.sign_test_p_twosided <= 1.0
+    assert 0.0 <= result.sign_test_p_onesided <= 1.0
+    assert "95% CI" in result.verdict("test_signal")
+    assert "two-sided p=" in result.verdict("test_signal")
+
+
 def test_a_signal_that_only_restates_pd_fails_the_conditional_test():
     """The confound the marginal table cannot detect.
 
