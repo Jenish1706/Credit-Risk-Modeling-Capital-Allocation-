@@ -421,11 +421,13 @@ def main() -> int:
             "",
             "## EXP06 - can a learned policy beat static policies?",
             "",
-            "| condition | shadow price lambda | verdict |",
-            "|---|---|---|",
+            "| condition | validation shadow price lambda | oracle ceiling lambda | verdict |",
+            "|---|---|---|---|",
         ]
         for label, payload in budget_reports.items():
-            lines.append(f"| {label} | {payload['shadow_price']:.4f} | {payload['verdict']} |")
+            s_val = payload.get("shadow_price_val", payload.get("shadow_price", 0.0))
+            s_orc = payload.get("shadow_price_oracle", payload.get("shadow_price", 0.0))
+            lines.append(f"| {label} | {s_val:.4f} | {s_orc:.4f} | {payload['verdict']} |")
 
         breaches = [p["control_breach"] for p in budget_reports.values() if p.get("control_breach")]
         if breaches:
