@@ -347,3 +347,22 @@ def test_q_policy_reports_an_implied_threshold(pool, cashflow, space):
     implied = policy.implied_threshold()
     assert implied["n_visited_states"] > 0
     assert len(implied["table"]) == encoder.spec.n_budget_bins * encoder.spec.n_time_bins
+
+
+def test_simulator_uses_observed_outcomes_at_observed_exposure(pool, cashflow, space):
+    """P1-6d: The simulator must use ground-truth observed loan outcomes and cashflows
+    at observed exposure, eliminating circular coupling where the tested PD model simulates
+    its own default labels."""
+    cfg = SimulationConfig(
+        n_steps=50,
+        use_observed_outcomes_at_observed_exposure=True,
+        seed=42,
+    )
+    env = LendingEnvironment(pool, cashflow, EconomicsConfig(), space, cfg)
+    res = env.run(ApproveAllPolicy(), keep_log=True)
+    assert res.per_step is not None
+    for _, row in res.per_step.iterrows():
+        if row["exposure"] > 0:
+            applicant = int(row["applicant"])
+            expected_default = bool(pool.observed_default[applicant] > 0.5)
+            assert bool(row["defaulted"]) == expected_default

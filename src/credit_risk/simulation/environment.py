@@ -112,6 +112,10 @@ class SimulationConfig:
     #: Elasticity of PD to exposure when the re-scored PD is unavailable: a 1x increase in
     #: exposure multiplies the odds of default by this factor.
     pd_exposure_elasticity: float = 0.15
+    #: When true, decisions at observed exposure use ground-truth historical loan outcomes
+    #: and realised returns, eliminating circular coupling where the evaluated PD model
+    #: generates its own simulated defaults.
+    use_observed_outcomes_at_observed_exposure: bool = True
     seed: int = 0
 
 
@@ -276,8 +280,16 @@ class LendingEnvironment:
             revenue = loss = 0.0
             cost = review_cost
         else:
-            defaulted = u < pd_here
-            per_dollar = self._return_per_dollar(applicant, defaulted, apr, exposure)
+            obs_exposure = float(self.pool.observed_exposure[applicant])
+            if (
+                self.config.use_observed_outcomes_at_observed_exposure
+                and abs(exposure - obs_exposure) < 1.0
+            ):
+                defaulted = bool(self.pool.observed_default[applicant] > 0.5)
+                per_dollar = float(self.pool.observed_return[applicant])
+            else:
+                defaulted = u < pd_here
+                per_dollar = self._return_per_dollar(applicant, defaulted, apr, exposure)
             gross = exposure * per_dollar
             cost = (
                 float(funding_cost(exposure, self.economics, apr))
