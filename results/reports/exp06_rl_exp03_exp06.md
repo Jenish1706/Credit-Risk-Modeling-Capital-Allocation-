@@ -23,7 +23,7 @@ Estimated from training-window cashflows: good-loan yield -0.001+1.351*APR, defa
 
 **Verdict.** No policy beat fixed_threshold@0.150 significantly. Best was expected_profit at -26,405 per episode, 95% CI [-59,902, +7,655] -- the interval includes zero, so this is a null result.
 
-The mechanism is worth stating: the expected-profit policy typically runs a *higher* book default rate than the threshold policy and still earns more, because it approves high-rate loans whose price covers their risk and declines low-rate loans whose price does not. A single PD cut-off cannot express that, since the break-even PD moves with the interest rate. This is a failure of the decision rule, not of the risk model -- every policy here consumes identical PDs.
+Why the expected-profit rule loses to a PD threshold is analysed on the real book, at the observed exposure, in `scripts/analyze_profit_calibration.py` (`results/tables/profit_calibration_*.csv`). Nothing is asserted about the mechanism here: a simulated difference with a CI that straddles zero is a null result.
 
 ## EXP06 - can a learned policy beat static policies?
 
@@ -36,7 +36,7 @@ The mechanism is worth stating: the expected-profit policy typically runs a *hig
 
 ### Control check
 
-> CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. The cause is not established by this experiment (see the CR-02 expected-vs-realised profit decile table).
+> CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. The cause is not established by this experiment (see profit_calibration_*.csv, the real-book predicted-vs-realised profit audit).
 
 Learning-policy results in the unconstrained condition should therefore **not** be read as evidence for reinforcement learning. The correct reading is that the myopic policy's economic inputs are stale relative to the test vintage.
 

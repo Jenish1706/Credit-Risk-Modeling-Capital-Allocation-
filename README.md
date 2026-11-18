@@ -47,10 +47,10 @@ under the assumptions in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 |---|---|---|---|
 | **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6581 → 0.6705** (+0.0124) `OBSERVED` | Material. Boosting justified |
 | **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0193 → 0.0111**; calibration slope 0.991 → 1.005 `OBSERVED` | The point of the project in one row: ranking metrics are blind to calibration |
-| **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Diff vs 15% threshold: **-26,405**/episode (95% CI [-59,902, +7,655]) `SIMULATED` | **Null result.** Myopic rule underperforms threshold under vintage deterioration on observed cashflows |
+| **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Simulated diff vs 15% threshold: **-26,405**/episode (95% CI [-59,902, +7,655]) `SIMULATED`. Real book at observed exposure: **-33.2**/loan (95% CI [-40.9, -25.5]) `OBSERVED` | **Expected-profit rule loses to a PD threshold on the real book.** Simulation CI straddles zero (null). Mechanism is measured below, not assumed |
 | **EXP04** | Do graph cohort features add signal? | AUC **-0.0010**. ECE **0.0105 → 0.0032**, P/O **0.930 → 0.999** `OBSERVED` | No discrimination gain; **calibration gain confirmed by controls** (ΔECE −0.0071 vs macro, −0.0044 vs shuffled) |
 | **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6616** vs 0.6679 (aggregates) vs 0.6690 (tabular) `OBSERVED` | **No.** The GNN loses to both |
-| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners vs myopic expected-profit: unconstrained thompson **+55,753** (95% CI [+29,266, +80,634]); at 60% budget best learner linucb@alpha=1 **+6,916** (95% CI [-17,235, +30,160]) `SIMULATED` | **Control breached:** learners significantly beat the myopic rule with unconstrained capital, where it should be near-optimal (cause: see CR-02); **no learner significantly beats expected-profit in any capital-constrained condition**; significantly worse at budget=0.20 |
+| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners vs myopic expected-profit: unconstrained thompson **+55,753** (95% CI [+29,266, +80,634]); at 60% budget best learner linucb@alpha=1 **+6,916** (95% CI [-17,235, +30,160]) `SIMULATED` | **Control breached:** learners significantly beat the myopic rule with unconstrained capital, where it should be near-optimal (see the real-book audit below); **no learner significantly beats expected-profit in any capital-constrained condition**; significantly worse at budget=0.20 |
 | **EXP07** | How does the model degrade under vintage drift? | O/E **0.860 (2010) → 1.077 (2015)** while AUC moves 0.7475 → 0.6705 `OBSERVED` | Calibration drifts before ranking does |
 | **EXP08** | Does autoencoder anomaly flag untrustworthy PDs? | Survives PD control in **10/10** deciles, sign-test **p=0.0010**, odds ratio 1.032/SD `OBSERVED` | **KEEP** |
 | **EXP09** | Does VGAE relational uncertainty flag them? | Fails PD control (**5/10** deciles, sign-test **p=0.6230**), odds ratio 1.002/SD `OBSERVED` | **REJECT** |
@@ -81,7 +81,7 @@ selectivity.
 
 **RL does not earn its place here, and that is the finding.** Learning policies (LinUCB, Thompson sampling, Q-learning) are trained on the validation pool and their parameters are **frozen** during every test-pool episode; an earlier version kept updating them on realised test outcomes after every decision, which no deployed policy can do (loan outcomes take up to 36 months to arrive).
 
-The experiment carries a control. With unconstrained capital the myopic expected-profit rule should be near-optimal, yet unconstrained Thompson sampling earns **92,696** vs the myopic rule's **36,943** (paired difference +55,753, 95% CI [+29,266, +80,634]). The control is breached and the cause is *not* established by this experiment: the learners are fitted on validation-window outcomes and the myopic rule on a parametric cashflow model, so any difference between the two inputs would show up here.
+The experiment carries a control. With unconstrained capital the myopic expected-profit rule should be near-optimal, yet unconstrained Thompson sampling earns **92,696** vs the myopic rule's **36,943** (paired difference +55,753, 95% CI [+29,266, +80,634]). The control is breached. This experiment cannot say why, but the real-book audit below shows the myopic rule's inputs (PD and cashflow curves) mis-predict profit, and the learners are fitted on validation-window outcomes instead.
 
 Paired difference vs the myopic expected-profit policy, by capital condition (mean over 30 episodes, 95% bootstrap CI):
 
@@ -99,6 +99,29 @@ Paired difference vs the myopic expected-profit policy, by capital condition (me
 | budget=0.20 | linucb@alpha=1 | -13,343 | [-26,403, -490] | yes |
 | budget=0.20 | budget_aware_q(greedy) | -16,708 | [-32,578, -1,264] | yes |
 | budget=0.20 | thompson | -19,706 | [-33,928, -5,896] | yes |
+
+**Why the expected-profit rule underperforms.** Measured on the real book at the exposure that was actually funded, so no simulator is involved:
+
+- On the 2015 test book, accepting every loan with predicted profit above zero earns **-33.2** per loan vs the 15% PD threshold (95% CI [-40.9, -25.5], -9.39M in total). On the validation pool the two rules are indistinguishable (-0.4 per loan, CI [-13.7, +13.0]).
+- Predicted profit on the test book exceeds realised profit by **50.3M** (18% of the prediction). By source: default count (PD too low) 57%, good-loan yield curve 23%, loss-severity curve 20%. Refitting the two cashflow curves on the test book itself (an oracle diagnostic, not deployable) removes the yield and severity errors (+1.4M, -1.4M) and leaves the PD effect (-31.0M).
+- Cashflow drift is therefore a real but secondary cause. Refitting the curves on the validation window narrows the shortfall to -26.0 per loan (CI [-33.4, -18.6]), still significantly negative.
+- The PD model excludes `int_rate` by design, while the rule's revenue term rises with APR. Observed/expected defaults on the test book run from **0.67** in the lowest APR quintile to **1.36** in the highest, so risk is understated exactly where predicted profit is largest. Predicted profit is over-dispersed: the top predicted-profit decile is predicted at +1,460 per loan and realises +192.
+- Simulator caveat: 0% of the expected-profit policy's simulated approvals are at the observed exposure (mean multiplier 1.48x) vs 100% for the threshold, so the simulated policy comparison mixes realised and modelled returns.
+
+Test book, deciles of predicted profit (per loan, dollars):
+
+| Decile | Mean PD | Observed default | Predicted profit | Realised profit |
+|---|---|---|---|---|
+| 1 | 0.221 | 0.173 | -698 | -349 |
+| 2 | 0.169 | 0.142 | -308 | -172 |
+| 3 | 0.143 | 0.125 | -183 | -104 |
+| 4 | 0.126 | 0.121 | -104 | -104 |
+| 5 | 0.123 | 0.130 | -35 | -88 |
+| 6 | 0.122 | 0.138 | +44 | -45 |
+| 7 | 0.121 | 0.146 | +147 | -3 |
+| 8 | 0.120 | 0.156 | +296 | +27 |
+| 9 | 0.120 | 0.172 | +558 | +49 |
+| 10 | 0.118 | 0.186 | +1,460 | +192 |
 
 ---
 

@@ -75,8 +75,22 @@ def render_results_table() -> str:
     diff_m = float(row_diff["mean_difference"])
     ci_l = float(row_diff["ci_low"])
     ci_u = float(row_diff["ci_high"])
+    real = _profit_rules("test").loc["expected_profit>0 (train-fit cashflow)"]
     res_exp03 = (
-        f"Diff vs 15% threshold: **{diff_m:+,.0f}**/episode (95% CI [{ci_l:+,.0f}, {ci_u:+,.0f}]) `SIMULATED`"
+        f"Simulated diff vs 15% threshold: **{diff_m:+,.0f}**/episode (95% CI [{ci_l:+,.0f}, {ci_u:+,.0f}]) `SIMULATED`. "
+        f"Real book at observed exposure: **{real['diff_vs_fixed_threshold_per_loan']:+.1f}**/loan "
+        f"(95% CI [{real['diff_ci_low']:+.1f}, {real['diff_ci_high']:+.1f}]) `OBSERVED`"
+    )
+    if real["diff_ci_high"] < 0:
+        headline = "**Expected-profit rule loses to a PD threshold on the real book.**"
+    elif real["diff_ci_low"] > 0:
+        headline = "**Expected-profit rule beats a PD threshold on the real book.**"
+    else:
+        headline = "**No significant difference on the real book.**"
+    exp03_verdict = (
+        headline
+        + (" Simulation CI straddles zero (null)." if ci_l <= 0 <= ci_u else " Simulation CI excludes zero.")
+        + " Mechanism is measured below, not assumed"
     )
 
     # EXP04 & EXP05
@@ -149,7 +163,7 @@ def render_results_table() -> str:
     rows = [
         ("EXP01", "Does non-linear modelling beat logistic regression?", res_exp01, "Material. Boosting justified"),
         ("EXP02", "Does calibration improve PD reliability?", res_exp02, "The point of the project in one row: ranking metrics are blind to calibration"),
-        ("EXP03", "Does expected-profit optimisation beat a fixed PD threshold?", res_exp03, "**Null result.** Myopic rule underperforms threshold under vintage deterioration on observed cashflows"),
+        ("EXP03", "Does expected-profit optimisation beat a fixed PD threshold?", res_exp03, exp03_verdict),
         ("EXP04", "Do graph cohort features add signal?", res_exp04, "No discrimination gain; **calibration gain confirmed by controls** (ΔECE −0.0071 vs macro, −0.0044 vs shuffled)"),
         ("EXP05", "Does GraphSAGE beat the aggregates?", res_exp05, "**No.** The GNN loses to both"),
         ("EXP06", "Can a budget-aware learned policy beat static policies?", res_exp06, exp06_verdict),
@@ -199,7 +213,7 @@ def _exp06_verdict(cond: dict[str, pd.DataFrame]) -> str:
     parts = []
     if wins["unconstrained"]:
         parts.append("**Control breached:** learners significantly beat the myopic rule with "
-                     "unconstrained capital, where it should be near-optimal (cause: see CR-02)")
+                     "unconstrained capital, where it should be near-optimal (see the real-book audit below)")
     if won:
         parts.append("learners significantly beat it at " + ", ".join(won))
     else:
@@ -227,10 +241,9 @@ def render_rl_paragraph() -> str:
         f"rule should be near-optimal, yet unconstrained Thompson sampling earns "
         f"**{thompson:,.0f}** vs the myopic rule's **{myopic:,.0f}** (paired difference "
         f"{d_unc['mean_difference']:+,.0f}, 95% CI [{d_unc['ci_low']:+,.0f}, "
-        f"{d_unc['ci_high']:+,.0f}]). The control is breached and the cause is *not* established by "
-        f"this experiment: the learners are fitted on validation-window outcomes and the "
-        f"myopic rule on a parametric cashflow model, so any difference between the two inputs "
-        f"would show up here.",
+        f"{d_unc['ci_high']:+,.0f}]). The control is breached. This experiment cannot say why, "
+        f"but the real-book audit below shows the myopic rule's inputs (PD and cashflow curves) "
+        f"mis-predict profit, and the learners are fitted on validation-window outcomes instead.",
         "",
         "Paired difference vs the myopic expected-profit policy, by capital condition "
         "(mean over 30 episodes, 95% bootstrap CI):",
@@ -245,6 +258,77 @@ def render_rl_paragraph() -> str:
                 f"| {name} | {learner} | {r['mean_difference']:+,.0f} | "
                 f"[{r['ci_low']:+,.0f}, {r['ci_high']:+,.0f}] | {'yes' if r['significant'] else 'no'} |"
             )
+    return "\n".join(lines) + "\n\n" + render_profit_paragraph()
+
+
+def _profit_rules(pool: str) -> pd.DataFrame:
+    rules = pd.read_csv(TABLES_DIR / "profit_calibration_rules.csv")
+    return rules[rules["pool"] == pool].set_index("rule")
+
+
+def render_profit_paragraph() -> str:
+    """CR-02: why the expected-profit rule underperforms, with every number read from artifacts."""
+    ep = "expected_profit>0 (train-fit cashflow)"
+    ep_valid_fit = "expected_profit>0 (valid-fit cashflow)"
+    test, valid = _profit_rules("test"), _profit_rules("valid")
+    decomp = pd.read_csv(TABLES_DIR / "profit_calibration_decomposition.csv")
+    d = decomp[(decomp["pool"] == "test") & (decomp["cashflow_source"] == "train_fit")].iloc[0]
+    d_oracle = decomp[
+        (decomp["pool"] == "test") & (decomp["cashflow_source"] == "test_fit_ORACLE_DIAGNOSTIC")
+    ].iloc[0]
+    by_apr = pd.read_csv(TABLES_DIR / "profit_calibration_pd_by_apr.csv")
+    by_apr = by_apr[by_apr["pool"] == "test"].sort_values("apr_quintile")
+    deciles = pd.read_csv(TABLES_DIR / "profit_calibration_deciles.csv")
+    deciles = deciles[deciles["pool"] == "test"].sort_values("decile")
+    mix = pd.read_csv(TABLES_DIR / "profit_calibration_exposure_mix.csv").set_index("policy")
+    ep_mix = mix.loc["expected_profit"]
+    thr_mix = mix.loc["fixed_threshold@0.150"]
+
+    gap = -float(d["gap_total"])
+    pct = lambda v: 100.0 * abs(float(v)) / gap  # noqa: E731
+    lines = [
+        "**Why the expected-profit rule underperforms.** Measured on the real book at the "
+        "exposure that was actually funded, so no simulator is involved:",
+        "",
+        f"- On the 2015 test book, accepting every loan with predicted profit above zero earns "
+        f"**{test.loc[ep, 'diff_vs_fixed_threshold_per_loan']:+.1f}** per loan vs the 15% PD "
+        f"threshold (95% CI [{test.loc[ep, 'diff_ci_low']:+.1f}, {test.loc[ep, 'diff_ci_high']:+.1f}], "
+        f"{test.loc[ep, 'diff_vs_fixed_threshold_total'] / 1e6:+.2f}M in total). On the validation "
+        f"pool the two rules are indistinguishable ({valid.loc[ep, 'diff_vs_fixed_threshold_per_loan']:+.1f} "
+        f"per loan, CI [{valid.loc[ep, 'diff_ci_low']:+.1f}, {valid.loc[ep, 'diff_ci_high']:+.1f}]).",
+        f"- Predicted profit on the test book exceeds realised profit by **{gap / 1e6:.1f}M** "
+        f"({gap / float(d['predicted_total']):.0%} of the prediction). By source: default count "
+        f"(PD too low) {pct(d['pd_effect']):.0f}%, good-loan yield curve {pct(d['yield_effect']):.0f}%, "
+        f"loss-severity curve {pct(d['severity_effect']):.0f}%. Refitting the two cashflow curves "
+        f"on the test book itself (an oracle diagnostic, not deployable) removes the yield and "
+        f"severity errors ({d_oracle['yield_effect'] / 1e6:+.1f}M, {d_oracle['severity_effect'] / 1e6:+.1f}M) "
+        f"and leaves the PD effect ({d_oracle['pd_effect'] / 1e6:+.1f}M).",
+        f"- Cashflow drift is therefore a real but secondary cause. Refitting the curves on the "
+        f"validation window narrows the shortfall to {test.loc[ep_valid_fit, 'diff_vs_fixed_threshold_per_loan']:+.1f} "
+        f"per loan (CI [{test.loc[ep_valid_fit, 'diff_ci_low']:+.1f}, {test.loc[ep_valid_fit, 'diff_ci_high']:+.1f}]), "
+        f"still significantly negative.",
+        f"- The PD model excludes `int_rate` by design, while the rule's revenue term rises with APR. "
+        f"Observed/expected defaults on the test book run from **{by_apr.iloc[0]['observed_over_expected']:.2f}** in the "
+        f"lowest APR quintile to **{by_apr.iloc[-1]['observed_over_expected']:.2f}** in the highest, so risk is "
+        f"understated exactly where predicted profit is largest. Predicted profit is over-dispersed: "
+        f"the top predicted-profit decile is predicted at {deciles.iloc[-1]['mean_predicted_profit']:+,.0f} "
+        f"per loan and realises {deciles.iloc[-1]['mean_realised_profit']:+,.0f}.",
+        f"- Simulator caveat: {ep_mix['share_of_approvals_at_observed_exposure']:.0%} of the "
+        f"expected-profit policy's simulated approvals are at the observed exposure (mean multiplier "
+        f"{ep_mix['mean_exposure_multiplier_of_approvals']:.2f}x) vs "
+        f"{thr_mix['share_of_approvals_at_observed_exposure']:.0%} for the threshold, so the "
+        f"simulated policy comparison mixes realised and modelled returns.",
+        "",
+        "Test book, deciles of predicted profit (per loan, dollars):",
+        "",
+        "| Decile | Mean PD | Observed default | Predicted profit | Realised profit |",
+        "|---|---|---|---|---|",
+    ]
+    for _, r in deciles.iterrows():
+        lines.append(
+            f"| {int(r['decile'])} | {r['mean_pd_hat']:.3f} | {r['observed_default_rate']:.3f} | "
+            f"{r['mean_predicted_profit']:+,.0f} | {r['mean_realised_profit']:+,.0f} |"
+        )
     return "\n".join(lines)
 
 

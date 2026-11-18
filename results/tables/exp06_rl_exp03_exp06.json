@@ -106,7 +106,7 @@
       "shadow_price_oracle": 0.0,
       "budget": null,
       "verdict": "thompson beat expected_profit by +55,753 per episode (+150.9%), 95% CI [+29,266, +80,634], winning on 80% of seeds.",
-      "control_breach": "CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. The cause is not established by this experiment (see the CR-02 expected-vs-realised profit decile table).",
+      "control_breach": "CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. The cause is not established by this experiment (see profit_calibration_*.csv, the real-book predicted-vs-realised profit audit).",
       "q_implied_threshold": {
         "table": [
           {

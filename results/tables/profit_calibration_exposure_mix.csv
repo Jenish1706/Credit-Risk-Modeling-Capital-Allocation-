@@ -1,0 +1,3 @@
+policy,share_of_approvals_at_observed_exposure,mean_exposure_multiplier_of_approvals
+fixed_threshold@0.150,1,1
+expected_profit,0,1.47694

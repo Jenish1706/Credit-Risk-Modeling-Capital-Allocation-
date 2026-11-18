@@ -346,8 +346,8 @@ def main() -> int:
                         f"CONTROL BREACHED: {', '.join(learners)} significantly beat the myopic "
                         f"expected-profit policy with unconstrained capital, where it should be "
                         f"optimal. This does not support an RL claim. The cause is not "
-                        f"established by this experiment (see the CR-02 expected-vs-realised "
-                        f"profit decile table)."
+                        f"established by this experiment (see profit_calibration_*.csv, the "
+                        f"real-book predicted-vs-realised profit audit)."
                     )
                     LOG.warning(control_breach)
 
@@ -410,12 +410,10 @@ def main() -> int:
         "",
         f"**Verdict.** {verdict(exp03_diff, 'fixed_threshold@0.150')}",
         "",
-        "The mechanism is worth stating: the expected-profit policy typically runs a *higher* "
-        "book default rate than the threshold policy and still earns more, because it approves "
-        "high-rate loans whose price covers their risk and declines low-rate loans whose price "
-        "does not. A single PD cut-off cannot express that, since the break-even PD moves with "
-        "the interest rate. This is a failure of the decision rule, not of the risk model -- "
-        "every policy here consumes identical PDs.",
+        "Why the expected-profit rule loses to a PD threshold is analysed on the real book, at "
+        "the observed exposure, in `scripts/analyze_profit_calibration.py` "
+        "(`results/tables/profit_calibration_*.csv`). Nothing is asserted about the mechanism "
+        "here: a simulated difference with a CI that straddles zero is a null result.",
     ]
 
     if budget_reports:

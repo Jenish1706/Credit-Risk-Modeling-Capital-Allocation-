@@ -1,0 +1,9 @@
+pool,rule,n_accepted,realised_profit_total,realised_profit_per_accepted,diff_vs_fixed_threshold_per_loan,diff_ci_low,diff_ci_high,diff_vs_fixed_threshold_total
+valid,fixed_threshold@0.15,54907,1.51995e+07,276.823,0,0,0,0
+valid,expected_profit>0 (train-fit cashflow),54138,1.5163e+07,280.08,-0.402912,-13.7393,13.0179,-36509.9
+valid,expected_profit>0 (valid-fit cashflow),52470,1.58282e+07,301.662,6.93789,-5.77673,19.8293,628676
+valid,approve_all,90615,1.36896e+07,151.074,-16.6628,-32.2664,-1.427,-1.5099e+06
+test,fixed_threshold@0.15,175708,1.5547e+07,88.4821,0,0,0,0
+test,expected_profit>0 (train-fit cashflow),142124,6.15531e+06,43.3094,-33.1832,-40.853,-25.4557,-9.3917e+06
+test,expected_profit>0 (valid-fit cashflow),138698,8.17715e+06,58.9565,-26.0395,-33.4099,-18.601,-7.36986e+06
+test,approve_all,283026,-1.69575e+07,-59.9149,-114.846,-123.961,-105.783,-3.25045e+07
