@@ -119,7 +119,7 @@ We implemented two rigorous placebo controls with 200 bootstrap draws at the ide
 #### Defect Description
 In EXP04, augmenting LightGBM with 18 time-respecting cohort graph features (aggregates across 3-digit zip code and normalized employment title) improved probability calibration:
 - ECE dropped from **0.0105** (Arm A: tabular) to **0.0032** (Arm B: tabular + graph).
-- Observed/Expected ratio moved from **0.930** to **0.999**.
+- Observed/Expected (O/E) ratio moved from **1.076** to **1.001** (full 2015; the earlier 0.930 and 0.999 were the reciprocal, predicted/observed).
 However, portfolio default rates were drifting upward over time (12.67% in training vs.\ 14.89% in testing). A skeptic could argue that the cohort aggregates merely captured the rising macroeconomic default level, rather than any localized relational structure.
 
 #### Controls Implemented

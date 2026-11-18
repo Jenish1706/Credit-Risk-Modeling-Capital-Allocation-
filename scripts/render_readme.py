@@ -124,12 +124,12 @@ def render_results_table() -> str:
     auc_b = float(df_exp04.loc["B_tabular_plus_graph", "roc_auc"])
     ece_a = float(df_exp04.loc["A_tabular", "ece"])
     ece_b = float(df_exp04.loc["B_tabular_plus_graph", "ece"])
-    po_a = float(df_exp04.loc["A_tabular", "predicted_observed_ratio"])
-    po_b = float(df_exp04.loc["B_tabular_plus_graph", "predicted_observed_ratio"])
+    oe_a = float(df_exp04.loc["A_tabular", "observed_expected_ratio"])
+    oe_b = float(df_exp04.loc["B_tabular_plus_graph", "observed_expected_ratio"])
     ece_af = float(df_exp04_full.loc["A_tabular", "ece"])
     ece_bf = float(df_exp04_full.loc["B_tabular_plus_graph", "ece"])
     res_exp04 = (
-        f"AUC **{auc_b - auc_a:+.4f}**. ECE **{ece_a:.4f} → {ece_b:.4f}**, P/O **{po_a:.3f} → {po_b:.3f}** "
+        f"AUC **{auc_b - auc_a:+.4f}**. ECE **{ece_a:.4f} → {ece_b:.4f}**, O/E **{oe_a:.3f} → {oe_b:.3f}** "
         f"on {H2} ({FULL} ECE: {ece_af:.4f} → {ece_bf:.4f}) `OBSERVED`"
     )
     macro, shuf = h2["bootstrap_vs_macro"], h2["bootstrap_vs_shuffled"]

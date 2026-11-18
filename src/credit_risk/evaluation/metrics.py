@@ -73,7 +73,7 @@ class RiskMetrics:
         return (
             f"n={self.n:,} rate={self.positive_rate:.4f} | "
             f"AUC={self.roc_auc:.4f} PR-AUC={self.pr_auc:.4f} KS={self.ks:.4f} | "
-            f"Brier={self.brier:.5f} ECE={self.ece:.4f} P/O={self.predicted_observed_ratio:.3f}"
+            f"Brier={self.brier:.5f} ECE={self.ece:.4f} O/E={self.observed_expected_ratio:.3f}"
         )
 
 

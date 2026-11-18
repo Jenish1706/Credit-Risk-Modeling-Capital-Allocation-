@@ -54,3 +54,22 @@ def test_readme_rl_paragraph_matches_rendered():
         "README.md RL paragraph differs from rendered artifact values! "
         "Run `python scripts/render_readme.py` to synchronize."
     )
+
+
+def test_calibration_ratios_use_one_convention_and_match_artifacts():
+    """CR-05: observed/expected (O/E) only; P/O must not appear in public text."""
+    import pandas as pd
+
+    from scripts.render_readme import PROJECT_ROOT, TABLES_DIR
+
+    texts = {p: p.read_text(encoding="utf-8")
+             for p in [README_PATH, *sorted((PROJECT_ROOT / "docs").rglob("*.md"))]}
+    for path, text in texts.items():
+        assert "P/O" not in text, f"{path} uses the P/O convention; use O/E"
+
+    h2 = pd.read_csv(TABLES_DIR / "cohort_graph_exp04_exp05_h2.csv", index_col=0)
+    a = float(h2.loc["A_tabular", "observed_expected_ratio"])
+    b = float(h2.loc["B_tabular_plus_graph", "observed_expected_ratio"])
+    # O/E is observed / mean predicted, i.e. the reciprocal of the predicted/observed column
+    assert abs(a - 1.0 / float(h2.loc["A_tabular", "predicted_observed_ratio"])) < 1e-3
+    assert f"O/E **{a:.3f} → {b:.3f}**" in texts[README_PATH]
