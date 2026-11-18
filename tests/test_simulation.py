@@ -17,6 +17,7 @@ from credit_risk.decision.policies import (
     ApproveAllPolicy,
     ExpectedProfitPolicy,
     FixedThresholdPolicy,
+    RiskBandPolicy,
 )
 from credit_risk.rl.formulation import StateEncoder, analytical_shadow_price
 from credit_risk.rl.policy import (
@@ -419,3 +420,37 @@ def test_run_can_still_learn_when_asked(pool, cashflow, space):
     before = _learner_state(policy)
     make_env(pool, cashflow, space, n_steps=50).run(policy, seed=0)
     assert _learner_state(policy) != before
+
+
+# ---------------------------------------------------------------------------
+# CR-04: headline comparisons use observed outcomes only
+# ---------------------------------------------------------------------------
+
+def test_headline_action_space_has_no_multipliers_other_than_one():
+    from scripts.train_policy import build_action_space
+
+    headline = build_action_space(40_000.0, include_review=False, multi_exposure=False)
+    assert set(headline.multipliers.tolist()) == {0.0, 1.0}
+    assert not any(a.is_review for a in headline.actions)
+    sensitivity = build_action_space(40_000.0, include_review=False, multi_exposure=True)
+    assert {0.5, 1.5} <= set(sensitivity.multipliers.tolist())
+
+
+def test_accept_reject_episodes_earn_only_realised_outcomes(pool, cashflow, space):
+    headline = space.at_observed_exposure()
+    assert pool.observed_exposure.tolist() == pool.requested_amount.tolist(), "fixture must fund as requested"
+    env = make_env(pool, cashflow, headline, n_steps=300)
+    policies = [
+        FixedThresholdPolicy(0.15, headline),
+        ExpectedProfitPolicy(cashflow, EconomicsConfig(), headline),
+        RiskBandPolicy(action_space=headline),
+    ]
+    for policy in policies:
+        result = env.run(policy, seed=3, keep_log=True, learn=False)
+        log = result.per_step
+        approved = log[log["exposure"] > 0]
+        assert len(approved) > 0, policy.name
+        idx = approved["applicant"].to_numpy()
+        # every approval is at the observed exposure and reproduces the observed outcome
+        assert np.allclose(approved["exposure"].to_numpy(), pool.observed_exposure[idx])
+        assert (approved["defaulted"].to_numpy() == (pool.observed_default[idx] > 0.5)).all()

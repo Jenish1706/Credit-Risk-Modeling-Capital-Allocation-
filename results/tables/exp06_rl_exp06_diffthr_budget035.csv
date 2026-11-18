@@ -1,0 +1,9 @@
+treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
+expected_profit,fixed_threshold@0.150,30,6008.23,-14255.6,25781.7,0.633333,False,0.130896
+thompson,fixed_threshold@0.150,30,5829.76,-9718.68,20364.2,0.566667,False,0.127008
+oracle_ceiling(lambda=0.0168),fixed_threshold@0.150,30,-11709.6,-46201.2,21783.6,0.566667,False,-0.255107
+budget_aware_q(greedy),fixed_threshold@0.150,30,-25738.8,-60442.8,7692.09,0.533333,False,-0.560747
+expected_profit(lambda=0.0291),fixed_threshold@0.150,30,-43860.1,-74603.6,-15567.6,0.333333,True,-0.955541
+linucb@alpha=1,fixed_threshold@0.150,30,-46102.8,-67056.7,-26200.9,0.233333,True,-1.0044
+risk_band,fixed_threshold@0.150,30,-50206.7,-66651.5,-33745.8,0.166667,True,-1.09381
+approve_all,fixed_threshold@0.150,30,-75279.4,-95309.6,-55510.6,0.0666667,True,-1.64005

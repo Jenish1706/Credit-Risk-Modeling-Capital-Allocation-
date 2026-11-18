@@ -245,8 +245,16 @@ def main() -> int:
     # -- audit of the simulator's exposure asymmetry ----------------------------------
     space = ActionSpace(max_exposure=float(config.get_path("actions.max_exposure", 40000.0))).without_review()
     pool = build_applicant_pool(test[masks["holdout"]], pd_test[masks["holdout"]], cashflow)
-    mix = exposure_mix_table(pool, cashflow, economics, space,
-                             int(config.get("simulation", {}).get("n_steps", 2000)), list(range(5)))
+    steps = int(config.get("simulation", {}).get("n_steps", 2000))
+    mix = pd.concat(
+        [
+            exposure_mix_table(pool, cashflow, economics, space.at_observed_exposure(), steps, list(range(5)))
+            .assign(action_space="accept_reject (headline)"),
+            exposure_mix_table(pool, cashflow, economics, space, steps, list(range(5)))
+            .assign(action_space="multi_exposure (sensitivity)"),
+        ],
+        ignore_index=True,
+    )
     save_table(mix, paths, "profit_calibration_exposure_mix", index=False)
     return 0
 

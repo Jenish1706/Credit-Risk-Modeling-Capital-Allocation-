@@ -75,6 +75,18 @@ from credit_risk.utils.runtime import get_logger  # noqa: E402
 LOG = get_logger("scripts.policy")
 
 
+def build_action_space(max_exposure: float, include_review: bool, multi_exposure: bool) -> ActionSpace:
+    """The action space for a run. Headline runs are accept/reject at the observed exposure.
+
+    ``multi_exposure=True`` is the labelled sensitivity analysis (0.5x / 1.0x / 1.5x of the amount
+    requested), whose off-diagonal outcomes are model counterfactuals rather than measurements.
+    """
+    space = ActionSpace(max_exposure=max_exposure)
+    if not include_review:
+        space = space.without_review()
+    return space if multi_exposure else space.at_observed_exposure()
+
+
 def _score_split(paths, pd_run: str, frame: pd.DataFrame) -> np.ndarray | None:
     """Score an arbitrary split with the saved model, or return None if artefacts are absent.
 
@@ -132,8 +144,15 @@ def main() -> int:
     parser = base_parser(__doc__ or "", default_config="configs/experiments/exp06_rl.yaml")
     parser.add_argument("--pd-run", default="boosting", help="Baseline run whose PDs to reuse.")
     parser.add_argument("--skip-rl", action="store_true", help="EXP03 only.")
+    parser.add_argument(
+        "--multi-exposure", action="store_true",
+        help="Sensitivity analysis: add 0.5x and 1.5x exposure actions. Results are written with "
+        "a _sens suffix and are not headline numbers.",
+    )
     args = parser.parse_args()
     config, paths, run_name, seed = resolve(args)
+    if args.multi_exposure:
+        run_name = f"{run_name}_sens"
     source = detect_source(paths)
 
     df = load_prepared(paths)
@@ -151,9 +170,11 @@ def main() -> int:
     )
     cashflow = fit_cashflow_model(train, economics)
 
-    action_space = ActionSpace(max_exposure=float(config.get_path("actions.max_exposure", 40000.0)))
-    if not bool(config.get_path("actions.include_review", False)):
-        action_space = action_space.without_review()
+    action_space = build_action_space(
+        float(config.get_path("actions.max_exposure", 40000.0)),
+        bool(config.get_path("actions.include_review", False)),
+        args.multi_exposure,
+    )
     LOG.info("action space: %s", action_space.names)
 
     # CR-03: policies are evaluated on the untouched 2015-07..12 holdout. Nothing is selected on
@@ -338,6 +359,9 @@ def main() -> int:
             evals = compare_policies(env, policies, seeds)
             summary = summary_table(evals)
             diffs = difference_table(evals, "expected_profit")
+            # The fixed PD threshold is the stronger simple baseline, so learners are also judged
+            # against it, not only against the unpriced myopic rule.
+            diffs_thr = difference_table(evals, "fixed_threshold@0.150")
             # The control: with unconstrained capital the myopic expected-profit rule is
             # optimal for the objective it optimises, so a learner beating it does not
             # demonstrate that RL helps -- it demonstrates that the myopic policy's *inputs*
@@ -371,6 +395,8 @@ def main() -> int:
             save_table(summary, paths, f"{run_name}_exp06_{label.replace('=', '').replace('.', '')}")
             save_table(diffs, paths,
                        f"{run_name}_exp06_diff_{label.replace('=', '').replace('.', '')}")
+            save_table(diffs_thr, paths,
+                       f"{run_name}_exp06_diffthr_{label.replace('=', '').replace('.', '')}")
 
     sweep = pd.DataFrame(sweep_rows)
     if len(sweep):

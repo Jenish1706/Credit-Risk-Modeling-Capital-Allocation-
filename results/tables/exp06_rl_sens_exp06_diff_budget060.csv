@@ -1,0 +1,8 @@
+treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
+expected_profit(lambda=0.0053),expected_profit,30,13426.8,-4511.91,31398.8,0.566667,False,0.225059
+fixed_threshold@0.150,expected_profit,30,548.957,-32473.9,34084,0.466667,False,0.0092016
+linucb@alpha=1,expected_profit,30,-1378.74,-30138.9,27085.8,0.533333,False,-0.0231105
+budget_aware_q(greedy),expected_profit,30,-19171.9,-44115,5600.7,0.4,False,-0.321358
+thompson,expected_profit,30,-40215,-74306.1,-6106.61,0.266667,True,-0.674082
+risk_band,expected_profit,30,-53400.9,-79653.3,-28411.1,0.2,True,-0.895103
+approve_all,expected_profit,30,-91122.1,-113434,-68287.2,0.1,True,-1.52738

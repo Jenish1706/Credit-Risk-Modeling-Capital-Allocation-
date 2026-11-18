@@ -101,6 +101,19 @@ class ActionSpace:
         requested = np.asarray(requested, dtype=float)[:, None]
         return np.minimum(requested * self.multipliers[None, :], self.max_exposure)
 
+    def at_observed_exposure(self) -> ActionSpace:
+        """Accept or reject at the exposure that was actually funded -- nothing else.
+
+        CR-04. In this action space every approved loan earns the return it really earned, so a
+        policy comparison contains no counterfactual exposure. (In this book every loan was funded
+        at its requested amount, so the 1.0x multiplier *is* the observed exposure.) The
+        multi-exposure space stays available as a labelled sensitivity analysis.
+        """
+        return ActionSpace(
+            actions=tuple(a for a in self.actions if a.exposure_multiplier in (0.0, 1.0) and not a.is_review),
+            max_exposure=self.max_exposure,
+        )
+
     def without_review(self) -> ActionSpace:
         """The action set with manual review removed.
 
@@ -216,9 +229,18 @@ class RiskBandPolicy(Policy):
             raise ValueError("band_actions must have exactly one more entry than band_edges")
         self.band_edges = np.asarray(band_edges, dtype=float)
         self.action_space = action_space or ActionSpace()
-        self.band_indices = np.array(
-            [self.action_space.names.index(a) for a in band_actions], dtype=int
-        )
+        names = self.action_space.names
+
+        def resolve(action: str) -> int:
+            # In an accept/reject action space there is only one exposure, so every "approve_*"
+            # band collapses to approve_medium and the policy becomes a PD-band cut-off.
+            if action in names:
+                return names.index(action)
+            if action.startswith("approve"):
+                return names.index("approve_medium")
+            raise ValueError(f"action {action!r} is not in the action space {names}")
+
+        self.band_indices = np.array([resolve(a) for a in band_actions], dtype=int)
         self.name = "risk_band"
 
     def act(self, context: DecisionContext, rng: np.random.Generator | None = None) -> np.ndarray:

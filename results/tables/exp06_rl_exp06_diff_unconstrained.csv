@@ -1,7 +1,7 @@
 treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
-linucb@alpha=1,expected_profit,30,39696.7,13802.2,65500.9,0.633333,True,1.21372
-thompson,expected_profit,30,31106.9,5461.46,56958.2,0.6,True,0.951087
-fixed_threshold@0.150,expected_profit,30,29041.6,-4619.7,62824.4,0.666667,False,0.887941
-budget_aware_q(greedy),expected_profit,30,-26475.8,-50945,-2354.63,0.366667,True,-0.809493
-risk_band,expected_profit,30,-37666.3,-67804.1,-8735.19,0.3,True,-1.15164
-approve_all,expected_profit,30,-128691,-153925,-104120,0.0333333,True,-3.9347
+fixed_threshold@0.150,expected_profit,30,28262.4,2616.14,54837.1,0.666667,True,0.844009
+thompson,expected_profit,30,17397.5,-2573.97,37135.8,0.633333,False,0.519547
+linucb@alpha=1,expected_profit,30,10861.4,-7086.57,29571.4,0.533333,False,0.324359
+budget_aware_q(greedy),expected_profit,30,-33217.5,-47279.6,-18551.8,0.266667,True,-0.991986
+risk_band,expected_profit,30,-79599.6,-98773.3,-60797.8,0.1,True,-2.37711
+approve_all,expected_profit,30,-129470,-150815,-109765,0,True,-3.86641

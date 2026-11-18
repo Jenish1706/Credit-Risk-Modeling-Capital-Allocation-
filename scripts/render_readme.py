@@ -157,14 +157,15 @@ def render_results_table() -> str:
     learners_60 = _learners(b60)
     lu = best(unc, learners_unc)
     l6 = best(b60, learners_60)
+    thr_c = _exp06_conditions(kind="diffthr")
+    t60 = thr_c["budget=0.60"]
     res_exp06 = (
-        f"Frozen-at-test learners vs myopic expected-profit ({H2}): unconstrained {lu} "
-        f"**{unc.loc[lu, 'mean_difference']:+,.0f}** (95% CI [{unc.loc[lu, 'ci_low']:+,.0f}, "
-        f"{unc.loc[lu, 'ci_high']:+,.0f}]); at 60% budget best learner {l6} "
-        f"**{b60.loc[l6, 'mean_difference']:+,.0f}** (95% CI [{b60.loc[l6, 'ci_low']:+,.0f}, "
-        f"{b60.loc[l6, 'ci_high']:+,.0f}]) `SIMULATED`"
+        f"Frozen-at-test learners, accept/reject at observed exposure ({H2}). Unconstrained: best learner {lu} "
+        f"{unc.loc[lu, 'mean_difference']:+,.0f} vs myopic expected-profit (95% CI [{unc.loc[lu, 'ci_low']:+,.0f}, "
+        f"{unc.loc[lu, 'ci_high']:+,.0f}]). 60% budget: {l6} {t60.loc[l6, 'mean_difference']:+,.0f} vs the 15% threshold "
+        f"(95% CI [{t60.loc[l6, 'ci_low']:+,.0f}, {t60.loc[l6, 'ci_high']:+,.0f}]) `SIMULATED`"
     )
-    exp06_verdict = _exp06_verdict(cond)
+    exp06_verdict = _exp06_verdict(cond, _exp06_conditions(kind="diffthr"))
 
     # EXP07
     df_exp07 = pd.read_csv(TABLES_DIR / "boosting_exp07_calibration_drift.csv")
@@ -243,12 +244,12 @@ LEARNER_MARKERS = ("q(", "linucb", "thompson")
 EXP06_CONDITIONS = ("unconstrained", "budget=0.60", "budget=0.35", "budget=0.20")
 
 
-def _exp06_conditions() -> dict[str, pd.DataFrame]:
-    """Paired differences vs the myopic expected-profit policy, one frame per capital condition."""
+def _exp06_conditions(prefix: str = "exp06_rl", kind: str = "diff") -> dict[str, pd.DataFrame]:
+    """Paired differences per capital condition: ``diff`` = vs expected-profit, ``diffthr`` = vs the 15% threshold."""
     out = {}
     for cond in EXP06_CONDITIONS:
         tag = cond.replace("=", "").replace(".", "")
-        out[cond] = pd.read_csv(TABLES_DIR / f"exp06_rl_exp06_diff_{tag}.csv", index_col=0)
+        out[cond] = pd.read_csv(TABLES_DIR / f"{prefix}_exp06_{kind}_{tag}.csv", index_col=0)
     return out
 
 
@@ -256,65 +257,107 @@ def _learners(diff: pd.DataFrame) -> list[str]:
     return [n for n in diff.index if any(m in n for m in LEARNER_MARKERS)]
 
 
-def _exp06_verdict(cond: dict[str, pd.DataFrame]) -> str:
+def _exp06_verdict(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) -> str:
     """Verdict derived from the paired CIs, never typed by hand."""
-    wins, losses = {}, {}
-    for name, diff in cond.items():
-        rows = diff.loc[_learners(diff)]
-        wins[name] = list(rows.index[(rows["ci_low"] > 0)])
-        losses[name] = list(rows.index[(rows["ci_high"] < 0)])
+
+    def sig(frames, c, side):
+        rows = frames[c].loc[_learners(frames[c])]
+        mask = rows["ci_low"] > 0 if side == "win" else rows["ci_high"] < 0
+        return list(rows.index[mask])
+
     constrained = [c for c in cond if c != "unconstrained"]
-    won = [c for c in constrained if wins[c]]
-    lost = [c for c in constrained if losses[c]]
     parts = []
-    if wins["unconstrained"]:
-        parts.append("**Control breached:** learners significantly beat the myopic rule with "
-                     "unconstrained capital, where it should be near-optimal (see the real-book audit below)")
-    if won:
-        parts.append("learners significantly beat it at " + ", ".join(won))
+    if sig(cond, "unconstrained", "win"):
+        parts.append("**Control breached:** learners significantly beat the myopic rule with unconstrained capital")
     else:
-        parts.append("**no learner significantly beats expected-profit in any capital-constrained condition**")
-    if lost:
-        parts.append("significantly worse at " + ", ".join(lost))
+        parts.append("Control holds: no learner significantly beats the myopic rule with unconstrained capital")
+    def by_learner(side):
+        found: dict[str, list[str]] = {}
+        for c in cond:
+            for learner in sig(thr, c, side):
+                found.setdefault(learner, []).append(c)
+        return "; ".join(f"{k} ({', '.join(v)})" for k, v in found.items())
+
+    wins, losses = by_learner("win"), by_learner("lose")
+    parts.append(
+        f"learners significantly beating the fixed 15% threshold: {wins}" if wins
+        else "**no learner significantly beats the fixed 15% threshold in any condition**"
+    )
+    if losses:
+        parts.append(f"significantly worse than the threshold: {losses}")
+    del constrained
     return "; ".join(parts)
 
 
 def render_rl_paragraph() -> str:
     """The prose under the results table, with every number read from the EXP06 artifacts."""
     cond = _exp06_conditions()
+    thr = _exp06_conditions(kind="diffthr")
     sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
     unc = sweep[sweep["condition"] == "unconstrained"].set_index("policy")["mean_reward"]
-    thompson, myopic = float(unc["thompson"]), float(unc["expected_profit"])
-    d_unc = cond["unconstrained"].loc["thompson"]
+    d_unc = cond["unconstrained"]
+    best = max(_learners(d_unc), key=lambda n: d_unc.loc[n, "mean_difference"])
+    bd = d_unc.loc[best]
+    breached = bool(bd["ci_low"] > 0)
+    thr_unc = d_unc.loc["fixed_threshold@0.150"]
     lines = [
         "**RL does not earn its place here, and that is the finding.** Learning policies "
-        "(LinUCB, Thompson sampling, Q-learning) are trained on the validation pool and their "
-        "parameters are **frozen** during every test-pool episode; an earlier version kept "
-        "updating them on realised test outcomes after every decision, which no deployed policy "
-        "can do (loan outcomes take up to 36 months to arrive).",
+        "(LinUCB, Thompson sampling, Q-learning) choose between accept and reject at the exposure "
+        "that was actually funded, so every simulated outcome is a real one. They are trained on "
+        "the validation pool and their parameters are **frozen** during every test-pool episode; "
+        "an earlier version kept updating them on realised test outcomes after every decision, "
+        "which no deployed policy can do (loan outcomes take up to 36 months to arrive).",
         "",
         f"The experiment carries a control. With unconstrained capital the myopic expected-profit "
-        f"rule should be near-optimal, yet unconstrained Thompson sampling earns "
-        f"**{thompson:,.0f}** vs the myopic rule's **{myopic:,.0f}** (paired difference "
-        f"{d_unc['mean_difference']:+,.0f}, 95% CI [{d_unc['ci_low']:+,.0f}, "
-        f"{d_unc['ci_high']:+,.0f}]). The control is breached. This experiment cannot say why, "
-        f"but the real-book audit below shows the myopic rule's inputs (PD and cashflow curves) "
-        f"mis-predict profit, and the learners are fitted on validation-window outcomes instead.",
+        f"rule should be near-optimal. The best learner ({best}) earns {float(unc[best]):,.0f} vs the "
+        f"myopic rule's {float(unc['expected_profit']):,.0f} (paired difference "
+        f"{bd['mean_difference']:+,.0f}, 95% CI [{bd['ci_low']:+,.0f}, {bd['ci_high']:+,.0f}]): "
+        + ("**the control is breached**." if breached else "**the control holds**.")
+        + f" The plain 15% PD threshold beats the myopic rule by {thr_unc['mean_difference']:+,.0f} "
+        f"(95% CI [{thr_unc['ci_low']:+,.0f}, {thr_unc['ci_high']:+,.0f}]), consistent with the "
+        "real-book audit below.",
         "",
-        "Paired difference vs the myopic expected-profit policy, by capital condition "
-        "(mean over 30 episodes, 95% bootstrap CI):",
+        "Paired difference by capital condition (mean over 30 episodes, 95% bootstrap CI), against "
+        "the myopic expected-profit policy and against the fixed 15% PD threshold:",
+        "",
+        "| Condition | Learner | vs expected-profit | 95% CI | vs 15% threshold | 95% CI |",
+        "|---|---|---|---|---|---|",
+    ]
+    for name, diff in cond.items():
+        for learner in _learners(diff):
+            r, t = diff.loc[learner], thr[name].loc[learner]
+            lines.append(
+                f"| {name} | {learner} | {r['mean_difference']:+,.0f}{'*' if r['significant'] else ''} | "
+                f"[{r['ci_low']:+,.0f}, {r['ci_high']:+,.0f}] | {t['mean_difference']:+,.0f}{'*' if t['significant'] else ''} | "
+                f"[{t['ci_low']:+,.0f}, {t['ci_high']:+,.0f}] |"
+            )
+    lines += ["", "\\* = 95% CI excludes zero."]
+    return "\n".join(lines) + "\n\n" + render_sensitivity_table() + "\n\n" + render_profit_paragraph()
+
+
+def render_sensitivity_table() -> str:
+    """CR-04: the exposure-changing action space, labelled as a sensitivity analysis."""
+    sens = _exp06_conditions("exp06_rl_sens")
+    exp03 = pd.read_csv(TABLES_DIR / "exp06_rl_sens_exp03_differences.csv")
+    ep = exp03[exp03["treatment"] == "expected_profit"].iloc[0]
+    lines = [
+        "**Sensitivity: exposure-changing actions.** Adding 0.5x and 1.5x exposure actions makes "
+        "off-diagonal outcomes model counterfactuals rather than measurements, so these are not "
+        "headline numbers. Expected-profit vs the 15% threshold in that space: "
+        f"{ep['mean_difference']:+,.0f} per episode (95% CI [{ep['ci_low']:+,.0f}, {ep['ci_high']:+,.0f}]). "
+        "Learners vs the myopic expected-profit policy:",
         "",
         "| Condition | Learner | Difference | 95% CI | Significant |",
         "|---|---|---|---|---|",
     ]
-    for name, diff in cond.items():
+    for name, diff in sens.items():
         for learner in _learners(diff):
             r = diff.loc[learner]
             lines.append(
                 f"| {name} | {learner} | {r['mean_difference']:+,.0f} | "
                 f"[{r['ci_low']:+,.0f}, {r['ci_high']:+,.0f}] | {'yes' if r['significant'] else 'no'} |"
             )
-    return "\n".join(lines) + "\n\n" + render_profit_paragraph()
+    return "\n".join(lines)
 
 
 def _profit_rules(pool: str) -> pd.DataFrame:
@@ -336,7 +379,8 @@ def render_profit_paragraph() -> str:
     by_apr = by_apr[by_apr["pool"] == "test_h2"].sort_values("apr_quintile")
     deciles = pd.read_csv(TABLES_DIR / "profit_calibration_deciles.csv")
     deciles = deciles[deciles["pool"] == "test_h2"].sort_values("decile")
-    mix = pd.read_csv(TABLES_DIR / "profit_calibration_exposure_mix.csv").set_index("policy")
+    mix_all = pd.read_csv(TABLES_DIR / "profit_calibration_exposure_mix.csv")
+    mix = mix_all[mix_all["action_space"].str.startswith("multi_exposure")].set_index("policy")
     ep_mix = mix.loc["expected_profit"]
     thr_mix = mix.loc["fixed_threshold@0.150"]
 
@@ -369,11 +413,13 @@ def render_profit_paragraph() -> str:
         f"understated exactly where predicted profit is largest. Predicted profit is over-dispersed: "
         f"the top predicted-profit decile is predicted at {deciles.iloc[-1]['mean_predicted_profit']:+,.0f} "
         f"per loan and realises {deciles.iloc[-1]['mean_realised_profit']:+,.0f}.",
-        f"- Simulator caveat: {ep_mix['share_of_approvals_at_observed_exposure']:.0%} of the "
-        f"expected-profit policy's simulated approvals are at the observed exposure (mean multiplier "
+        f"- Simulator caveat: in the exposure-changing sensitivity space "
+        f"{ep_mix['share_of_approvals_at_observed_exposure']:.0%} of the expected-profit policy's "
+        f"approvals are at the observed exposure (mean multiplier "
         f"{ep_mix['mean_exposure_multiplier_of_approvals']:.2f}x) vs "
-        f"{thr_mix['share_of_approvals_at_observed_exposure']:.0%} for the threshold, so the "
-        f"simulated policy comparison mixes realised and modelled returns.",
+        f"{thr_mix['share_of_approvals_at_observed_exposure']:.0%} for the threshold, so that "
+        f"comparison mixes realised and modelled returns. The headline EXP03/EXP06 tables use "
+        f"accept/reject at the observed exposure, where every outcome is real.",
         "",
         "2015-07..12 holdout, deciles of predicted profit (per loan, dollars):",
         "",

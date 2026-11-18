@@ -1,3 +1,5 @@
-policy,share_of_approvals_at_observed_exposure,mean_exposure_multiplier_of_approvals
-fixed_threshold@0.150,1,1
-expected_profit,0,1.47176
+policy,share_of_approvals_at_observed_exposure,mean_exposure_multiplier_of_approvals,action_space
+fixed_threshold@0.150,1,1,accept_reject (headline)
+expected_profit,1,1,accept_reject (headline)
+fixed_threshold@0.150,1,1,multi_exposure (sensitivity)
+expected_profit,0,1.47176,multi_exposure (sensitivity)
