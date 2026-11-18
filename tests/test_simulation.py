@@ -366,3 +366,56 @@ def test_simulator_uses_observed_outcomes_at_observed_exposure(pool, cashflow, s
             applicant = int(row["applicant"])
             expected_default = bool(pool.observed_default[applicant] > 0.5)
             assert bool(row["defaulted"]) == expected_default
+
+
+# ---------------------------------------------------------------------------
+# CR-01: evaluation episodes must not train the policy on test-pool outcomes
+# ---------------------------------------------------------------------------
+
+def _learner_state(policy) -> bytes:
+    """Byte-exact snapshot of everything a learning policy has learned."""
+    arrays = [getattr(policy, name) for name in ("A", "A_inv", "b", "counts", "Q", "visits")
+              if hasattr(policy, name)]
+    assert arrays, "policy exposes no learnable state"
+    return b"".join(np.ascontiguousarray(a).tobytes() for a in arrays)
+
+
+def _pretrained_learners(pool, cashflow, space):
+    encoder = StateEncoder(cashflow, EconomicsConfig(), space, total_budget=3e5, total_steps=200)
+    train_env = make_env(pool, cashflow, space, budget=3e5, n_steps=200)
+    learners = [
+        LinUCBPolicy(encoder, space, BanditConfig()),
+        ThompsonSamplingPolicy(encoder, space, BanditConfig(), seed=1),
+        BudgetAwareQPolicy(encoder, space, QLearningConfig(epsilon_decay_episodes=5, seed=0)),
+    ]
+    for learner in learners:
+        train_policy(train_env, learner, n_episodes=3, seed_offset=10_000)
+    learners[2].greedy()
+    return learners
+
+
+def test_evaluation_leaves_learning_policy_parameters_byte_identical(pool, cashflow, space):
+    eval_env = make_env(pool, cashflow, space, budget=3e5, n_steps=200)
+    for policy in _pretrained_learners(pool, cashflow, space):
+        before = _learner_state(policy)
+        evaluate_policy(eval_env, policy, seeds=[0, 1, 2])
+        assert _learner_state(policy) == before, f"{policy.name} learned during evaluation"
+
+
+def test_evaluation_results_do_not_depend_on_episode_order(pool, cashflow, space):
+    eval_env = make_env(pool, cashflow, space, budget=3e5, n_steps=200)
+    for policy in _pretrained_learners(pool, cashflow, space):
+        forward = evaluate_policy(eval_env, policy, seeds=[0, 1, 2, 3]).rewards()
+        backward = evaluate_policy(eval_env, policy, seeds=[3, 2, 1, 0]).rewards()
+        alone = evaluate_policy(eval_env, policy, seeds=[2]).rewards()
+        assert np.allclose(forward, backward[::-1]), policy.name
+        assert np.isclose(forward[2], alone[0]), policy.name
+
+
+def test_run_can_still_learn_when_asked(pool, cashflow, space):
+    """Training episodes (the validation pool) must keep updating the policy."""
+    encoder = StateEncoder(cashflow, EconomicsConfig(), space)
+    policy = LinUCBPolicy(encoder, space, BanditConfig())
+    before = _learner_state(policy)
+    make_env(pool, cashflow, space, n_steps=50).run(policy, seed=0)
+    assert _learner_state(policy) != before

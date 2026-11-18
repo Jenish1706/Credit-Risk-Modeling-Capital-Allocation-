@@ -95,16 +95,23 @@ def render_results_table() -> str:
     auc_c = float(df_exp04.loc["C_graphsage", "roc_auc"])
     res_exp05 = f"AUC **{auc_c:.4f}** vs {auc_b:.4f} (aggregates) vs {auc_a:.4f} (tabular) `OBSERVED`"
 
-    # EXP06
-    df_sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
-    s60 = df_sweep[df_sweep["condition"] == "budget=0.60"].set_index("policy")
-    rew_thomp = float(s60.loc["thompson", "mean_reward"])
-    rew_lucb = float(s60.loc["linucb@alpha=1", "mean_reward"])
-    rew_orc = float(s60.loc["oracle_ceiling(lambda=0.0004)", "mean_reward"])
-    rew_val = float(s60.loc["expected_profit(lambda=0.0052)", "mean_reward"])
+    # EXP06 (learning policies are frozen during evaluation episodes -- CR-01)
+    cond = _exp06_conditions()
+    unc = cond["unconstrained"]
+    b60 = cond["budget=0.60"]
+    best = lambda d, names: max(names, key=lambda n: d.loc[n, "mean_difference"])  # noqa: E731
+    learners_unc = _learners(unc)
+    learners_60 = _learners(b60)
+    lu = best(unc, learners_unc)
+    l6 = best(b60, learners_60)
     res_exp06 = (
-        f"At 60% budget: Thompson **{rew_thomp:,.0f}**, LinUCB **{rew_lucb:,.0f}**, oracle **{rew_orc:,.0f}**, val $\\lambda$ **{rew_val:,.0f}** `SIMULATED`"
+        f"Frozen-at-test learners vs myopic expected-profit: unconstrained {lu} "
+        f"**{unc.loc[lu, 'mean_difference']:+,.0f}** (95% CI [{unc.loc[lu, 'ci_low']:+,.0f}, "
+        f"{unc.loc[lu, 'ci_high']:+,.0f}]); at 60% budget best learner {l6} "
+        f"**{b60.loc[l6, 'mean_difference']:+,.0f}** (95% CI [{b60.loc[l6, 'ci_low']:+,.0f}, "
+        f"{b60.loc[l6, 'ci_high']:+,.0f}]) `SIMULATED`"
     )
+    exp06_verdict = _exp06_verdict(cond)
 
     # EXP07
     df_exp07 = pd.read_csv(TABLES_DIR / "boosting_exp07_calibration_drift.csv")
@@ -145,7 +152,7 @@ def render_results_table() -> str:
         ("EXP03", "Does expected-profit optimisation beat a fixed PD threshold?", res_exp03, "**Null result.** Myopic rule underperforms threshold under vintage deterioration on observed cashflows"),
         ("EXP04", "Do graph cohort features add signal?", res_exp04, "No discrimination gain; **calibration gain confirmed by controls** (ΔECE −0.0071 vs macro, −0.0044 vs shuffled)"),
         ("EXP05", "Does GraphSAGE beat the aggregates?", res_exp05, "**No.** The GNN loses to both"),
-        ("EXP06", "Can a budget-aware learned policy beat static policies?", res_exp06, "**Bandits adapt to vintage drift at 60%; capital shadow pricing dominates at 20%**"),
+        ("EXP06", "Can a budget-aware learned policy beat static policies?", res_exp06, exp06_verdict),
         ("EXP07", "How does the model degrade under vintage drift?", res_exp07, "Calibration drifts before ranking does"),
         ("EXP08", "Does autoencoder anomaly flag untrustworthy PDs?", res_exp08, "**KEEP**"),
         ("EXP09", "Does VGAE relational uncertainty flag them?", res_exp09, "**REJECT**"),
@@ -159,6 +166,85 @@ def render_results_table() -> str:
     ]
     for exp_id, q, res, v in rows:
         lines.append(f"| **{exp_id}** | {q} | {res} | {v} |")
+    return "\n".join(lines)
+
+
+LEARNER_MARKERS = ("q(", "linucb", "thompson")
+EXP06_CONDITIONS = ("unconstrained", "budget=0.60", "budget=0.35", "budget=0.20")
+
+
+def _exp06_conditions() -> dict[str, pd.DataFrame]:
+    """Paired differences vs the myopic expected-profit policy, one frame per capital condition."""
+    out = {}
+    for cond in EXP06_CONDITIONS:
+        tag = cond.replace("=", "").replace(".", "")
+        out[cond] = pd.read_csv(TABLES_DIR / f"exp06_rl_exp06_diff_{tag}.csv", index_col=0)
+    return out
+
+
+def _learners(diff: pd.DataFrame) -> list[str]:
+    return [n for n in diff.index if any(m in n for m in LEARNER_MARKERS)]
+
+
+def _exp06_verdict(cond: dict[str, pd.DataFrame]) -> str:
+    """Verdict derived from the paired CIs, never typed by hand."""
+    wins, losses = {}, {}
+    for name, diff in cond.items():
+        rows = diff.loc[_learners(diff)]
+        wins[name] = list(rows.index[(rows["ci_low"] > 0)])
+        losses[name] = list(rows.index[(rows["ci_high"] < 0)])
+    constrained = [c for c in cond if c != "unconstrained"]
+    won = [c for c in constrained if wins[c]]
+    lost = [c for c in constrained if losses[c]]
+    parts = []
+    if wins["unconstrained"]:
+        parts.append("**Control breached:** learners significantly beat the myopic rule with "
+                     "unconstrained capital, where it should be near-optimal (cause: see CR-02)")
+    if won:
+        parts.append("learners significantly beat it at " + ", ".join(won))
+    else:
+        parts.append("**no learner significantly beats expected-profit in any capital-constrained condition**")
+    if lost:
+        parts.append("significantly worse at " + ", ".join(lost))
+    return "; ".join(parts)
+
+
+def render_rl_paragraph() -> str:
+    """The prose under the results table, with every number read from the EXP06 artifacts."""
+    cond = _exp06_conditions()
+    sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
+    unc = sweep[sweep["condition"] == "unconstrained"].set_index("policy")["mean_reward"]
+    thompson, myopic = float(unc["thompson"]), float(unc["expected_profit"])
+    d_unc = cond["unconstrained"].loc["thompson"]
+    lines = [
+        "**RL does not earn its place here, and that is the finding.** Learning policies "
+        "(LinUCB, Thompson sampling, Q-learning) are trained on the validation pool and their "
+        "parameters are **frozen** during every test-pool episode; an earlier version kept "
+        "updating them on realised test outcomes after every decision, which no deployed policy "
+        "can do (loan outcomes take up to 36 months to arrive).",
+        "",
+        f"The experiment carries a control. With unconstrained capital the myopic expected-profit "
+        f"rule should be near-optimal, yet unconstrained Thompson sampling earns "
+        f"**{thompson:,.0f}** vs the myopic rule's **{myopic:,.0f}** (paired difference "
+        f"{d_unc['mean_difference']:+,.0f}, 95% CI [{d_unc['ci_low']:+,.0f}, "
+        f"{d_unc['ci_high']:+,.0f}]). The control is breached and the cause is *not* established by "
+        f"this experiment: the learners are fitted on validation-window outcomes and the "
+        f"myopic rule on a parametric cashflow model, so any difference between the two inputs "
+        f"would show up here.",
+        "",
+        "Paired difference vs the myopic expected-profit policy, by capital condition "
+        "(mean over 30 episodes, 95% bootstrap CI):",
+        "",
+        "| Condition | Learner | Difference | 95% CI | Significant |",
+        "|---|---|---|---|---|",
+    ]
+    for name, diff in cond.items():
+        for learner in _learners(diff):
+            r = diff.loc[learner]
+            lines.append(
+                f"| {name} | {learner} | {r['mean_difference']:+,.0f} | "
+                f"[{r['ci_low']:+,.0f}, {r['ci_high']:+,.0f}] | {'yes' if r['significant'] else 'no'} |"
+            )
     return "\n".join(lines)
 
 
@@ -179,6 +265,12 @@ def update_readme() -> None:
     if not results_pattern.search(content):
         raise RuntimeError("Could not locate Results table in README.md")
     content = results_pattern.sub(lambda m: results_table, content)
+
+    # Replace RL paragraph
+    rl_pattern = re.compile(r"\*\*RL does not earn its place here[\s\S]*?(?=\n\n---\n\n## Architecture)")
+    if not rl_pattern.search(content):
+        raise RuntimeError("Could not locate RL paragraph in README.md")
+    content = rl_pattern.sub(lambda m: render_rl_paragraph(), content)
 
     README_PATH.write_text(content, encoding="utf-8")
     print(f"Successfully updated tables in {README_PATH}")

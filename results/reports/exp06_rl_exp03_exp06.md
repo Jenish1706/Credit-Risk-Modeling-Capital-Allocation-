@@ -3,7 +3,7 @@
 # exp06_rl: EXP03 and EXP06
 
 Applicant pool: 283,026 out-of-time loans; 1,200 processed per episode; 30 seeds under common random numbers.
-Learning policies are trained on 90,615 **validation-window** applicants and evaluated on the test window, so they never see the borrowers they are scored on. An earlier version trained them on the evaluation pool itself, which gave them an advantage the static policies did not have.
+Learning policies are trained on 90,615 **validation-window** applicants and evaluated on the test window, so they never see the borrowers they are scored on. During evaluation episodes learning is switched off (`env.run(..., learn=False)`): parameters are frozen at what the validation window taught them, so no test-pool outcome is fed back. An earlier version trained them on the evaluation pool and then kept updating them on test outcomes after every decision, which static policies cannot do.
 Estimated from training-window cashflows: good-loan yield -0.001+1.351*APR, defaulted-loan loss rate 0.393-0.179*APR, **empirical LGD 0.518** (mean) / 0.532 (median).
 
 ## EXP03 - does expected-profit optimisation beat a fixed PD threshold?
@@ -29,14 +29,14 @@ The mechanism is worth stating: the expected-profit policy typically runs a *hig
 
 | condition | validation shadow price lambda | oracle ceiling lambda | verdict |
 |---|---|---|---|
-| unconstrained | 0.0000 | 0.0000 | thompson beat expected_profit by +64,260 per episode (+173.9%), 95% CI [+33,334, +94,402], winning on 80% of seeds. |
-| budget=0.60 | 0.0052 | 0.0004 | No policy beat expected_profit significantly. Best was thompson at +14,782 per episode, 95% CI [-12,622, +42,261] -- the interval includes zero, so this is a null result. |
+| unconstrained | 0.0000 | 0.0000 | thompson beat expected_profit by +55,753 per episode (+150.9%), 95% CI [+29,266, +80,634], winning on 80% of seeds. |
+| budget=0.60 | 0.0052 | 0.0004 | No policy beat expected_profit significantly. Best was linucb@alpha=1 at +6,916 per episode, 95% CI [-17,235, +30,160] -- the interval includes zero, so this is a null result. |
 | budget=0.35 | 0.0290 | 0.0232 | No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0232) at +10,574 per episode, 95% CI [-13,394, +34,391] -- the interval includes zero, so this is a null result. |
 | budget=0.20 | 0.0491 | 0.0415 | No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0415) at -2,818 per episode, 95% CI [-26,767, +19,941] -- the interval includes zero, so this is a null result. |
 
 ### Control check
 
-> CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. It indicates the myopic policy is optimising a misspecified objective -- its good-loan yield and loss-rate coefficients are fitted on the 2010-2014 training window and applied to the 2015 test vintage.
+> CONTROL BREACHED: thompson, linucb@alpha=1 significantly beat the myopic expected-profit policy with unconstrained capital, where it should be optimal. This does not support an RL claim. The cause is not established by this experiment (see the CR-02 expected-vs-realised profit decile table).
 
 Learning-policy results in the unconstrained condition should therefore **not** be read as evidence for reinforcement learning. The correct reading is that the myopic policy's economic inputs are stale relative to the test vintage.
 
@@ -49,12 +49,12 @@ Learning-policy results in the unconstrained condition should therefore **not** 
 | expected_profit(lambda=0.0290) |           nan |         28595 |           nan |             nan |
 | expected_profit(lambda=0.0491) |         15900 |           nan |           nan |             nan |
 | fixed_threshold@0.150          |         30411 |         46368 |         65381 |           63349 |
-| linucb@alpha=1                 |         27005 |         31007 |         76908 |           93266 |
+| linucb@alpha=1                 |         23652 |         28938 |         76871 |           91894 |
 | oracle_ceiling(lambda=0.0004)  |           nan |           nan |         72515 |             nan |
 | oracle_ceiling(lambda=0.0232)  |           nan |         56228 |           nan |             nan |
 | oracle_ceiling(lambda=0.0415)  |         34177 |           nan |           nan |             nan |
 | risk_band                      |         18279 |         22460 |         13858 |            8163 |
-| thompson                       |         18333 |         27355 |         84737 |          101203 |
+| thompson                       |         17289 |         24211 |         59745 |           92696 |
 
 **Reading this table.** The `unconstrained` column is the control. There, the myopic expected-profit rule is optimal by construction and the learned policies should not beat it -- if they appear to, the simulator has a bug. As the budget tightens, the shadow price of capital rises and the ranking should change: pricing capital correctly (either analytically via `expected_profit(lambda=...)` or by learning it via `budget_aware_q`) starts to matter more than per-applicant accuracy.
 

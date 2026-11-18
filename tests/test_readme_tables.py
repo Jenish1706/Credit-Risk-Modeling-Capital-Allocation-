@@ -8,7 +8,12 @@ re-renders them and fails on any difference, so a hand-edited number can't survi
 import re
 from pathlib import Path
 
-from scripts.render_readme import README_PATH, render_data_table, render_results_table
+from scripts.render_readme import (
+    README_PATH,
+    render_data_table,
+    render_results_table,
+    render_rl_paragraph,
+)
 
 
 def test_readme_data_table_matches_rendered():
@@ -35,5 +40,17 @@ def test_readme_results_table_matches_rendered():
     assert match is not None, "Results table not found in README.md"
     assert match.group(0).strip() == expected.strip(), (
         "README.md results table differs from rendered artifact values! "
+        "Run `python scripts/render_readme.py` to synchronize."
+    )
+
+
+def test_readme_rl_paragraph_matches_rendered():
+    content = README_PATH.read_text(encoding="utf-8")
+    expected = render_rl_paragraph()
+    pattern = re.compile(r"\*\*RL does not earn its place here[\s\S]*?(?=\n\n---\n\n## Architecture)")
+    match = pattern.search(content)
+    assert match is not None, "RL paragraph not found in README.md"
+    assert match.group(0).strip() == expected.strip(), (
+        "README.md RL paragraph differs from rendered artifact values! "
         "Run `python scripts/render_readme.py` to synchronize."
     )

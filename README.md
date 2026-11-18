@@ -50,7 +50,7 @@ under the assumptions in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 | **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Diff vs 15% threshold: **-26,405**/episode (95% CI [-59,902, +7,655]) `SIMULATED` | **Null result.** Myopic rule underperforms threshold under vintage deterioration on observed cashflows |
 | **EXP04** | Do graph cohort features add signal? | AUC **-0.0010**. ECE **0.0105 → 0.0032**, P/O **0.930 → 0.999** `OBSERVED` | No discrimination gain; **calibration gain confirmed by controls** (ΔECE −0.0071 vs macro, −0.0044 vs shuffled) |
 | **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6616** vs 0.6679 (aggregates) vs 0.6690 (tabular) `OBSERVED` | **No.** The GNN loses to both |
-| **EXP06** | Can a budget-aware learned policy beat static policies? | At 60% budget: Thompson **84,737**, LinUCB **76,908**, oracle **72,515**, val $\lambda$ **68,316** `SIMULATED` | **Bandits adapt to vintage drift at 60%; capital shadow pricing dominates at 20%** |
+| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners vs myopic expected-profit: unconstrained thompson **+55,753** (95% CI [+29,266, +80,634]); at 60% budget best learner linucb@alpha=1 **+6,916** (95% CI [-17,235, +30,160]) `SIMULATED` | **Control breached:** learners significantly beat the myopic rule with unconstrained capital, where it should be near-optimal (cause: see CR-02); **no learner significantly beats expected-profit in any capital-constrained condition**; significantly worse at budget=0.20 |
 | **EXP07** | How does the model degrade under vintage drift? | O/E **0.860 (2010) → 1.077 (2015)** while AUC moves 0.7475 → 0.6705 `OBSERVED` | Calibration drifts before ranking does |
 | **EXP08** | Does autoencoder anomaly flag untrustworthy PDs? | Survives PD control in **10/10** deciles, sign-test **p=0.0010**, odds ratio 1.032/SD `OBSERVED` | **KEEP** |
 | **EXP09** | Does VGAE relational uncertainty flag them? | Fails PD control (**5/10** deciles, sign-test **p=0.6230**), odds ratio 1.002/SD `OBSERVED` | **REJECT** |
@@ -79,15 +79,26 @@ match the 15.98% default rate (random CI [15.94%, 16.09%], APR-matched CI [15.98
 drop is an accounting consequence of deploying unspent budget into lower-risk loans, not representation-learning
 selectivity.
 
-**RL does not earn its place here, and that is the finding.** The RL experiment carries a control:
-with unconstrained capital the myopic expected-profit rule should be optimal, so a learner beating it
-indicates misspecified economic parameters rather than an RL breakthrough. Under 2015 vintage deterioration,
-unconstrained Thompson sampling achieves **101,203** vs the myopic rule's **36,943** because static cashflow
-parameters fitted on 2010–2014 misprice deteriorating cohorts. When capital constraints tighten to 60% budget,
-Thompson (**84,737**) and LinUCB (**76,908**) sequentially adapt, while the analytical validation shadow price
-$\lambda$ achieves **68,316** bounded by the oracle ceiling (**72,515**). At 20% budget, capital shadow pricing
-dominates sequential exploration: static expected profit (**36,995**) beats LinUCB (**27,005**) and Thompson (**18,333**).
-Complex dynamic RL adds no systematic value over disciplined knapsack shadow pricing.
+**RL does not earn its place here, and that is the finding.** Learning policies (LinUCB, Thompson sampling, Q-learning) are trained on the validation pool and their parameters are **frozen** during every test-pool episode; an earlier version kept updating them on realised test outcomes after every decision, which no deployed policy can do (loan outcomes take up to 36 months to arrive).
+
+The experiment carries a control. With unconstrained capital the myopic expected-profit rule should be near-optimal, yet unconstrained Thompson sampling earns **92,696** vs the myopic rule's **36,943** (paired difference +55,753, 95% CI [+29,266, +80,634]). The control is breached and the cause is *not* established by this experiment: the learners are fitted on validation-window outcomes and the myopic rule on a parametric cashflow model, so any difference between the two inputs would show up here.
+
+Paired difference vs the myopic expected-profit policy, by capital condition (mean over 30 episodes, 95% bootstrap CI):
+
+| Condition | Learner | Difference | 95% CI | Significant |
+|---|---|---|---|---|
+| unconstrained | thompson | +55,753 | [+29,266, +80,634] | yes |
+| unconstrained | linucb@alpha=1 | +54,951 | [+29,273, +79,091] | yes |
+| unconstrained | budget_aware_q(greedy) | -6,499 | [-27,055, +14,423] | no |
+| budget=0.60 | linucb@alpha=1 | +6,916 | [-17,235, +30,160] | no |
+| budget=0.60 | thompson | -10,209 | [-36,599, +15,626] | no |
+| budget=0.60 | budget_aware_q(greedy) | -24,354 | [-53,771, +4,544] | no |
+| budget=0.35 | budget_aware_q(greedy) | -8,541 | [-30,982, +13,788] | no |
+| budget=0.35 | linucb@alpha=1 | -16,716 | [-41,512, +8,368] | no |
+| budget=0.35 | thompson | -21,443 | [-47,513, +5,321] | no |
+| budget=0.20 | linucb@alpha=1 | -13,343 | [-26,403, -490] | yes |
+| budget=0.20 | budget_aware_q(greedy) | -16,708 | [-32,578, -1,264] | yes |
+| budget=0.20 | thompson | -19,706 | [-33,928, -5,896] | yes |
 
 ---
 

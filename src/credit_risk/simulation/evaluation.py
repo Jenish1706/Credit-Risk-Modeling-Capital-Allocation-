@@ -81,10 +81,14 @@ def evaluate_policy(
     seeds: Sequence[int],
     keep_logs: bool = False,
 ) -> PolicyEvaluation:
-    """Run ``policy`` once per seed in ``env``."""
+    """Run ``policy`` once per seed in ``env``, with learning switched off.
+
+    Evaluation is read-only for the policy: ``learn=False`` means no ``update`` is called, so the
+    result of one episode cannot depend on the outcomes seen in earlier ones.
+    """
     episodes = []
     for seed in seeds:
-        episodes.append(env.run(policy, seed=seed, keep_log=keep_logs))
+        episodes.append(env.run(policy, seed=seed, keep_log=keep_logs, learn=False))
     evaluation = PolicyEvaluation(
         name=policy.name, episodes=episodes, description=policy.describe()
     )

@@ -345,10 +345,9 @@ def main() -> int:
                     control_breach = (
                         f"CONTROL BREACHED: {', '.join(learners)} significantly beat the myopic "
                         f"expected-profit policy with unconstrained capital, where it should be "
-                        f"optimal. This does not support an RL claim. It indicates the myopic "
-                        f"policy is optimising a misspecified objective -- its good-loan yield "
-                        f"and loss-rate coefficients are fitted on the 2010-2014 training window "
-                        f"and applied to the 2015 test vintage."
+                        f"optimal. This does not support an RL claim. The cause is not "
+                        f"established by this experiment (see the CR-02 expected-vs-realised "
+                        f"profit decile table)."
                     )
                     LOG.warning(control_breach)
 
@@ -388,8 +387,11 @@ def main() -> int:
         (
             f"Learning policies are trained on {len(train_pool):,} **validation-window** "
             f"applicants and evaluated on the test window, so they never see the borrowers they "
-            f"are scored on. An earlier version trained them on the evaluation pool itself, which "
-            f"gave them an advantage the static policies did not have."
+            f"are scored on. During evaluation episodes learning is switched off "
+            f"(`env.run(..., learn=False)`): parameters are frozen at what the validation "
+            f"window taught them, so no test-pool outcome is fed back. An earlier version "
+            f"trained them on the evaluation pool and then kept updating them on test outcomes "
+            f"after every decision, which static policies cannot do."
             if train_pool is not None
             else "Learning policies were SKIPPED: validation-window PDs were unavailable, and "
             "training them on the evaluation pool would have made the comparison invalid."

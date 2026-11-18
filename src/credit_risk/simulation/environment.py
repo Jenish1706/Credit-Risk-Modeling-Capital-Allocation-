@@ -388,8 +388,21 @@ class LendingEnvironment:
         return float(self.cashflow_model.good_yield(apr))
 
     # -- running a whole episode ------------------------------------------
-    def run(self, policy: Policy, seed: int | None = None, keep_log: bool = False) -> EpisodeResult:
-        """Run one full episode under ``policy`` and summarise it."""
+    def run(
+        self,
+        policy: Policy,
+        seed: int | None = None,
+        keep_log: bool = False,
+        learn: bool = True,
+    ) -> EpisodeResult:
+        """Run one full episode under ``policy`` and summarise it.
+
+        ``learn=True`` (the default, used for training episodes) feeds each realised reward back
+        to a learning policy immediately. ``learn=False`` is the evaluation mode: the policy acts
+        but never ``update``s, so scoring it on a pool cannot teach it that pool's outcomes. A
+        loan's outcome takes up to 36 months to arrive; delivering it instantly during an
+        evaluation episode would be information no deployed policy has.
+        """
         obs = self.reset(seed)
         policy.reset()
         rng = np.random.default_rng((seed or 0) + 9973)
@@ -399,7 +412,7 @@ class LendingEnvironment:
             context = self.context(applicant)
             action = int(np.asarray(policy.act(context, rng)).ravel()[0])
             reward, done, obs = self.step(action)
-            if policy.is_learning:
+            if learn and policy.is_learning:
                 policy.update(context, np.array([action]), np.array([reward]))
 
         return self._summarise(keep_log)
