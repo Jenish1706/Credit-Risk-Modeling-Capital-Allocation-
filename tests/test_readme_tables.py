@@ -72,4 +72,26 @@ def test_calibration_ratios_use_one_convention_and_match_artifacts():
     b = float(h2.loc["B_tabular_plus_graph", "observed_expected_ratio"])
     # O/E is observed / mean predicted, i.e. the reciprocal of the predicted/observed column
     assert abs(a - 1.0 / float(h2.loc["A_tabular", "predicted_observed_ratio"])) < 1e-3
-    assert f"O/E **{a:.3f} → {b:.3f}**" in texts[README_PATH]
+    seeds = pd.read_csv(TABLES_DIR / "cohort_controls_exp04_seed_summary.csv", index_col=0)
+    sa = float(seeds.loc["A_tabular", "observed_expected_ratio_mean"])
+    sb = float(seeds.loc["B_tabular_plus_graph", "observed_expected_ratio_mean"])
+    assert f"O/E **{sa:.3f} → {sb:.3f}**" in texts[README_PATH]
+    assert f"O/E {a:.3f} → {b:.3f}" in texts[README_PATH]  # single-fit run, unbolded
+
+
+def test_exp04_is_reported_over_at_least_three_seeds():
+    """CR-06: the calibration claim must rest on several model fits, not one."""
+    import json
+
+    import pandas as pd
+
+    from scripts.render_readme import TABLES_DIR
+
+    summary = json.loads((TABLES_DIR / "cohort_controls_exp04.json").read_text(encoding="utf-8"))["seed_summary"]
+    assert len(summary["seeds"]) >= 3
+    deltas = pd.read_csv(TABLES_DIR / "cohort_controls_exp04_seed_deltas.csv")
+    assert len(deltas) == len(summary["seeds"])
+    every_seed = bool(
+        (deltas["delta_ece_vs_macro_ci_high"] < 0).all() and (deltas["delta_ece_vs_shuffled_ci_high"] < 0).all()
+    )
+    assert summary["survives_controls_for_every_seed"] == every_seed

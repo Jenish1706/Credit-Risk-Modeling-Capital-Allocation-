@@ -53,7 +53,7 @@ data; `SIMULATED` = produced inside the lending simulator under the assumptions 
 | **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6606 → 0.6732** (+0.0126) on 2015-07..12 (full 2015: 0.6581 → 0.6705) `OBSERVED` | Material. Boosting justified |
 | **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0198 → 0.0117** (intercept_only, chosen on 2015-01..06) on 2015-07..12 (full 2015: 0.0193 → 0.0110); slope 1.003 → 1.004 `OBSERVED` | The point of the project in one row: ranking metrics are blind to calibration |
 | **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Simulated diff vs 15% threshold: **-28,262**/episode (95% CI [-54,837, -2,616]) `SIMULATED` on 2015-07..12. Real book at observed exposure: **-36.9**/loan (95% CI [-47.1, -26.9]) `OBSERVED` on 2015-07..12 | **Expected-profit rule loses to a PD threshold on the real book.** Simulation CI excludes zero. Mechanism is measured below, not assumed |
-| **EXP04** | Do graph cohort features add signal? | AUC **-0.0009**. ECE **0.0109 → 0.0043**, O/E **1.080 → 0.989** on 2015-07..12 (full 2015 ECE: 0.0105 → 0.0032) `OBSERVED` | No discrimination gain; **calibration gain confirmed by controls** (ΔECE -0.0066 vs macro [-0.0083, -0.0037], -0.0029 vs shuffled [-0.0047, -0.0002], 2015-07..12) |
+| **EXP04** | Do graph cohort features add signal? | AUC **-0.0009**. Mean over 5 LightGBM seeds on 2015-07..12: ECE **0.0110 ± 0.0001 → 0.0048 ± 0.0005**, O/E **1.081 → 0.998** (EXP04/05 single-fit run: ECE 0.0109 → 0.0043, O/E 1.080 → 0.989) `OBSERVED` | No discrimination gain; **calibration gain survives both controls in every one of 5 seeds** (ΔECE B−tabular -0.0062 ± 0.0005, B−macro -0.0066 ± 0.0002, B−shuffled -0.0038 ± 0.0006; mean ± sd over seeds, per-seed paired bootstrap, 2015-07..12) |
 | **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6637** vs 0.6704 (aggregates) vs 0.6712 (tabular) on 2015-07..12 `OBSERVED` | **No.** The GNN loses to both |
 | **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners, accept/reject at observed exposure (2015-07..12). Unconstrained: best learner thompson +17,398 vs myopic expected-profit (95% CI [-2,574, +37,136]). 60% budget: thompson -160 vs the 15% threshold (95% CI [-15,333, +14,180]) `SIMULATED` | Control holds: no learner significantly beats the myopic rule with unconstrained capital; **no learner significantly beats the fixed 15% threshold in any condition**; significantly worse than the threshold: budget_aware_q(greedy) (unconstrained, budget=0.60); linucb@alpha=1 (budget=0.35, budget=0.20); thompson (budget=0.20) |
 | **EXP07** | How does the model degrade under vintage drift? | O/E **0.861 (2010) → 1.082 (2015-07..12)** (full 2015: 1.077) while AUC moves 0.7475 → 0.6732 `OBSERVED` | Calibration drifts before ranking does |
@@ -68,8 +68,10 @@ data; `SIMULATED` = produced inside the lending simulator under the assumptions 
 *discrimination*: GraphSAGE is the worst of the three arms. The cohort features lower expected
 calibration error (table above), and that gain is larger than the gain from two non-graph controls:
 a time-respecting portfolio macro default rate, and cohort keys shuffled within issue month (paired
-bootstrap intervals in the EXP04 verdict). This rests on one fitted LightGBM model per arm, so it
-says nothing yet about variation across training seeds.
+bootstrap intervals in the EXP04 verdict). Every arm is fitted for five LightGBM seeds; the result
+is reported as mean ± sd over seeds, and the claim is kept only if it holds in each seed. The
+shuffled-key control also lowers ECE somewhat, so part of the gain is not specific to true cohort
+membership.
 
 **Only one blind-spot signal passes the pre-specified rule.** Each signal is tested *conditional on
 the PD level*; KEEP requires a two-sided sign test below 5% across PD strata on 2015-01…06, and the

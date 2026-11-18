@@ -126,19 +126,22 @@ def render_results_table() -> str:
     ece_b = float(df_exp04.loc["B_tabular_plus_graph", "ece"])
     oe_a = float(df_exp04.loc["A_tabular", "observed_expected_ratio"])
     oe_b = float(df_exp04.loc["B_tabular_plus_graph", "observed_expected_ratio"])
-    ece_af = float(df_exp04_full.loc["A_tabular", "ece"])
-    ece_bf = float(df_exp04_full.loc["B_tabular_plus_graph", "ece"])
+    ss = ctrl["seed_summary"]
+    seeds_tbl = pd.read_csv(TABLES_DIR / "cohort_controls_exp04_seed_summary.csv", index_col=0)
+    n_seeds = len(ss["seeds"])
+    a_s, b_s = seeds_tbl.loc["A_tabular"], seeds_tbl.loc["B_tabular_plus_graph"]
     res_exp04 = (
-        f"AUC **{auc_b - auc_a:+.4f}**. ECE **{ece_a:.4f} → {ece_b:.4f}**, O/E **{oe_a:.3f} → {oe_b:.3f}** "
-        f"on {H2} ({FULL} ECE: {ece_af:.4f} → {ece_bf:.4f}) `OBSERVED`"
+        f"AUC **{auc_b - auc_a:+.4f}**. Mean over {n_seeds} LightGBM seeds on {H2}: ECE **{a_s['ece_mean']:.4f} ± {a_s['ece_std']:.4f} "
+        f"→ {b_s['ece_mean']:.4f} ± {b_s['ece_std']:.4f}**, O/E **{a_s['observed_expected_ratio_mean']:.3f} → "
+        f"{b_s['observed_expected_ratio_mean']:.3f}** (EXP04/05 single-fit run: ECE {ece_a:.4f} → {ece_b:.4f}, O/E {oe_a:.3f} → {oe_b:.3f}) `OBSERVED`"
     )
-    macro, shuf = h2["bootstrap_vs_macro"], h2["bootstrap_vs_shuffled"]
-    survives = macro["delta_ece_ci"][1] < 0 and shuf["delta_ece_ci"][1] < 0
+    fmt = lambda d: f"{d['mean']:+.4f} ± {d['std']:.4f}"  # noqa: E731
     exp04_verdict = (
-        ("No discrimination gain; **calibration gain confirmed by controls**" if survives
-         else "No discrimination gain; **calibration gain does not clearly survive the controls**")
-        + f" (ΔECE {macro['delta_ece']:+.4f} vs macro [{macro['delta_ece_ci'][0]:+.4f}, {macro['delta_ece_ci'][1]:+.4f}], "
-        f"{shuf['delta_ece']:+.4f} vs shuffled [{shuf['delta_ece_ci'][0]:+.4f}, {shuf['delta_ece_ci'][1]:+.4f}], {H2})"
+        ("No discrimination gain; **calibration gain survives both controls in every one of "
+         f"{n_seeds} seeds**" if ss["survives_controls_for_every_seed"]
+         else f"No discrimination gain; **calibration gain does not survive the controls in every one of {n_seeds} seeds**")
+        + f" (ΔECE B−tabular {fmt(ss['delta_ece_vs_tabular'])}, B−macro {fmt(ss['delta_ece_vs_macro'])}, "
+        f"B−shuffled {fmt(ss['delta_ece_vs_shuffled'])}; mean ± sd over seeds, per-seed paired bootstrap, {H2})"
     )
 
     auc_c = float(df_exp04.loc["C_graphsage", "roc_auc"])

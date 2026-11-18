@@ -7,7 +7,8 @@ Controls evaluated:
 3. Control (a): Tabular + global time-respecting recent default rate
 4. Control (b): Tabular + cohort aggregates with keys (zip3, emp_norm) shuffled within issue month
 
-Uses paired bootstrap (>= 2,000 resamples) to test whether Arm B beats controls on ECE and O/E.
+Uses paired bootstrap (>= 2,000 resamples) to test whether Arm B beats controls on ECE and O/E,
+and repeats every arm over five LightGBM seeds (CR-06) so the claim does not rest on one fit.
 """
 
 from __future__ import annotations
@@ -177,93 +178,129 @@ def main() -> int:
     y = df["default"].astype("float32").to_numpy()
     y_train, y_valid, y_test = (y[masks[s]] for s in ("train", "valid", "test"))
 
-    scores: dict[str, np.ndarray] = {}
-    metrics: dict[str, RiskMetrics] = {}
-
-    def fit_and_eval(name: str, extra_feature_df: pd.DataFrame | None, extra_cols: tuple[str, ...]) -> None:
-        LOG.info("Fitting arm: %s...", name)
-        if extra_feature_df is not None:
-            combined_train = pd.concat([train, extra_feature_df[masks["train"]].set_index(train.index)], axis=1)
-            combined_valid = pd.concat([valid, extra_feature_df[masks["valid"]].set_index(valid.index)], axis=1)
-            combined_test = pd.concat([test, extra_feature_df[masks["test"]].set_index(test.index)], axis=1)
-        else:
-            combined_train, combined_valid, combined_test = train, valid, test
-
-        spec = FeatureSpec(feature_set="primary", extra_numeric=extra_cols)
-        builder = FeatureBuilder(spec).fit(combined_train, combined_valid)
-        X_tr = builder.transform(combined_train)
-        X_va = builder.transform(combined_valid)
-        X_te = builder.transform(combined_test)
-
-        model = BoostingConfig(n_estimators=2000, early_stopping_rounds=100)
-        boosting = BoostingModel(builder.categorical_features, model).fit(
-            X_tr, y_train, X_va, y_valid, seed=seed
-        )
-        calibrator = ProbabilityCalibrator("isotonic").fit(y_valid, boosting.predict_proba(X_va))
-        pred = calibrator.transform(boosting.predict_proba(X_te))
-        scores[name] = pred
-        m = compute_metrics(y_test, pred)
-        metrics[name] = m
-        oe = float(y_test.mean() / pred.mean()) if pred.mean() > 0 else float("nan")
-        LOG.info(
-            "%-24s | AUC=%.4f | ECE=%.4f | O/E=%.4f (ratio=%.4f)",
-            name,
-            m.roc_auc,
-            m.ece,
-            oe,
-            m.predicted_observed_ratio,
-        )
-
-    # 1. Arm A (tabular only)
-    fit_and_eval("A_tabular", None, ())
-
-    # 2. Arm B (tabular + cohort features)
+    # D6 / CR-06: the arms differ in their features, but each is one *fitted model*, and a single
+    # LightGBM seed cannot tell a real calibration gain from fit-to-fit noise. Every arm is
+    # therefore fitted for several model seeds; the data, the cohort features and the key shuffle
+    # are held fixed, so the spread below is model-fit variance only.
+    seeds = [42, 43, 44, 45, 46]
     cohort_cols = tuple(c for c in cohort.columns if c in cohort.columns)
-    fit_and_eval("B_tabular_plus_graph", cohort, cohort_cols)
+    arm_specs = {
+        "A_tabular": (None, ()),
+        "B_tabular_plus_graph": (cohort, cohort_cols),
+        "A_plus_macro_default": (None, ("macro_default_rate",)),
+        "B_shuffled_cohort": (cohort_shuffled, cohort_cols),
+    }
+    win = test_window_masks(test["issue_period"])
+    h2 = win["holdout"]
 
-    # 3. Control (a): Tabular + global recent default rate
-    fit_and_eval("A_plus_macro_default", None, ("macro_default_rate",))
+    prepared = {}
+    for name, (extra_df, extra_cols) in arm_specs.items():
+        LOG.info("Building features for arm %s...", name)
+        if extra_df is not None:
+            c_tr = pd.concat([train, extra_df[masks["train"]].set_index(train.index)], axis=1)
+            c_va = pd.concat([valid, extra_df[masks["valid"]].set_index(valid.index)], axis=1)
+            c_te = pd.concat([test, extra_df[masks["test"]].set_index(test.index)], axis=1)
+        else:
+            c_tr, c_va, c_te = train, valid, test
+        builder = FeatureBuilder(FeatureSpec(feature_set="primary", extra_numeric=extra_cols)).fit(c_tr, c_va)
+        prepared[name] = (builder, builder.transform(c_tr), builder.transform(c_va), builder.transform(c_te))
 
-    # 4. Control (b): Tabular + shuffled cohort features
-    fit_and_eval("B_shuffled_cohort", cohort_shuffled, cohort_cols)
+    scores: dict[tuple[str, int], np.ndarray] = {}
+    rows = []
+    for fit_seed in seeds:
+        for name, (builder, X_tr, X_va, X_te) in prepared.items():
+            boosting = BoostingModel(
+                builder.categorical_features, BoostingConfig(n_estimators=2000, early_stopping_rounds=100)
+            ).fit(X_tr, y_train, X_va, y_valid, seed=fit_seed)
+            calibrator = ProbabilityCalibrator("isotonic").fit(y_valid, boosting.predict_proba(X_va))
+            pred = calibrator.transform(boosting.predict_proba(X_te))
+            scores[(name, fit_seed)] = pred
+            for window, mask in (("2015-07..12", h2), ("full 2015", win["full"])):
+                m = compute_metrics(y_test[mask], pred[mask])
+                rows.append(
+                    {
+                        "seed": fit_seed, "arm": name, "window": window, "roc_auc": m.roc_auc,
+                        "ece": m.ece, "brier": m.brier, "calibration_slope": m.calibration_slope,
+                        "observed_expected_ratio": m.observed_expected_ratio,
+                    }
+                )
+            LOG.info("seed %d | %-24s | H2 ECE=%.4f", fit_seed, name,
+                     [r for r in rows if r["seed"] == fit_seed and r["arm"] == name and r["window"] == "2015-07..12"][0]["ece"])
+    per_seed = pd.DataFrame(rows)
+    per_seed.to_csv(paths_root / "results" / "tables" / "cohort_controls_exp04_seeds.csv", index=False)
 
-    LOG.info("Running paired bootstrap comparisons (2,000 resamples)...")
-    comp_macro = paired_bootstrap_comparison(y_test, scores["B_tabular_plus_graph"], scores["A_plus_macro_default"])
-    comp_shuffled = paired_bootstrap_comparison(y_test, scores["B_tabular_plus_graph"], scores["B_shuffled_cohort"])
+    # Primary seed (42): the existing single-fit outputs, kept for continuity.
+    primary = seeds[0]
+    p_scores = {name: scores[(name, primary)] for name in arm_specs}
+    metrics = {k: compute_metrics(y_test, v) for k, v in p_scores.items()}
+    metrics_h2 = {k: compute_metrics(y_test[h2], v[h2]) for k, v in p_scores.items()}
 
-    # CR-03: the same comparisons on the untouched 2015-07..12 holdout (the headline window).
-    holdout = test_window_masks(test["issue_period"])["holdout"]
-    metrics_h2 = {k: compute_metrics(y_test[holdout], v[holdout]) for k, v in scores.items()}
-    comp_macro_h2 = paired_bootstrap_comparison(
-        y_test[holdout], scores["B_tabular_plus_graph"][holdout], scores["A_plus_macro_default"][holdout]
+    LOG.info("Paired bootstrap, every seed, 2015-07..12 (2,000 resamples each)...")
+    deltas = []
+    boot = {}
+    for fit_seed in seeds:
+        b = scores[("B_tabular_plus_graph", fit_seed)][h2]
+        for control, tag in (("A_plus_macro_default", "macro"), ("B_shuffled_cohort", "shuffled")):
+            boot[(fit_seed, tag)] = paired_bootstrap_comparison(y_test[h2], b, scores[(control, fit_seed)][h2])
+        a_arm = scores[("A_tabular", fit_seed)][h2]
+        e_b, _ = expected_calibration_error(y_test[h2], b)
+        e_a, _ = expected_calibration_error(y_test[h2], a_arm)
+        deltas.append(
+            {
+                "seed": fit_seed,
+                "delta_ece_vs_tabular": float(e_b - e_a),
+                "delta_ece_vs_macro": boot[(fit_seed, "macro")]["delta_ece"],
+                "delta_ece_vs_macro_ci_low": boot[(fit_seed, "macro")]["delta_ece_ci"][0],
+                "delta_ece_vs_macro_ci_high": boot[(fit_seed, "macro")]["delta_ece_ci"][1],
+                "delta_ece_vs_shuffled": boot[(fit_seed, "shuffled")]["delta_ece"],
+                "delta_ece_vs_shuffled_ci_low": boot[(fit_seed, "shuffled")]["delta_ece_ci"][0],
+                "delta_ece_vs_shuffled_ci_high": boot[(fit_seed, "shuffled")]["delta_ece_ci"][1],
+                "delta_oe_gap_vs_macro": boot[(fit_seed, "macro")]["delta_oe_gap"],
+                "delta_oe_gap_vs_shuffled": boot[(fit_seed, "shuffled")]["delta_oe_gap"],
+            }
+        )
+    delta_df = pd.DataFrame(deltas)
+    delta_df.to_csv(paths_root / "results" / "tables" / "cohort_controls_exp04_seed_deltas.csv", index=False)
+
+    h2_rows = per_seed[per_seed["window"] == "2015-07..12"]
+    summary_table = h2_rows.groupby("arm")[["roc_auc", "ece", "observed_expected_ratio"]].agg(["mean", "std", "min", "max"])
+    summary_table.columns = ["_".join(c) for c in summary_table.columns]
+    summary_table.to_csv(paths_root / "results" / "tables" / "cohort_controls_exp04_seed_summary.csv")
+
+    survives_all = bool(
+        (delta_df["delta_ece_vs_macro_ci_high"] < 0).all() and (delta_df["delta_ece_vs_shuffled_ci_high"] < 0).all()
     )
-    comp_shuffled_h2 = paired_bootstrap_comparison(
-        y_test[holdout], scores["B_tabular_plus_graph"][holdout], scores["B_shuffled_cohort"][holdout]
-    )
+    seed_summary = {
+        "seeds": seeds,
+        "window": "2015-07..12",
+        "survives_controls_for_every_seed": survives_all,
+        "delta_ece_vs_tabular": {"mean": float(delta_df["delta_ece_vs_tabular"].mean()), "std": float(delta_df["delta_ece_vs_tabular"].std(ddof=1)),
+                                 "max": float(delta_df["delta_ece_vs_tabular"].max())},
+        "delta_ece_vs_macro": {"mean": float(delta_df["delta_ece_vs_macro"].mean()), "std": float(delta_df["delta_ece_vs_macro"].std(ddof=1)),
+                               "max": float(delta_df["delta_ece_vs_macro"].max())},
+        "delta_ece_vs_shuffled": {"mean": float(delta_df["delta_ece_vs_shuffled"].mean()), "std": float(delta_df["delta_ece_vs_shuffled"].std(ddof=1)),
+                                  "max": float(delta_df["delta_ece_vs_shuffled"].max())},
+        "delta_oe_gap_vs_macro": {"mean": float(delta_df["delta_oe_gap_vs_macro"].mean()), "std": float(delta_df["delta_oe_gap_vs_macro"].std(ddof=1))},
+        "delta_oe_gap_vs_shuffled": {"mean": float(delta_df["delta_oe_gap_vs_shuffled"].mean()), "std": float(delta_df["delta_oe_gap_vs_shuffled"].std(ddof=1))},
+    }
+
+    # Continuity outputs for the primary seed (existing file names).
+    LOG.info("Primary-seed bootstrap on the full 2015 book...")
+    comp_macro = paired_bootstrap_comparison(y_test, p_scores["B_tabular_plus_graph"], p_scores["A_plus_macro_default"])
+    comp_shuffled = paired_bootstrap_comparison(y_test, p_scores["B_tabular_plus_graph"], p_scores["B_shuffled_cohort"])
+    comp_macro_h2, comp_shuffled_h2 = boot[(primary, "macro")], boot[(primary, "shuffled")]
+    res_df = compare_models(metrics)
+    res_df.to_csv(paths_root / "results" / "tables" / "cohort_controls_exp04.csv")
     compare_models(metrics_h2).to_csv(paths_root / "results" / "tables" / "cohort_controls_exp04_h2.csv")
 
     print("\n" + "=" * 80)
-    print("EXP04 NON-GRAPH CONTROLS RESULTS")
-    print("=" * 80)
-    res_df = compare_models(metrics)
-    print(res_df[["roc_auc", "ece", "observed_expected_ratio", "calibration_slope", "brier"]].to_string())
-
-    print("\n--- Paired Bootstrap: Arm B vs Control (a) [Macro Default Rate] ---")
-    print(f"Delta ECE (B - Macro):     {comp_macro['delta_ece']:+.5f} (95% CI: [{comp_macro['delta_ece_ci'][0]:.5f}, {comp_macro['delta_ece_ci'][1]:.5f}], p={comp_macro['p_val_ece']:.4f})")
-    print(f"Delta |O/E - 1|:           {comp_macro['delta_oe_gap']:+.5f} (95% CI: [{comp_macro['delta_oe_gap_ci'][0]:.5f}, {comp_macro['delta_oe_gap_ci'][1]:.5f}], p={comp_macro['p_val_oe_gap']:.4f})")
-
-    print("\n--- Paired Bootstrap: Arm B vs Control (b) [Shuffled Cohort Keys] ---")
-    print(f"Delta ECE (B - Shuffled):  {comp_shuffled['delta_ece']:+.5f} (95% CI: [{comp_shuffled['delta_ece_ci'][0]:.5f}, {comp_shuffled['delta_ece_ci'][1]:.5f}], p={comp_shuffled['p_val_ece']:.4f})")
-    print(f"Delta |O/E - 1|:           {comp_shuffled['delta_oe_gap']:+.5f} (95% CI: [{comp_shuffled['delta_oe_gap_ci'][0]:.5f}, {comp_shuffled['delta_oe_gap_ci'][1]:.5f}], p={comp_shuffled['p_val_oe_gap']:.4f})")
+    print("EXP04 NON-GRAPH CONTROLS: per-seed deltas on 2015-07..12 (B minus control; negative favours B)")
+    print(delta_df.round(5).to_string(index=False))
+    print(f"\nSurvives both controls for every seed: {survives_all}")
     print("=" * 80 + "\n")
 
-    # Save results to tables and JSON
-    table_path = paths_root / "results" / "tables" / "cohort_controls_exp04.csv"
-    res_df.to_csv(table_path)
-    LOG.info("Saved %s", table_path)
-
-    json_path = paths_root / "results" / "tables" / "cohort_controls_exp04.json"
     import json
+    json_path = paths_root / "results" / "tables" / "cohort_controls_exp04.json"
     with open(json_path, "w") as f:
         json.dump(
             {
@@ -276,6 +313,7 @@ def main() -> int:
                     "bootstrap_vs_macro": comp_macro_h2,
                     "bootstrap_vs_shuffled": comp_shuffled_h2,
                 },
+                "seed_summary": seed_summary,
             },
             f,
             indent=2,
