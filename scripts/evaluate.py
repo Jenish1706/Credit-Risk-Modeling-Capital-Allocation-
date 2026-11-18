@@ -41,10 +41,12 @@ from credit_risk.monitoring.drift import (  # noqa: E402
     monitoring_summary,
     prediction_drift,
 )
+from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
     detect_source,
     load_prepared,
+    production_calibrator_path,
     resolve,
     save_json,
     save_table,
@@ -79,12 +81,10 @@ def main() -> int:
 
     builder = FeatureBuilder.load(needed[0])
     model = BoostingModel.load(needed[1])
-    calibrator_path = paths.artifacts / f"{stem}_calibrator_platt.pkl"
-    if not calibrator_path.exists():
-        calibrator_path = paths.artifacts / f"{stem}_calibrator_isotonic.pkl"
+    calibrator_path = production_calibrator_path(paths, stem)
     calibrator = (
         ProbabilityCalibrator.load(calibrator_path)
-        if calibrator_path.exists()
+        if calibrator_path is not None
         else ProbabilityCalibrator("identity")
     )
 
@@ -123,6 +123,11 @@ def main() -> int:
     labelled = labelled.assign(_pd=labelled_scores)
     cdrift = calibration_drift(labelled, "_pd", period_column="issue_period", freq="Y")
     save_table(cdrift, paths, f"{run_name}_exp07_calibration_drift", index=False)
+    # CR-03: the same drift statistic on the untouched 2015-07..12 holdout alone. Nothing here is
+    # selected on the test book; the second table just states which half-year a number is from.
+    h2_rows = labelled[test_window_masks(labelled["issue_period"])["holdout"]]
+    cdrift_h2 = calibration_drift(h2_rows, "_pd", period_column="issue_period", freq="Y")
+    save_table(cdrift_h2, paths, f"{run_name}_exp07_calibration_drift_2015h2", index=False)
 
     lines += [
         "## EXP07 - how do model and policy degrade under drift?",

@@ -40,6 +40,7 @@ from credit_risk.features.financial import add_derived_features  # noqa: E402
 from credit_risk.graph.construction import TimeRespectingGraph  # noqa: E402
 from credit_risk.graph.features import compute_macro_default_rate  # noqa: E402
 from credit_risk.models.boosting import BoostingConfig, BoostingModel  # noqa: E402
+from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.models.calibration import ProbabilityCalibrator  # noqa: E402
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
@@ -229,7 +230,12 @@ def main() -> int:
             }
 
     comparison = compare_models(metrics)
-    save_table(comparison, paths, f"{run_name}_exp04_exp05")
+    save_table(comparison, paths, f"{run_name}_exp04_exp05")  # full 2015 (continuity)
+    # CR-03: nothing here is selected on the test book (isotonic is fixed a priori, early
+    # stopping uses validation), so the 2015-07..12 holdout is simply the headline window.
+    holdout = test_window_masks(test["issue_period"])["holdout"]
+    metrics_h2 = {k: compute_metrics(y_test[holdout], v[holdout]) for k, v in scores.items()}
+    save_table(compare_models(metrics_h2), paths, f"{run_name}_exp04_exp05_h2")
 
     if not args.no_figures and scores:
         from credit_risk.evaluation.plots import reliability_diagram, roc_curves, save

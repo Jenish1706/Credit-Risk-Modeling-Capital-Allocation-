@@ -253,3 +253,43 @@ def test_assign_test_holdout_freezes_2015_h2():
 
     assert dev_months == [f"2015-0{i}" for i in range(1, 7)]
     assert holdout_months == [f"2015-0{i}" if i < 10 else f"2015-{i}" for i in range(7, 13)]
+
+
+# ---------------------------------------------------------------------------
+# CR-03: selections use 2015-01..06 only
+# ---------------------------------------------------------------------------
+
+def test_test_window_masks_partition_the_test_book():
+    from credit_risk.data.splits import test_window_masks
+
+    months = pd.Series(pd.period_range("2015-01", "2015-12", freq="M").astype(str))
+    masks = test_window_masks(months)
+    assert masks["dev"].sum() == 6 and masks["holdout"].sum() == 6
+    assert not (masks["dev"] & masks["holdout"]).any()
+    assert masks["full"].all()
+    assert list(months[masks["holdout"]]) == [f"2015-{m:02d}" for m in range(7, 13)]
+
+
+def test_assert_selection_window_rejects_holdout_rows():
+    from credit_risk.data.splits import assert_selection_window
+
+    assert_selection_window(pd.Series(["2015-01", "2015-06"]))
+    with pytest.raises(AssertionError, match="dev cutoff"):
+        assert_selection_window(pd.Series(["2015-06", "2015-07"]))
+
+
+def test_windowed_conditional_decides_on_h1_and_reports_h2_separately():
+    from credit_risk.decision.blindspot import conditional_by_window
+
+    rng = np.random.default_rng(0)
+    n = 40_000
+    months = pd.Series(np.where(np.arange(n) < n // 2, "2015-03", "2015-09"))
+    p = rng.uniform(0.05, 0.4, n)
+    signal = rng.normal(size=n)
+    h1 = np.arange(n) < n // 2
+    # The signal predicts under-stated risk in H1 only.
+    y = (rng.random(n) < np.clip(p + 0.08 * (signal > 0) * h1, 0, 1)).astype(float)
+    out = conditional_by_window(y, p, signal, months, n_strata=10, min_per_half=50)
+    assert out.decision == "KEEP"
+    assert not out.holdout_confirms  # no effect was planted in the holdout
+    assert set(out.summary()) == {"selection_h1", "holdout_h2", "full_2015"}

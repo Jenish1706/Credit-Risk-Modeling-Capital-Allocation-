@@ -8,11 +8,11 @@ had not yet matured. Their final outcomes occurred during 2015-2018—the exact 
 
 ## Results Table
 
-| model                                      |   train_loans |   valid_loans |   test_auc |   test_ece |   observed_expected_ratio |      brier |
-|:-------------------------------------------|--------------:|--------------:|-----------:|-----------:|--------------------------:|-----------:|
-| Standard (Omniscient Labels <= 2018)       |        239104 |         90615 |  0.668968  |  0.0104557 |                  1.07554  | 0.12108    |
-| Deployment-Realistic (Outcomes <= 2014-12) |         56842 |         20713 |  0.647815  |  0.0374455 |                  1.28598  | 0.12396    |
-| Delta (Realistic - Standard)               |       -182262 |        -69902 | -0.0211532 |  0.0269899 |                  0.210435 | 0.00287952 |
+| model                                      |   train_loans |   valid_loans |   test_auc |   test_ece |   observed_expected_ratio |      brier |   h2_test_auc |   h2_test_ece |   h2_observed_expected_ratio |
+|:-------------------------------------------|--------------:|--------------:|-----------:|-----------:|--------------------------:|-----------:|--------------:|--------------:|-----------------------------:|
+| Standard (Omniscient Labels <= 2018)       |        239104 |         90615 |  0.668968  |  0.0104557 |                  1.07554  | 0.12108    |     0.671249  |     0.0108915 |                     1.07997  |
+| Deployment-Realistic (Outcomes <= 2014-12) |         56842 |         20713 |  0.647815  |  0.0374455 |                  1.28598  | 0.12396    |     0.650254  |     0.0366574 |                     1.29382  |
+| Delta (Realistic - Standard)               |       -182262 |        -69902 | -0.0211532 |  0.0269899 |                  0.210435 | 0.00287952 |    -0.0209952 |     0.0257659 |                     0.213849 |
 
 ## Key Findings
 - **Discrimination Drop:** Out-of-time test AUC drops from 0.6690 to 0.6478 (-0.0212).

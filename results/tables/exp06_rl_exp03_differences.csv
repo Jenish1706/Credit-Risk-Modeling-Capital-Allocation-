@@ -1,4 +1,4 @@
 treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
-expected_profit,fixed_threshold@0.150,30,-26405.3,-59902.1,7655.16,0.433333,False,-0.416825
-risk_band,fixed_threshold@0.150,30,-55185.8,-71222.5,-38915.2,0.1,True,-0.871145
-approve_all,fixed_threshold@0.150,30,-130495,-155635,-105070,0.0333333,True,-2.05995
+expected_profit,fixed_threshold@0.150,30,-29041.6,-62824.4,4619.7,0.333333,False,-0.470322
+risk_band,fixed_threshold@0.150,30,-66707.9,-84569.8,-49377.4,0.0666667,True,-1.08032
+approve_all,fixed_threshold@0.150,30,-157733,-190223,-126730,0,True,-2.55445

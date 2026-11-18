@@ -150,3 +150,22 @@ def detect_source(paths: Paths) -> str:
     from credit_risk.data.download import detect_data_source
 
     return detect_data_source(paths.data_raw)
+
+
+def production_calibrator_path(paths: Paths, stem: str) -> Path | None:
+    """The calibrator ``train_baseline`` chose on 2015-01..06 Brier, or the legacy default.
+
+    Scripts that re-score a split must apply the *same* calibrator that produced
+    ``{stem}_pd_test.npy``; this is the single place that says which one that is.
+    """
+    choice = paths.results_tables / f"{stem}_calibration_choice.json"
+    if choice.exists():
+        method = json.loads(choice.read_text(encoding="utf-8"))["method"]
+        candidate = paths.artifacts / f"{stem}_calibrator_{method}.pkl"
+        if candidate.exists():
+            return candidate
+    for method in ("platt", "isotonic"):
+        candidate = paths.artifacts / f"{stem}_calibrator_{method}.pkl"
+        if candidate.exists():
+            return candidate
+    return None

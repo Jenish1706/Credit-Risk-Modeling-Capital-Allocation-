@@ -36,6 +36,6 @@ categorical__emp_length_9 years,0.109319,0.109319
 numeric__annual_inc,0.108061,0.108061
 categorical__addr_state_TX,-0.107188,0.107188
 categorical__addr_state_NJ,0.10412,0.10412
-categorical__home_ownership_OTHER,0.099892,0.099892
-categorical__addr_state_FL,0.094928,0.094928
-numeric__inq_last_6mths_capped,0.092874,0.092874
+categorical__home_ownership_OTHER,0.0998915,0.0998915
+categorical__addr_state_FL,0.0949277,0.0949277
+numeric__inq_last_6mths_capped,0.0928742,0.0928742

@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 
 SplitName = Literal["history", "train", "valid", "test", "monitor", "excluded"]
@@ -118,6 +119,40 @@ def assign_test_holdout(issue_period: pd.Series, cutoff: str = "2015-06") -> pd.
     out = pd.Series("test_holdout", index=issue_period.index, dtype="object")
     out[idx <= cutoff_p] = "test_dev"
     return out
+
+
+HOLDOUT_CUTOFF = "2015-06"
+WINDOW_LABELS = {
+    "dev": "2015-01..06 (H1, selection)",
+    "holdout": "2015-07..12 (H2, untouched holdout)",
+    "full": "2015-01..12 (full test book, continuity)",
+}
+
+
+def test_window_masks(issue_period: pd.Series, cutoff: str = HOLDOUT_CUTOFF) -> dict[str, np.ndarray]:
+    """Boolean masks, aligned to ``issue_period``, for the three windows of the test book.
+
+    CR-03. Every *selection* (a calibrator, a flag cut-point, a KEEP/REJECT verdict, a threshold)
+    uses ``dev`` only. Headline numbers are reported on ``holdout``, which no selection has seen.
+    ``full`` is kept as a labelled second column for continuity with earlier results.
+    """
+    idx = pd.PeriodIndex(pd.Series(issue_period).to_numpy(), freq="M")
+    dev = np.asarray(idx <= pd.Period(cutoff, freq="M"))
+    return {"dev": dev, "holdout": ~dev, "full": np.ones(len(dev), dtype=bool)}
+
+
+def assert_selection_window(issue_period: pd.Series, cutoff: str = HOLDOUT_CUTOFF) -> None:
+    """Fail unless every row was issued on or before ``cutoff``.
+
+    Called by each script on the frame it *selects* from, so a selection that reaches into the
+    holdout cannot pass silently.
+    """
+    idx = pd.PeriodIndex(pd.Series(issue_period).to_numpy(), freq="M")
+    if len(idx) and idx.max() > pd.Period(cutoff, freq="M"):
+        raise AssertionError(
+            f"selection frame reaches {idx.max()}, past the dev cutoff {cutoff}; "
+            "selections may use 2015-01..06 only"
+        )
 
 
 def assert_temporal_ordering(df: pd.DataFrame, split_col: str = "split",

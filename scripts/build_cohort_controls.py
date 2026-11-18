@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
 import pandas as pd
 
+from credit_risk.data.splits import test_window_masks
 from credit_risk.evaluation.metrics import (
     RiskMetrics,
     compare_models,
@@ -230,6 +231,17 @@ def main() -> int:
     comp_macro = paired_bootstrap_comparison(y_test, scores["B_tabular_plus_graph"], scores["A_plus_macro_default"])
     comp_shuffled = paired_bootstrap_comparison(y_test, scores["B_tabular_plus_graph"], scores["B_shuffled_cohort"])
 
+    # CR-03: the same comparisons on the untouched 2015-07..12 holdout (the headline window).
+    holdout = test_window_masks(test["issue_period"])["holdout"]
+    metrics_h2 = {k: compute_metrics(y_test[holdout], v[holdout]) for k, v in scores.items()}
+    comp_macro_h2 = paired_bootstrap_comparison(
+        y_test[holdout], scores["B_tabular_plus_graph"][holdout], scores["A_plus_macro_default"][holdout]
+    )
+    comp_shuffled_h2 = paired_bootstrap_comparison(
+        y_test[holdout], scores["B_tabular_plus_graph"][holdout], scores["B_shuffled_cohort"][holdout]
+    )
+    compare_models(metrics_h2).to_csv(paths_root / "results" / "tables" / "cohort_controls_exp04_h2.csv")
+
     print("\n" + "=" * 80)
     print("EXP04 NON-GRAPH CONTROLS RESULTS")
     print("=" * 80)
@@ -258,6 +270,12 @@ def main() -> int:
                 "arms": {k: v.to_dict() for k, v in metrics.items()},
                 "bootstrap_vs_macro": comp_macro,
                 "bootstrap_vs_shuffled": comp_shuffled,
+                "holdout_h2": {
+                    "window": "2015-07..12",
+                    "arms": {k: v.to_dict() for k, v in metrics_h2.items()},
+                    "bootstrap_vs_macro": comp_macro_h2,
+                    "bootstrap_vs_shuffled": comp_shuffled_h2,
+                },
             },
             f,
             indent=2,

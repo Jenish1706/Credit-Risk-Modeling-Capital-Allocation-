@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
 import pandas as pd
 
+from credit_risk.data.splits import test_window_masks
 from credit_risk.evaluation.metrics import compute_metrics
 from credit_risk.features.build import FeatureBuilder, FeatureSpec
 from credit_risk.features.financial import add_derived_features
@@ -94,6 +95,14 @@ def evaluate_deployment_realism(df: pd.DataFrame, seed: int = 42) -> tuple[pd.Da
     res_obs = compute_metrics(y_te, pred_obs)
     oe_obs = float(y_te.mean() / pred_obs.mean()) if pred_obs.mean() > 0 else float("nan")
 
+    # CR-03: nothing here is selected on the test book, so the headline is the untouched
+    # 2015-07..12 holdout and the full-2015 columns above are the continuity figures.
+    h2 = test_window_masks(te_df["issue_period"])["holdout"]
+    h2_std = compute_metrics(y_te[h2], pred_std[h2])
+    h2_obs = compute_metrics(y_te[h2], pred_obs[h2])
+    oe_h2_std = float(y_te[h2].mean() / pred_std[h2].mean())
+    oe_h2_obs = float(y_te[h2].mean() / pred_obs[h2].mean())
+
     table = pd.DataFrame(
         [
             {
@@ -104,6 +113,9 @@ def evaluate_deployment_realism(df: pd.DataFrame, seed: int = 42) -> tuple[pd.Da
                 "test_ece": res_std.ece,
                 "observed_expected_ratio": oe_std,
                 "brier": res_std.brier,
+                "h2_test_auc": h2_std.roc_auc,
+                "h2_test_ece": h2_std.ece,
+                "h2_observed_expected_ratio": oe_h2_std,
             },
             {
                 "model": "Deployment-Realistic (Outcomes <= 2014-12)",
@@ -113,6 +125,9 @@ def evaluate_deployment_realism(df: pd.DataFrame, seed: int = 42) -> tuple[pd.Da
                 "test_ece": res_obs.ece,
                 "observed_expected_ratio": oe_obs,
                 "brier": res_obs.brier,
+                "h2_test_auc": h2_obs.roc_auc,
+                "h2_test_ece": h2_obs.ece,
+                "h2_observed_expected_ratio": oe_h2_obs,
             },
             {
                 "model": "Delta (Realistic - Standard)",
@@ -122,6 +137,9 @@ def evaluate_deployment_realism(df: pd.DataFrame, seed: int = 42) -> tuple[pd.Da
                 "test_ece": res_obs.ece - res_std.ece,
                 "observed_expected_ratio": oe_obs - oe_std,
                 "brier": res_obs.brier - res_std.brier,
+                "h2_test_auc": h2_obs.roc_auc - h2_std.roc_auc,
+                "h2_test_ece": h2_obs.ece - h2_std.ece,
+                "h2_observed_expected_ratio": oe_h2_obs - oe_h2_std,
             },
         ]
     )

@@ -31,7 +31,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from credit_risk.decision.blindspot import (  # noqa: E402
-    conditional_signal_table,
+    conditional_by_window,
     marginal_signal_table,
 )
 from credit_risk.evaluation.metrics import compute_metrics  # noqa: E402
@@ -139,16 +139,21 @@ def main() -> int:
     )
     save_table(marginal, paths, f"{run_name}_bins", index=False)
 
-    conditional = conditional_signal_table(
-        y_test, p_reference, disagreement,
+    # CR-03: the KEEP/REJECT decision uses 2015-01..06 only; 2015-07..12 is the untouched
+    # holdout (headline evidence); the full-2015 result is kept as a labelled second column.
+    windowed = conditional_by_window(
+        y_test, p_reference, disagreement, test["issue_period"],
         n_strata=int(config.get_path("analysis.n_strata", 10)),
         min_per_half=int(config.get_path("analysis.min_per_half", 200)),
     )
+    conditional = windowed.full
+    save_table(windowed.selection.table, paths, f"{run_name}_conditional_h1", index=False)
+    save_table(windowed.holdout.table, paths, f"{run_name}_conditional_h2", index=False)
     save_table(conditional.table, paths, f"{run_name}_conditional", index=False)
 
-    verdict = conditional.verdict(f"Disagreement ({scale} scale)")
+    verdict = "On 2015-01..06 (selection window): " + windowed.selection.verdict(f"Disagreement ({scale} scale)")
     LOG.info(verdict)
-    keep = conditional.sign_test_p < 0.05 and conditional.mean_gap_difference > 0
+    keep = windowed.selection.keep
 
     # For reference: how much did the probability-scale version confound with PD?
     prob_disagreement = np.abs(p_tabular - p_graph)
@@ -172,9 +177,15 @@ def main() -> int:
         "",
         marginal.round(4).to_markdown(index=False),
         "",
-        "## Conditional view (the evidence)",
+        "## Conditional view, full 2015 (continuity)",
         "",
         conditional.table.round(4).to_markdown(index=False),
+        "",
+        "## Selection window vs untouched holdout",
+        "",
+        "The decision below is taken on 2015-01..06 only. 2015-07..12 had no part in it.",
+        "",
+        windowed.markdown(),
         "",
         "## Verdict",
         "",
@@ -208,6 +219,9 @@ def main() -> int:
             "odds_ratio_ci_lower": conditional.odds_ratio_ci_lower,
             "odds_ratio_ci_upper": conditional.odds_ratio_ci_upper,
             "decision": "KEEP" if keep else "REJECT",
+            "decision_basis": "2015-01..06 only (selection window)",
+            "holdout_confirms": windowed.holdout_confirms,
+            "windows": windowed.summary(),
             "tabular_metrics": compute_metrics(y_test, p_tabular).to_dict(),
             "graph_metrics": compute_metrics(y_test, p_graph).to_dict(),
         },

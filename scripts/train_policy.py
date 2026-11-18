@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from credit_risk.data.splits import WINDOW_LABELS, test_window_masks  # noqa: E402
 from credit_risk.decision.expected_loss import EconomicsConfig, fit_cashflow_model  # noqa: E402
 from credit_risk.decision.policies import (  # noqa: E402
     ActionSpace,
@@ -62,6 +63,7 @@ from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
     detect_source,
     load_prepared,
+    production_calibrator_path,
     resolve,
     save_json,
     save_table,
@@ -92,10 +94,9 @@ def _score_split(paths, pd_run: str, frame: pd.DataFrame) -> np.ndarray | None:
     builder = FeatureBuilder.load(builder_path)
     model = BoostingModel.load(model_path)
     raw = model.predict_proba(builder.transform(frame))
-    for method in ("platt", "isotonic"):
-        calibrator_path = paths.artifacts / f"{pd_run}_calibrator_{method}.pkl"
-        if calibrator_path.exists():
-            return ProbabilityCalibrator.load(calibrator_path).transform(raw)
+    calibrator_path = production_calibrator_path(paths, pd_run)
+    if calibrator_path is not None:
+        return ProbabilityCalibrator.load(calibrator_path).transform(raw)
     return raw
 
 
@@ -155,7 +156,13 @@ def main() -> int:
         action_space = action_space.without_review()
     LOG.info("action space: %s", action_space.names)
 
-    pool = build_applicant_pool(test, pd_test, cashflow)
+    # CR-03: policies are evaluated on the untouched 2015-07..12 holdout. Nothing is selected on
+    # it: the shadow price is fitted on the validation pool, and the PD threshold, band edges
+    # and learner hyper-parameters are fixed in the config before any evaluation.
+    holdout = test_window_masks(test["issue_period"])["holdout"]
+    test_eval, pd_eval = test[holdout], pd_test[holdout]
+    pool = build_applicant_pool(test_eval, pd_eval, cashflow)
+    assert len(pool) == int(holdout.sum()), "evaluation pool must be the holdout window only"
     scfg = config.get("simulation", {})
     n_steps = int(scfg.get("n_steps", 2000))
     seeds = list(config.get_path("evaluation.seeds", list(range(12))))
@@ -382,7 +389,7 @@ def main() -> int:
     lines = [
         f"# {run_name}: EXP03 and EXP06",
         "",
-        f"Applicant pool: {len(pool):,} out-of-time loans; {n_steps:,} processed per episode; "
+        f"Applicant pool: {len(pool):,} loans from {WINDOW_LABELS['holdout']}; {n_steps:,} processed per episode; "
         f"{len(seeds)} seeds under common random numbers.",
         (
             f"Learning policies are trained on {len(train_pool):,} **validation-window** "
@@ -436,8 +443,9 @@ def main() -> int:
             lines += [
                 "",
                 "Learning-policy results in the unconstrained condition should therefore **not** "
-                "be read as evidence for reinforcement learning. The correct reading is that the "
-                "myopic policy's economic inputs are stale relative to the test vintage.",
+                "be read as evidence for reinforcement learning. The myopic policy's PD and cashflow "
+                "inputs are measurably mis-calibrated on the real book (see "
+                "profit_calibration_*.csv), which this experiment does not isolate.",
             ]
         if degenerate:
             lines += [

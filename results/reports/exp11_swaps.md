@@ -2,40 +2,47 @@
 
 # EXP11: does acting on blind-spot signals improve the book?
 
-Applicant pool: 283,026 out-of-time loans (2015 vintage). Capital budget $1,673,463,380, 80% of profitable demand.
-Flagged as blind spots: 53,666 borrowers (19.0%) above the 90th percentile of the anomaly **or** disagreement signal.
+**Headline window: 2015-07..12 (H2, untouched holdout)**, 162,236 loans. Signals used: anomaly (KEEP on 2015-01..06). Flag cut-points are the 90th percentile of each signal on 2015-01..06 (anomaly 0.1466). Capital budget $948,159,060, 80% of profitable demand. Flagged: 17,233 borrowers (10.6%).
 
-## Portfolios at equal budget, measured on observed cashflows
+## Portfolios at equal budget, measured on observed cashflows (2015-07..12)
 
 | policy            |   n_loans |   capital_deployed |   observed_profit |   return_on_capital |   default_rate |   mean_apr |   budget_utilisation |
 |:------------------|----------:|-------------------:|------------------:|--------------------:|---------------:|-----------:|---------------------:|
-| A_pd_ranked       |    112078 |        1.67346e+09 |       1.17338e+08 |              0.0701 |         0.1688 |     0.1333 |               1      |
-| B_blindspot_aware |    112792 |        1.63777e+09 |       1.15833e+08 |              0.0707 |         0.1598 |     0.1278 |               0.9787 |
-| C_exposure_capped |    126581 |        1.67346e+09 |       1.18028e+08 |              0.0705 |         0.1638 |     0.13   |               1      |
+| A_pd_ranked       |     62820 |        9.48154e+08 |       6.46693e+07 |              0.0682 |         0.1662 |     0.1311 |                    1 |
+| B_blindspot_aware |     64127 |        9.48146e+08 |       6.5142e+07  |              0.0687 |         0.1588 |     0.1268 |                    1 |
+| C_exposure_capped |     67266 |        9.48157e+08 |       6.47703e+07 |              0.0683 |         0.1639 |     0.1294 |                    1 |
+
+Full-2015 continuity column (283,026 loans, flagged 29,312):
+
+| policy            |   n_loans |   capital_deployed |   observed_profit |   return_on_capital |   default_rate |   mean_apr |   budget_utilisation |
+|:------------------|----------:|-------------------:|------------------:|--------------------:|---------------:|-----------:|---------------------:|
+| A_pd_ranked       |    112292 |        1.67724e+09 |       1.17891e+08 |              0.0703 |         0.168  |     0.133  |                    1 |
+| B_blindspot_aware |    114282 |        1.67723e+09 |       1.18937e+08 |              0.0709 |         0.1602 |     0.1286 |                    1 |
+| C_exposure_capped |    119957 |        1.67724e+09 |       1.18221e+08 |              0.0705 |         0.1654 |     0.1312 |                    1 |
 
 ## Verdict
 
-B_blindspot_aware changed realised profit by **$-1,504,723** on a $1,673,462,150 book, deploying $-35,694,050 of capital (a +0.06% change in return on capital). That is **below 50bp of return on capital and represents no material difference in profitability**. While the raw book default rate moved from 16.88% to 15.98%, placebo controls demonstrate that this risk reduction is **not attributable to the blind-spot signals**, but is rather a mechanical artifact of budget refilling after arbitrary exclusions (refilling draws in lower-APR applicants with naturally lower base default rates). Neither profit improvement nor risk reduction is attributable to the blind-spot signals.
+B_blindspot_aware changed realised profit by **$+472,752** on a $948,153,975 book, deploying $-8,400 of capital (a +0.05% change in return on capital). That is **below 50bp of return on capital and should be read as no material difference in profitability**. The book default rate moved from 16.62% to 15.88% at essentially unchanged return, so the defensible claim is risk reduction at constant profitability -- not a profit improvement.
 
-The swap involved 23,287 loans out (realised return +6.66%, default 16.87%) and 24,001 loans in (realised return +6.93%, default 12.63%).
+The swap involved 7,384 loans out (realised return +6.37%, default 18.22%) and 8,691 loans in (realised return +6.77%, default 12.48%).
 
-Policy C, which caps flagged borrowers at 50% exposure rather than refusing them, changed return on capital by +0.04% against Policy A.
+Policy C, which caps flagged borrowers at 50% exposure rather than refusing them, changed return on capital by +0.01% against Policy A.
 
 ## Placebo Controls (Attribution Check)
 
-To test whether the default reduction is attributable to the blind-spot signals or merely the mechanical consequence of excluding loans and refilling the portfolio, 200 draws of two placebo arms were evaluated at the exact same capital budget:
+To test whether the default reduction is attributable to the blind-spot signals or merely the mechanical consequence of excluding loans and refilling the portfolio, 200 draws of two placebo arms were evaluated at the exact same capital budget (2015-07..12):
 
-1. **Random 19% Excluded:**
-   - Mean Default Rate: 16.01% (95% CI: [15.94%, 16.09%])
-   - Mean RoC: 6.96% (95% CI: [6.90%, 7.02%])
-   - Signal beats random placebo: **False**
+1. **Random exclusion (same share flagged):**
+   - Mean Default Rate: 16.17% (95% CI: [16.08%, 16.26%])
+   - Mean RoC: 6.81% (95% CI: [6.73%, 6.87%])
+   - Signal beats random placebo: **True**
 
-2. **APR-Decile Matched 19% Excluded:**
-   - Mean Default Rate: 16.08% (95% CI: [15.98%, 16.16%])
-   - Mean RoC: 6.97% (95% CI: [6.91%, 7.04%])
+2. **APR-decile matched exclusion:**
+   - Mean Default Rate: 15.97% (95% CI: [15.87%, 16.05%])
+   - Mean RoC: 6.84% (95% CI: [6.77%, 6.91%])
    - Signal beats APR-matched placebo: **False**
 
-**Conclusion:** Policy B's default rate (15.98%) falls inside the placebo intervals. The default reduction is **not attributable to the blind-spot signals**. Refilling the budget after any arbitrary 19% exclusion draws in lower-APR loans that naturally have lower default rates.
+**Conclusion:** Policy B's default rate (15.88%) lies outside the random-exclusion interval but inside the APR-matched interval: the reduction is what excluding the same share of loans with a matching APR profile produces, so it is **not attributable to the signal's selectivity** beyond the shift toward lower-APR loans.
 
 ## What this does and does not show
 
@@ -44,4 +51,4 @@ To test whether the default reduction is attributable to the blind-spot signals 
 - **Return on capital is the comparable quantity.** Profit alone rewards whichever book happens to deploy more capital.
 - This is a *retrospective reallocation* on an already-approved population. It does not establish what would happen to borrowers LendingClub declined, and it is not evidence that the policy is safe to deploy.
 
-> **Correction.** An earlier version of this experiment computed profit as `amount x apr x 1.55 - amount x 0.5 x default` and compared the two swap sets rather than the portfolios. That formula understated realised book profit by roughly a factor of 2.4, and it reported a **$9.8M loss** as a *'net increase in profit'* -- the conclusion was asserted regardless of the sign of the number printed above it. Measured on observed cashflows at equal budget, the effect is a fraction of a percentage point of return on capital in either direction, i.e. not a profit result at all. See `docs/AUDIT_REPORT.md`.
+> **Correction.** An earlier version of this experiment computed profit as `amount x apr x 1.55 - amount x 0.5 x default` and compared the two swap sets rather than the portfolios. That formula understated realised book profit by roughly a factor of 2.4, and it reported a **$9.8M loss** as a *'net increase in profit'* -- the conclusion was asserted regardless of the sign of the number printed above it. See `docs/AUDIT_REPORT.md`.

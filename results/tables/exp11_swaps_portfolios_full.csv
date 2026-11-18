@@ -1,0 +1,4 @@
+policy,n_loans,capital_deployed,observed_profit,return_on_capital,default_rate,mean_apr,budget_utilisation
+A_pd_ranked,112292,1.67724e+09,1.17891e+08,0.0702887,0.167982,0.132965,0.999995
+B_blindspot_aware,114282,1.67723e+09,1.18937e+08,0.0709129,0.160209,0.128628,0.999988
+C_exposure_capped,119957,1.67724e+09,1.18221e+08,0.0704855,0.165443,0.131207,0.999993

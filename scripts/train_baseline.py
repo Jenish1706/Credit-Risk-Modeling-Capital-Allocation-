@@ -24,6 +24,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from credit_risk.data.splits import (
+    WINDOW_LABELS,
+    assert_selection_window,
+    test_window_masks,
+)  # noqa: E402
 from credit_risk.evaluation.metrics import (  # noqa: E402
     compare_models,
     compute_metrics,
@@ -62,6 +67,10 @@ def main() -> int:
     y_train, y_valid, y_test = (
         d["default"].astype(int).to_numpy() for d in (train, valid, test)
     )
+    # CR-03: every selection below uses 2015-01..06 (dev); headline numbers use 2015-07..12.
+    masks = test_window_masks(test["issue_period"])
+    assert_selection_window(test.loc[masks["dev"], "issue_period"])
+    dev, holdout = masks["dev"], masks["holdout"]
     LOG.info(
         "train %s | valid %s | test %s | default rates %.4f / %.4f / %.4f",
         f"{len(train):,}", f"{len(valid):,}", f"{len(test):,}",
@@ -135,7 +144,9 @@ def main() -> int:
         save_table(pd.DataFrame(boosting.result.search_trials), paths, f"{run_name}_search",
                    index=False)
 
-    save_table(compare_models(metrics), paths, f"{run_name}_exp01_models")
+    save_table(compare_models(metrics), paths, f"{run_name}_exp01_models")  # full 2015
+    metrics_h2 = {n: compute_metrics(y_test[holdout], sc[holdout]) for n, sc in scores.items()}
+    save_table(compare_models(metrics_h2), paths, f"{run_name}_exp01_models_h2")
 
     # -- EXP02: calibration ----------------------------------------------------
     methods = tuple(config.get_path("calibration.methods", ["identity", "platt", "isotonic"]))
@@ -145,9 +156,27 @@ def main() -> int:
         if name != "identity":
             calibrator.save(paths.artifacts / f"{run_name}_calibrator_{name}.pkl")
 
+    calibration_h1 = compare_calibrations(
+        y_valid, p_valid, y_test[dev], scores["lightgbm"][dev], methods
+    )
+    calibration_h2 = compare_calibrations(
+        y_valid, p_valid, y_test[holdout], scores["lightgbm"][holdout], methods
+    )
+    save_table(calibration_h1.table(), paths, f"{run_name}_exp02_calibration_h1")
+    save_table(calibration_h2.table(), paths, f"{run_name}_exp02_calibration_h2")
+
+    # The production calibrator is chosen on 2015-01..06 Brier only. It used to be chosen on the
+    # full test book, which is a selection made on the data the result was then reported on.
     best_method = min(
-        (m for m in calibration.per_method if m != "identity"),
-        key=lambda m: calibration.per_method[m].brier,
+        (m for m in calibration_h1.per_method if m != "identity"),
+        key=lambda m: calibration_h1.per_method[m].brier,
+    )
+    LOG.info("production calibrator: %s (lowest Brier on 2015-01..06)", best_method)
+    save_json(
+        {"method": best_method, "selected_on": WINDOW_LABELS["dev"],
+         "criterion": "brier",
+         "h1_brier": {m: v.brier for m, v in calibration_h1.per_method.items()}},
+        paths, f"{run_name}_calibration_choice",
     )
     np.save(paths.artifacts / f"{run_name}_pd_test.npy", calibration.calibrated_test[best_method])
     save_table(
@@ -180,18 +209,28 @@ def main() -> int:
         "",
         f"Feature set: **{spec.feature_set}** ({len(builder.feature_names)} features, "
         f"{len(builder.state.dropped)} dropped by the availability guard and constancy checks).",
-        f"Out-of-time test window: {len(test):,} loans, observed default rate {y_test.mean():.4f}.",
+        f"Out-of-time test book: {len(test):,} loans, observed default rate {y_test.mean():.4f}. "
+        f"**Headline window: {WINDOW_LABELS['holdout']}** ({int(holdout.sum()):,} loans, default "
+        f"rate {y_test[holdout].mean():.4f}). Model and calibrator choices were made on validation "
+        f"and 2015-01..06 only.",
         "",
         "## EXP01 - does non-linear modelling improve default prediction?",
+        "",
+        "2015-07..12 (headline):",
+        "",
+        compare_models(metrics_h2).round(5).to_markdown(),
+        "",
+        "Full 2015 (continuity):",
         "",
         compare_models(metrics).round(5).to_markdown(),
         "",
     ]
     if "logistic" in metrics:
-        delta = metrics["lightgbm"].roc_auc - metrics["logistic"].roc_auc
+        delta = metrics_h2["lightgbm"].roc_auc - metrics_h2["logistic"].roc_auc
         lines.append(
-            f"**Verdict.** LightGBM moves out-of-time ROC-AUC by {delta:+.4f} against logistic "
-            f"regression ({metrics['logistic'].roc_auc:.4f} -> {metrics['lightgbm'].roc_auc:.4f}). "
+            f"**Verdict (2015-07..12).** LightGBM moves out-of-time ROC-AUC by {delta:+.4f} against "
+            f"logistic regression ({metrics_h2['logistic'].roc_auc:.4f} -> "
+            f"{metrics_h2['lightgbm'].roc_auc:.4f}). "
             + (
                 "That is a small margin for the extra complexity, and the logistic scorecard "
                 "remains defensible."
@@ -203,9 +242,17 @@ def main() -> int:
         "",
         "## EXP02 - does calibration improve the reliability of PD estimates?",
         "",
-        calibration.table().round(5).to_markdown(),
+        f"Production calibrator: **{best_method}**, chosen on 2015-01..06 Brier.",
         "",
-        f"**Verdict.** {calibration.verdict()}",
+        "2015-07..12 (headline):",
+        "",
+        calibration_h2.table().round(5).to_markdown(),
+        "",
+        f"**Verdict (2015-07..12).** {calibration_h2.verdict()}",
+        "",
+        "Full 2015 (continuity):",
+        "",
+        calibration.table().round(5).to_markdown(),
         "",
         "Note the ROC-AUC column: it barely moves. That is the whole point. Calibration is a "
         "monotone transform of the score, so every ranking metric is blind to it, while the "
@@ -221,6 +268,10 @@ def main() -> int:
             "models": {k: v.to_dict() for k, v in metrics.items()},
             "calibration": {k: v.to_dict() for k, v in calibration.per_method.items()},
             "best_calibration": best_method,
+            "best_calibration_selected_on": WINDOW_LABELS["dev"],
+            "models_h2": {k: v.to_dict() for k, v in metrics_h2.items()},
+            "calibration_h2": {k: v.to_dict() for k, v in calibration_h2.per_method.items()},
+            "calibration_h1": {k: v.to_dict() for k, v in calibration_h1.per_method.items()},
         },
         paths, f"{run_name}_exp01_exp02",
     )

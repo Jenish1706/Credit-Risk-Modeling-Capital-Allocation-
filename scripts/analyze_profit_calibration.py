@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.decision.expected_loss import (  # noqa: E402
     EconomicsConfig,
     expected_profit,
@@ -169,13 +170,22 @@ def main() -> int:
     )
     cashflow = fit_cashflow_model(train, economics)
     cashflow_valid = fit_cashflow_model(valid, economics)
-    cashflow_test_oracle = fit_cashflow_model(test, economics)  # diagnostic only, never used to choose anything
 
     pd_test = _load_pd(paths, args.pd_run, test, train, valid, seed)
     pd_valid = _score_split(paths, args.pd_run, valid)
     if pd_valid is None:
         raise SystemExit("validation PDs unavailable: run scripts/train_baseline.py first")
-    pools = {"valid": (valid, pd_valid), "test": (test, pd_test)}
+    # CR-03: nothing below selects anything on the test book (rules are fixed a priori, the
+    # valid-fit curves use validation only), so 2015-07..12 is the headline window and the
+    # other test windows are reported alongside. The "oracle" refit is fitted on the pool it
+    # is scored on: a diagnostic ceiling, never used to choose anything.
+    masks = test_window_masks(test["issue_period"])
+    pools = {
+        "valid": (valid, pd_valid),
+        "test_h1": (test[masks["dev"]], pd_test[masks["dev"]]),
+        "test_h2": (test[masks["holdout"]], pd_test[masks["holdout"]]),
+        "test_full": (test, pd_test),
+    }
 
     # -- deciles + decomposition ------------------------------------------------------
     deciles, decomp = [], []
@@ -184,8 +194,9 @@ def main() -> int:
         table = profit_decile_table(**a, cashflow=cashflow, economics=economics)
         table.insert(0, "pool", name)
         deciles.append(table)
+        oracle = fit_cashflow_model(frame, economics)
         for source, model in (("train_fit", cashflow), ("valid_fit", cashflow_valid),
-                              ("test_fit_ORACLE_DIAGNOSTIC", cashflow_test_oracle)):
+                              ("pool_fit_ORACLE_DIAGNOSTIC", oracle)):
             row = gap_decomposition(**a, cashflow=model)
             row.update({"pool": name, "cashflow_source": source,
                         "mean_pd_hat": float(np.nanmean(a["pd_hat"])),
@@ -193,7 +204,8 @@ def main() -> int:
             decomp.append(row)
     save_table(pd.concat(deciles), paths, "profit_calibration_deciles", index=False)
     save_table(pd.DataFrame(decomp), paths, "profit_calibration_decomposition", index=False)
-    save_table(cashflow_fit_table({"train": train, "valid": valid, "test": test}, cashflow),
+    save_table(cashflow_fit_table(
+        {"train": train, "valid": valid, "test_h2": test[masks["holdout"]]}, cashflow),
                paths, "profit_calibration_cashflow_fit", index=False)
 
     save_table(pd_by_apr_table(pools), paths, "profit_calibration_pd_by_apr", index=False)
@@ -232,7 +244,7 @@ def main() -> int:
 
     # -- audit of the simulator's exposure asymmetry ----------------------------------
     space = ActionSpace(max_exposure=float(config.get_path("actions.max_exposure", 40000.0))).without_review()
-    pool = build_applicant_pool(test, pd_test, cashflow)
+    pool = build_applicant_pool(test[masks["holdout"]], pd_test[masks["holdout"]], cashflow)
     mix = exposure_mix_table(pool, cashflow, economics, space,
                              int(config.get("simulation", {}).get("n_steps", 2000)), list(range(5)))
     save_table(mix, paths, "profit_calibration_exposure_mix", index=False)

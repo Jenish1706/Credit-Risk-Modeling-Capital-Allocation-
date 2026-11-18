@@ -15,6 +15,12 @@ comparison is between the two *portfolios* at equal budget rather than between t
 Return on capital is reported alongside profit, because a book that deploys more capital will
 usually earn more profit without being better.
 
+**Windows (CR-03).** Which signals are used (the H1 KEEP/REJECT decisions of EXP08 and EXP10) and
+where "flagged" starts (the ``--flag-quantile`` of each signal, measured on 2015-01..06 only) are
+fixed on the selection window. The headline portfolios are built and scored on the untouched
+2015-07..12 holdout; the full-2015 result is written alongside for continuity. ``--flag-quantile``,
+``--budget-fraction`` and ``--exposure-cap`` are pre-specified, not tuned.
+
 An earlier version of this experiment used a hardcoded ``LGD=0.5`` profit formula and compared the
 swap sets. That understated book profit by a factor of 2.4 and **reversed the sign** of the
 headline result. See docs/AUDIT_REPORT.md.
@@ -22,6 +28,7 @@ headline result. See docs/AUDIT_REPORT.md.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -30,6 +37,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from credit_risk.data.splits import (  # noqa: E402
+    WINDOW_LABELS,
+    assert_selection_window,
+    test_window_masks,
+)
 from credit_risk.decision.blindspot import (  # noqa: E402
     build_portfolio,
     compare_capital_constrained,
@@ -55,6 +67,25 @@ from credit_risk.utils.cli import (  # noqa: E402
 from credit_risk.utils.runtime import get_logger  # noqa: E402
 
 LOG = get_logger("scripts.exp11")
+
+
+def _placebo_conclusion(default_rate: float, p) -> str:
+    """State exactly which placebo the signal does and does not beat."""
+    head = f"**Conclusion:** Policy B's default rate ({default_rate:.2%}) "
+    if p.signal_beats_random and p.signal_beats_apr_matched:
+        return head + "lies outside both placebo intervals, so the reduction is not explained by refilling the budget or by APR mix alone."
+    if p.signal_beats_random:
+        return (
+            head + "lies outside the random-exclusion interval but inside the APR-matched interval: "
+            "the reduction is what excluding the same share of loans with a matching APR profile "
+            "produces, so it is **not attributable to the signal's selectivity** beyond the shift "
+            "toward lower-APR loans."
+        )
+    return (
+        head + "falls inside the placebo intervals, so the default reduction is **not attributable "
+        "to the blind-spot signals**: refilling the budget after an arbitrary exclusion draws in "
+        "lower-APR loans that naturally default less."
+    )
 
 
 def main() -> int:
@@ -109,82 +140,105 @@ def main() -> int:
     )
     cashflow = fit_cashflow_model(train, economics)
 
-    # --- flags ---------------------------------------------------------------
+    # --- selection (2015-01..06 only) ----------------------------------------
+    masks = test_window_masks(test["issue_period"])
+    assert_selection_window(test.loc[masks["dev"], "issue_period"])
     q = float(args.flag_quantile)
-    flag_anomaly = anomaly > np.quantile(anomaly, q)
-    flag_disagree = disagreement > np.quantile(disagreement, q)
-    flagged = flag_anomaly | flag_disagree
-    LOG.info(
-        "flagged %s of %s test borrowers (%.1f%%) at the %.0fth percentile of either signal",
-        f"{flagged.sum():,}", f"{len(test):,}", 100 * flagged.mean(), 100 * q,
-    )
+    candidate = {
+        "anomaly": (anomaly, "exp08_blindspots"),
+        "disagreement": (disagreement, "exp10_disagreement"),
+    }
+    used, cuts = [], {}
+    for name, (values, run) in candidate.items():
+        record = json.loads((paths.results_tables / f"{run}.json").read_text(encoding="utf-8"))
+        LOG.info("signal %-12s | H1 decision %s", name, record["decision"])
+        if record["decision"] == "KEEP":
+            used.append(name)
+            cuts[name] = float(np.quantile(values[masks["dev"]], q))
+    if not used:
+        raise SystemExit("no signal survived the H1 selection; EXP11 has nothing to act on")
+    flagged_all = np.zeros(len(test), dtype=bool)
+    for name in used:
+        flagged_all |= candidate[name][0] > cuts[name]
 
-    analysis = compare_capital_constrained(
-        test, pd_hat, flagged, cashflow, economics, budget_fraction=float(args.budget_fraction)
-    )
+    def evaluate(mask: np.ndarray):
+        sub = test[mask].reset_index(drop=True)
+        pd_w, flagged = pd_hat[mask], flagged_all[mask]
+        LOG.info(
+            "flagged %s of %s borrowers (%.1f%%)",
+            f"{flagged.sum():,}", f"{len(sub):,}", 100 * flagged.mean(),
+        )
+        analysis = compare_capital_constrained(
+            sub, pd_w, flagged, cashflow, economics, budget_fraction=float(args.budget_fraction)
+        )
+        exposure = pd.to_numeric(sub["funded_amnt"], errors="coerce").fillna(0.0)
+        apr = pd.to_numeric(sub["int_rate"], errors="coerce").fillna(13.0) / 100.0
+        profit = expected_profit(pd_w, exposure.to_numpy(), apr.to_numpy(), cashflow, economics)
+        density = pd.Series(
+            np.divide(profit, exposure.to_numpy(), out=np.zeros_like(profit),
+                      where=exposure.to_numpy() > 0),
+            index=sub.index,
+        )
+        approve_c, exposure_c = exposure_capped_policy(
+            density, exposure, flagged, analysis.budget, cap_multiplier=float(args.exposure_cap)
+        )
+        # Realised profit scales with the exposure actually taken, so a half-size loan earns half
+        # the realised return. Same linear-scaling assumption the simulator makes for
+        # counterfactual exposures; it is an assumption -- see docs/ASSUMPTIONS.md.
+        scale = np.where(flagged, float(args.exposure_cap), 1.0)
+        capped_profit = float((realised_profit(sub) * scale)[approve_c].sum())
+        capped_capital = float(exposure_c[approve_c].sum())
+        policy_c = build_portfolio(sub, approve_c, "C_exposure_capped", analysis.budget)
+        policy_c.capital_deployed = capped_capital
+        policy_c.observed_profit = capped_profit
+        policy_c.return_on_capital = (
+            capped_profit / capped_capital if capped_capital else float("nan")
+        )
+        policy_c.budget_utilisation = capped_capital / analysis.budget
+        analysis.portfolios.append(policy_c)
+        b_port = analysis.portfolios[1]
+        placebo = evaluate_placebo_controls(
+            density=density,
+            exposure=exposure,
+            defaults=pd.to_numeric(sub["default"], errors="coerce").fillna(0.0),
+            realised_profits=realised_profit(sub),
+            flagged=flagged,
+            apr=apr,
+            budget=analysis.budget,
+            signal_default_rate=b_port.default_rate,
+            n_draws=200,
+            seed=seed,
+        )
+        return analysis, policy_c, placebo, int(flagged.sum()), len(sub)
 
-    # --- Policy C: cap exposure rather than refuse ---------------------------
-    exposure = pd.to_numeric(test["funded_amnt"], errors="coerce").fillna(0.0)
-    apr = pd.to_numeric(test["int_rate"], errors="coerce").fillna(13.0) / 100.0
-    profit = expected_profit(pd_hat, exposure.to_numpy(), apr.to_numpy(), cashflow, economics)
-    density = pd.Series(
-        np.divide(profit, exposure.to_numpy(), out=np.zeros_like(profit),
-                  where=exposure.to_numpy() > 0),
-        index=test.index,
-    )
-    approve_c, exposure_c = exposure_capped_policy(
-        density, exposure, flagged, analysis.budget, cap_multiplier=float(args.exposure_cap)
-    )
-    # Realised profit scales with the exposure actually taken, so a half-size loan earns half the
-    # realised return. This is the same linear-scaling assumption the simulator makes for
-    # counterfactual exposures, and it is an assumption -- see docs/ASSUMPTIONS.md.
-    scale = np.where(flagged, float(args.exposure_cap), 1.0)
-    capped_profit = float((realised_profit(test) * scale)[approve_c].sum())
-    capped_capital = float(exposure_c[approve_c].sum())
-    policy_c = build_portfolio(test, approve_c, "C_exposure_capped", analysis.budget)
-    policy_c.capital_deployed = capped_capital
-    policy_c.observed_profit = capped_profit
-    policy_c.return_on_capital = capped_profit / capped_capital if capped_capital else float("nan")
-    policy_c.budget_utilisation = capped_capital / analysis.budget
-    analysis.portfolios.append(policy_c)
-
+    LOG.info("EXP11 headline: 2015-07..12 holdout")
+    analysis, policy_c, placebo_comp, n_flagged, n_pool = evaluate(masks["holdout"])
+    LOG.info("EXP11 continuity: full 2015")
+    analysis_full, _, placebo_full, n_flagged_full, n_pool_full = evaluate(masks["full"])
+    save_table(analysis.frame, paths, f"{run_name}_portfolios", index=False)
+    save_table(analysis_full.frame, paths, f"{run_name}_portfolios_full", index=False)
     table = analysis.frame
-    save_table(table, paths, f"{run_name}_portfolios", index=False)
-
-    baseline = "A_pd_ranked"
-    verdict_b = analysis.verdict("B_blindspot_aware", baseline)
-    a = analysis.portfolios[0]
-    b = analysis.portfolios[1]
+    verdict_b = analysis.verdict("B_blindspot_aware", "A_pd_ranked")
+    a, b = analysis.portfolios[0], analysis.portfolios[1]
     c_delta_roc = policy_c.return_on_capital - a.return_on_capital
-
-    LOG.info("evaluating placebo controls (200 draws of random and APR-matched exclusions)...")
-    defaults_series = pd.to_numeric(test["default"], errors="coerce").fillna(0.0)
-    realised_profits_series = realised_profit(test)
-    placebo_comp = evaluate_placebo_controls(
-        density=density,
-        exposure=exposure,
-        defaults=defaults_series,
-        realised_profits=realised_profits_series,
-        flagged=flagged,
-        apr=apr,
-        budget=analysis.budget,
-        signal_default_rate=b.default_rate,
-        n_draws=200,
-        seed=seed,
-    )
+    cut_text = ", ".join(f"{k} {v:.4g}" for k, v in cuts.items())
 
     lines = [
         "# EXP11: does acting on blind-spot signals improve the book?",
         "",
-        f"Applicant pool: {len(test):,} out-of-time loans (2015 vintage). "
-        f"Capital budget ${analysis.budget:,.0f}, "
-        f"{100 * float(args.budget_fraction):.0f}% of profitable demand.",
-        f"Flagged as blind spots: {flagged.sum():,} borrowers ({100 * flagged.mean():.1f}%) "
-        f"above the {100 * q:.0f}th percentile of the anomaly **or** disagreement signal.",
+        f"**Headline window: {WINDOW_LABELS['holdout']}**, {n_pool:,} loans. Signals used: "
+        f"{', '.join(used)} (KEEP on 2015-01..06). Flag cut-points are the {100 * q:.0f}th "
+        f"percentile of each signal on 2015-01..06 ({cut_text}). Capital budget "
+        f"${analysis.budget:,.0f}, {100 * float(args.budget_fraction):.0f}% of profitable demand. "
+        f"Flagged: {n_flagged:,} borrowers ({100 * n_flagged / n_pool:.1f}%).",
         "",
-        "## Portfolios at equal budget, measured on observed cashflows",
+        "## Portfolios at equal budget, measured on observed cashflows (2015-07..12)",
         "",
         table.round(4).to_markdown(index=False),
+        "",
+        f"Full-2015 continuity column ({n_pool_full:,} loans, flagged {n_flagged_full:,}):",
+        "",
+        analysis_full.frame.round(4).to_markdown(index=False),
         "",
         "## Verdict",
         "",
@@ -202,31 +256,30 @@ def main() -> int:
         "## Placebo Controls (Attribution Check)",
         "",
         "To test whether the default reduction is attributable to the blind-spot signals or merely "
-        "the mechanical consequence of excluding loans and refilling the portfolio, 200 draws of two "
-        "placebo arms were evaluated at the exact same capital budget:",
+        "the mechanical consequence of excluding loans and refilling the portfolio, 200 draws of "
+        "two placebo arms were evaluated at the exact same capital budget (2015-07..12):",
         "",
-        f"1. **Random 19% Excluded:**",
-        f"   - Mean Default Rate: {placebo_comp.random_default_mean:.2%} "
-        f"(95% CI: [{placebo_comp.random_default_ci[0]:.2%}, {placebo_comp.random_default_ci[1]:.2%}])",
-        f"   - Mean RoC: {placebo_comp.random_roc_mean:.2%} "
-        f"(95% CI: [{placebo_comp.random_roc_ci[0]:.2%}, {placebo_comp.random_roc_ci[1]:.2%}])",
+        "1. **Random exclusion (same share flagged):**",
+        f"   - Mean Default Rate: {placebo_comp.random_default_mean:.2%} (95% CI: "
+        f"[{placebo_comp.random_default_ci[0]:.2%}, {placebo_comp.random_default_ci[1]:.2%}])",
+        f"   - Mean RoC: {placebo_comp.random_roc_mean:.2%} (95% CI: "
+        f"[{placebo_comp.random_roc_ci[0]:.2%}, {placebo_comp.random_roc_ci[1]:.2%}])",
         f"   - Signal beats random placebo: **{placebo_comp.signal_beats_random}**",
         "",
-        f"2. **APR-Decile Matched 19% Excluded:**",
-        f"   - Mean Default Rate: {placebo_comp.apr_matched_default_mean:.2%} "
-        f"(95% CI: [{placebo_comp.apr_matched_default_ci[0]:.2%}, {placebo_comp.apr_matched_default_ci[1]:.2%}])",
-        f"   - Mean RoC: {placebo_comp.apr_matched_roc_mean:.2%} "
-        f"(95% CI: [{placebo_comp.apr_matched_roc_ci[0]:.2%}, {placebo_comp.apr_matched_roc_ci[1]:.2%}])",
+        "2. **APR-decile matched exclusion:**",
+        f"   - Mean Default Rate: {placebo_comp.apr_matched_default_mean:.2%} (95% CI: "
+        f"[{placebo_comp.apr_matched_default_ci[0]:.2%}, {placebo_comp.apr_matched_default_ci[1]:.2%}])",
+        f"   - Mean RoC: {placebo_comp.apr_matched_roc_mean:.2%} (95% CI: "
+        f"[{placebo_comp.apr_matched_roc_ci[0]:.2%}, {placebo_comp.apr_matched_roc_ci[1]:.2%}])",
         f"   - Signal beats APR-matched placebo: **{placebo_comp.signal_beats_apr_matched}**",
         "",
-        f"**Conclusion:** Policy B's default rate ({b.default_rate:.2%}) falls inside the placebo "
-        "intervals. The default reduction is **not attributable to the blind-spot signals**. Refilling "
-        "the budget after any arbitrary 19% exclusion draws in lower-APR loans that naturally have lower default rates.",
+        _placebo_conclusion(b.default_rate, placebo_comp),
         "",
         "## What this does and does not show",
         "",
         "- Profit here is **observed**: `total_pymnt - collection_recovery_fee - funded_amnt` "
-        "for every matured loan (total_pymnt already includes recoveries). No loss-given-default is assumed.",
+        "for every matured loan (total_pymnt already includes recoveries). No loss-given-default "
+        "is assumed.",
         "- The comparison is between **whole portfolios at the same budget**, not between the two "
         "swap sets. Swap sets need not deploy equal capital, so differencing their profits is not "
         "a portfolio result.",
@@ -240,17 +293,24 @@ def main() -> int:
         "`amount x apr x 1.55 - amount x 0.5 x default` and compared the two swap sets rather "
         "than the portfolios. That formula understated realised book profit by roughly a factor "
         "of 2.4, and it reported a **$9.8M loss** as a *'net increase in profit'* -- the "
-        "conclusion was asserted regardless of the sign of the number printed above it. Measured "
-        "on observed cashflows at equal budget, the effect is a fraction of a percentage point of "
-        "return on capital in either direction, i.e. not a profit result at all. "
-        "See `docs/AUDIT_REPORT.md`.",
+        "conclusion was asserted regardless of the sign of the number printed above it. See "
+        "`docs/AUDIT_REPORT.md`.",
     ]
     write_report(lines, paths, f"{run_name}", source)
     save_json(
         {
             "budget": analysis.budget,
             "flag_quantile": q,
-            "n_flagged": int(flagged.sum()),
+            "headline_window": WINDOW_LABELS["holdout"],
+            "signals_used": used,
+            "flag_cutpoints_h1": cuts,
+            "n_flagged": n_flagged,
+            "n_pool": n_pool,
+            "full_2015": {
+                "portfolios": [p.to_dict() for p in analysis_full.portfolios],
+                "placebo_controls": placebo_full.to_dict(),
+                "n_flagged": n_flagged_full, "n_pool": n_pool_full,
+            },
             "portfolios": [p.to_dict() for p in analysis.portfolios],
             "n_swapped_out": analysis.n_swapped_out,
             "n_swapped_in": analysis.n_swapped_in,

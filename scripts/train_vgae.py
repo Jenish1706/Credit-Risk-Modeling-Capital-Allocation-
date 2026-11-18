@@ -28,7 +28,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from credit_risk.decision.blindspot import (  # noqa: E402
-    conditional_signal_table,
+    conditional_by_window,
     marginal_signal_table,
 )
 from credit_risk.features.build import (  # noqa: E402
@@ -131,16 +131,21 @@ def main() -> int:
     )
     save_table(marginal, paths, f"{run_name}_sigma_bins", index=False)
 
-    conditional = conditional_signal_table(
-        y_test, p_test, mean_sigma,
+    # CR-03: the KEEP/REJECT decision uses 2015-01..06 only; 2015-07..12 is the untouched
+    # holdout (headline evidence); the full-2015 result is kept as a labelled second column.
+    windowed = conditional_by_window(
+        y_test, p_test, mean_sigma, test["issue_period"],
         n_strata=int(config.get_path("analysis.n_strata", 10)),
         min_per_half=int(config.get_path("analysis.min_per_half", 200)),
     )
+    conditional = windowed.full
+    save_table(windowed.selection.table, paths, f"{run_name}_conditional_h1", index=False)
+    save_table(windowed.holdout.table, paths, f"{run_name}_conditional_h2", index=False)
     save_table(conditional.table, paths, f"{run_name}_conditional", index=False)
 
-    verdict = conditional.verdict("Graph uncertainty (VGAE sigma)")
+    verdict = "On 2015-01..06 (selection window): " + windowed.selection.verdict("Graph uncertainty (VGAE sigma)")
     LOG.info(verdict)
-    keep = conditional.sign_test_p < 0.05 and conditional.mean_gap_difference > 0
+    keep = windowed.selection.keep
 
     # Degree is the obvious non-neural competitor: if sigma is just a proxy for "few neighbours",
     # the VGAE adds nothing a one-line count would not.
@@ -160,9 +165,15 @@ def main() -> int:
         "",
         marginal.round(4).to_markdown(index=False),
         "",
-        "## Conditional view (the evidence)",
+        "## Conditional view, full 2015 (continuity)",
         "",
         conditional.table.round(4).to_markdown(index=False),
+        "",
+        "## Selection window vs untouched holdout",
+        "",
+        "The decision below is taken on 2015-01..06 only. 2015-07..12 had no part in it.",
+        "",
+        windowed.markdown(),
         "",
         "## Verdict",
         "",
@@ -207,6 +218,9 @@ def main() -> int:
             "spearman_with_pd": conditional.spearman_with_pd,
             "spearman_with_degree": degree_corr,
             "decision": "KEEP" if keep else "REJECT",
+            "decision_basis": "2015-01..06 only (selection window)",
+            "holdout_confirms": windowed.holdout_confirms,
+            "windows": windowed.summary(),
         },
         paths, f"{run_name}",
     )

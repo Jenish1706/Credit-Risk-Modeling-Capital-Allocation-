@@ -1,9 +1,17 @@
 pool,rule,n_accepted,realised_profit_total,realised_profit_per_accepted,diff_vs_fixed_threshold_per_loan,diff_ci_low,diff_ci_high,diff_vs_fixed_threshold_total
-valid,fixed_threshold@0.15,54907,1.51995e+07,276.823,0,0,0,0
-valid,expected_profit>0 (train-fit cashflow),54138,1.5163e+07,280.08,-0.402912,-13.7393,13.0179,-36509.9
-valid,expected_profit>0 (valid-fit cashflow),52470,1.58282e+07,301.662,6.93789,-5.77673,19.8293,628676
-valid,approve_all,90615,1.36896e+07,151.074,-16.6628,-32.2664,-1.427,-1.5099e+06
-test,fixed_threshold@0.15,175708,1.5547e+07,88.4821,0,0,0,0
-test,expected_profit>0 (train-fit cashflow),142124,6.15531e+06,43.3094,-33.1832,-40.853,-25.4557,-9.3917e+06
-test,expected_profit>0 (valid-fit cashflow),138698,8.17715e+06,58.9565,-26.0395,-33.4099,-18.601,-7.36986e+06
-test,approve_all,283026,-1.69575e+07,-59.9149,-114.846,-123.961,-105.783,-3.25045e+07
+valid,fixed_threshold@0.15,54943,1.52281e+07,277.162,0,0,0,0
+valid,expected_profit>0 (train-fit cashflow),54199,1.50907e+07,278.431,-1.51687,-14.7838,11.8094,-137452
+valid,expected_profit>0 (valid-fit cashflow),52559,1.59502e+07,303.472,7.9685,-4.7206,20.6992,722065
+valid,approve_all,90615,1.36896e+07,151.074,-16.9786,-32.5899,-1.72925,-1.53851e+06
+test_h1,fixed_threshold@0.15,73265,8.56132e+06,116.854,0,0,0,0
+test_h1,expected_profit>0 (train-fit cashflow),62492,5.06885e+06,81.1119,-28.9136,-40.7405,-17.1926,-3.49248e+06
+test_h1,expected_profit>0 (valid-fit cashflow),60860,5.97937e+06,98.248,-21.3755,-32.9434,-9.98957,-2.58195e+06
+test_h1,approve_all,120790,-3.30311e+06,-27.3459,-98.2237,-112.377,-84.293,-1.18644e+07
+test_h2,fixed_threshold@0.15,102545,7.03034e+06,68.5586,0,0,0,0
+test_h2,expected_profit>0 (train-fit cashflow),79924,1.04289e+06,13.0485,-36.9058,-47.0559,-26.9011,-5.98745e+06
+test_h2,expected_profit>0 (valid-fit cashflow),78187,2.4503e+06,31.339,-28.2307,-38.1714,-18.5689,-4.58004e+06
+test_h2,approve_all,162236,-1.36543e+07,-84.1635,-127.498,-139.608,-115.771,-2.06847e+07
+test_full,fixed_threshold@0.15,175810,1.55917e+07,88.6847,0,0,0,0
+test_full,expected_profit>0 (train-fit cashflow),142416,6.11173e+06,42.9147,-33.4949,-41.1023,-25.7798,-9.47993e+06
+test_full,expected_profit>0 (valid-fit cashflow),139047,8.42967e+06,60.6246,-25.3051,-32.6397,-17.8794,-7.16199e+06
+test_full,approve_all,283026,-1.69575e+07,-59.9149,-115.004,-124.125,-105.937,-3.25491e+07

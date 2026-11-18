@@ -1,9 +1,9 @@
 treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
-oracle_ceiling(lambda=0.0232),expected_profit,30,10574.5,-13393.7,34391,0.533333,False,0.231624
-fixed_threshold@0.150,expected_profit,30,714.379,-24197.9,25241.3,0.433333,False,0.0156478
-budget_aware_q(greedy),expected_profit,30,-8540.72,-30982.3,13787.9,0.5,False,-0.187077
-linucb@alpha=1,expected_profit,30,-16715.9,-41512.4,8367.55,0.366667,False,-0.366146
-expected_profit(lambda=0.0290),expected_profit,30,-17058.4,-43547.4,8396.35,0.366667,False,-0.373648
-thompson,expected_profit,30,-21442.7,-47513.4,5321.19,0.333333,False,-0.469682
-risk_band,expected_profit,30,-23193.8,-43674.3,-2647.23,0.333333,True,-0.508038
-approve_all,expected_profit,30,-44093.5,-62522.2,-25856,0.133333,True,-0.965829
+oracle_ceiling(lambda=0.0168),expected_profit,30,22401,3859.74,40728.2,0.633333,True,0.627537
+fixed_threshold@0.150,expected_profit,30,10204.1,-14263.1,35411.3,0.533333,False,0.285857
+linucb@alpha=1,expected_profit,30,-3536.67,-20688.7,14114.7,0.466667,False,-0.0990756
+thompson,expected_profit,30,-6453.21,-28219.1,15903.1,0.4,False,-0.180779
+budget_aware_q(greedy),expected_profit,30,-22307.8,-50453.5,5495.58,0.5,False,-0.624928
+risk_band,expected_profit,30,-23706.8,-40854.2,-6906.41,0.266667,True,-0.664117
+expected_profit(lambda=0.0291),expected_profit,30,-31019.5,-62268.8,472.785,0.3,False,-0.868975
+approve_all,expected_profit,30,-65075.3,-82232.7,-48484.8,0.1,True,-1.82301

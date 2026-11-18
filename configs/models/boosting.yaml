@@ -29,7 +29,7 @@ features:
   max_categorical_levels: 40
 
 calibration:
-  methods: [identity, platt, isotonic]
+  methods: [identity, intercept_only, platt, isotonic]
   fit_on: valid
 
 seed: 42

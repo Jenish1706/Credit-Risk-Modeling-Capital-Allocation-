@@ -99,6 +99,11 @@ class ConditionalResult:
     sign_test_p_twosided: float = 1.0
     sign_test_p_onesided: float = 1.0
 
+    @property
+    def keep(self) -> bool:
+        """The single KEEP rule: two-sided sign test below 5% with the gap in the right direction."""
+        return bool(self.sign_test_p_twosided < 0.05 and self.mean_gap_difference > 0)
+
     def verdict(self, name: str) -> str:
         direction = "under-states" if self.mean_gap_difference > 0 else "over-states"
         strength = (
@@ -212,6 +217,86 @@ def conditional_signal_table(
         odds_ratio_ci_upper=ci_upper,
         sign_test_p_twosided=sign_p_twosided,
         sign_test_p_onesided=sign_p_onesided,
+    )
+
+
+@dataclass
+class WindowedConditional:
+    """The conditional test run on the three windows of the 2015 test book (CR-03).
+
+    ``selection`` (2015-01..06) alone decides KEEP/REJECT. ``holdout`` (2015-07..12) is the
+    headline evidence, since nothing has been chosen on it. ``full`` is the continuity column.
+    """
+
+    selection: ConditionalResult
+    holdout: ConditionalResult
+    full: ConditionalResult
+
+    @property
+    def decision(self) -> str:
+        return "KEEP" if self.selection.keep else "REJECT"
+
+    @property
+    def holdout_confirms(self) -> bool:
+        return self.holdout.keep
+
+    def summary(self) -> dict[str, dict]:
+        out = {}
+        for name, r in (("selection_h1", self.selection), ("holdout_h2", self.holdout),
+                        ("full_2015", self.full)):
+            out[name] = {
+                "n_strata": r.n_strata, "n_strata_positive": r.n_strata_positive,
+                "mean_gap_difference": r.mean_gap_difference,
+                "sign_test_p_twosided": r.sign_test_p_twosided,
+                "sign_test_p_onesided": r.sign_test_p_onesided,
+                "odds_ratio_per_sd": r.odds_ratio_per_sd,
+                "odds_ratio_ci_lower": r.odds_ratio_ci_lower,
+                "odds_ratio_ci_upper": r.odds_ratio_ci_upper,
+                "spearman_with_pd": r.spearman_with_pd,
+                "keep": r.keep,
+            }
+        return out
+
+    def markdown(self) -> str:
+        rows = [
+            "| window | strata with larger gap | mean gap difference | sign test (two-sided) | odds ratio / SD (95% CI) |",
+            "|---|---|---|---|---|",
+        ]
+        from credit_risk.data.splits import WINDOW_LABELS
+        for key, r in (("dev", self.selection), ("holdout", self.holdout), ("full", self.full)):
+            rows.append(
+                f"| {WINDOW_LABELS[key]} | {r.n_strata_positive}/{r.n_strata} | "
+                f"{r.mean_gap_difference:+.4f} | {r.sign_test_p_twosided:.4f} | "
+                f"{r.odds_ratio_per_sd:.3f} [{r.odds_ratio_ci_lower:.3f}, {r.odds_ratio_ci_upper:.3f}] |"
+            )
+        return "\n".join(rows)
+
+
+def conditional_by_window(
+    y_true: np.ndarray,
+    pd_estimate: np.ndarray,
+    signal: np.ndarray,
+    issue_period: pd.Series,
+    n_strata: int = 10,
+    min_per_half: int = 200,
+) -> WindowedConditional:
+    """Run :func:`conditional_signal_table` on 2015-H1, 2015-H2 and the full test book.
+
+    The selection window is asserted to end at the dev cutoff before it is read.
+    """
+    from credit_risk.data.splits import assert_selection_window, test_window_masks
+
+    masks = test_window_masks(issue_period)
+    assert_selection_window(pd.Series(issue_period).to_numpy()[masks["dev"]])
+    y, p, s = (np.asarray(a) for a in (y_true, pd_estimate, signal))
+
+    def run(mask: np.ndarray) -> ConditionalResult:
+        return conditional_signal_table(
+            y[mask], p[mask], s[mask], n_strata=n_strata, min_per_half=min_per_half
+        )
+
+    return WindowedConditional(
+        selection=run(masks["dev"]), holdout=run(masks["holdout"]), full=run(masks["full"])
     )
 
 
