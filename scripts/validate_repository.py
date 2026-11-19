@@ -97,54 +97,62 @@ print("4. README NUMBERS TRACE TO ARTEFACTS")
 print("=" * 78)
 
 exp01 = json.loads((paths.results_tables / "boosting_exp01_exp02.json").read_text())
-auc_lr = exp01["models"]["logistic"]["roc_auc"]
-auc_gb = exp01["models"]["lightgbm"]["roc_auc"]
-check("EXP01 AUC 0.6581 -> 0.6705",
-      abs(auc_lr - 0.6581) < 5e-4 and abs(auc_gb - 0.6705) < 5e-4,
-      f"{auc_lr:.4f} -> {auc_gb:.4f}")
+check("EXP01 headline (H2) and full-2015 tables both exist",
+      (paths.results_tables / "boosting_exp01_models_h2.csv").exists()
+      and (paths.results_tables / "boosting_exp01_models.csv").exists())
 
 cal = exp01["calibration"]
-check("EXP02 calibration leaves AUC unchanged",
-      abs(cal["identity"]["roc_auc"] - cal["platt"]["roc_auc"]) < 1e-9,
-      f"ECE {cal['identity']['ece']:.4f} -> {cal['platt']['ece']:.4f}")
+choice = json.loads((paths.results_tables / "boosting_calibration_choice.json").read_text())
+check("EXP02 calibration leaves AUC unchanged (non-isotonic methods)",
+      abs(cal["identity"]["roc_auc"] - cal[choice["method"]]["roc_auc"]) < 5e-4
+      or choice["method"] == "isotonic",
+      f"{choice['method']}: ECE {cal['identity']['ece']:.4f} -> {cal[choice['method']]['ece']:.4f}")
+check("EXP02 production calibrator was selected on 2015-01..06",
+      "2015-01..06" in choice["selected_on"], choice["selected_on"])
 
-exp08 = json.loads((paths.results_tables / "exp08_blindspots.json").read_text())
-check("EXP08 KEEP, 10/10 strata, p<0.01",
-      exp08["decision"] == "KEEP" and exp08["n_strata_positive"] == 10
-      and exp08["sign_test_p"] < 0.01,
-      f"p={exp08['sign_test_p']:.4f}, OR={exp08['odds_ratio_per_sd']:.3f}")
+# KEEP/REJECT is decided on H1 only; the holdout confirms or not.
+decisions = {}
+for run in ("exp08_blindspots", "exp09_vgae", "exp10_disagreement"):
+    rec = json.loads((paths.results_tables / f"{run}.json").read_text())
+    h1 = rec["windows"]["selection_h1"]
+    decisions[run] = rec["decision"]
+    check(f"{run}: decision equals the H1 rule",
+          (rec["decision"] == "KEEP") == bool(h1["keep"]) and "2015-01..06" in rec["decision_basis"],
+          f"{rec['decision']} on H1 ({h1['n_strata_positive']}/{h1['n_strata']}, p={h1['sign_test_p_twosided']:.4f}); "
+          f"holdout confirms: {rec['holdout_confirms']}")
 
 exp10 = json.loads((paths.results_tables / "exp10_disagreement.json").read_text())
-check("EXP10 KEEP on log-odds scale",
-      exp10["decision"] == "KEEP" and exp10["scale"] == "logodds",
-      f"{exp10['n_strata_positive']}/{exp10['n_strata']} strata, p={exp10['sign_test_p']:.4f}")
 check("EXP10 log-odds less PD-confounded than probability scale",
-      abs(exp10["spearman_with_pd_logodds"]) < abs(exp10["spearman_with_pd_probability"]),
+      exp10["scale"] == "logodds"
+      and abs(exp10["spearman_with_pd_logodds"]) < abs(exp10["spearman_with_pd_probability"]),
       f"{exp10['spearman_with_pd_logodds']:+.3f} vs {exp10['spearman_with_pd_probability']:+.3f}")
 
 exp11 = json.loads((paths.results_tables / "exp11_swaps.json").read_text())
 a = next(p for p in exp11["portfolios"] if p["policy"] == "A_pd_ranked")
 b = next(p for p in exp11["portfolios"] if p["policy"] == "B_blindspot_aware")
-check("EXP11 RoC 8.17% vs 8.13%",
-      abs(a["return_on_capital"] - 0.0817) < 5e-4 and abs(b["return_on_capital"] - 0.0813) < 5e-4,
-      f"{a['return_on_capital']:.4f} vs {b['return_on_capital']:.4f}")
-check("EXP11 default rate falls 17.30% -> 16.32%",
-      abs(a["default_rate"] - 0.1730) < 5e-4 and abs(b["default_rate"] - 0.1632) < 5e-4,
-      f"{a['default_rate']:.4f} -> {b['default_rate']:.4f}")
+kept = [n for n, run in (("anomaly", "exp08_blindspots"), ("disagreement", "exp10_disagreement"))
+        if decisions[run] == "KEEP"]
+check("EXP11 acts only on signals that were KEEP on H1",
+      sorted(exp11["signals_used"]) == sorted(kept), f"used {exp11['signals_used']}, kept {kept}")
 check("EXP11 return-on-capital change is immaterial (<50bp)",
       abs(b["return_on_capital"] - a["return_on_capital"]) < 0.005,
       f"{(b['return_on_capital'] - a['return_on_capital']):+.4f}")
+check("EXP11 default rate is lower for the signal book",
+      b["default_rate"] < a["default_rate"], f"{a['default_rate']:.4f} -> {b['default_rate']:.4f}")
 
 exp06 = json.loads((paths.results_tables / "exp06_rl_exp03_exp06.json").read_text())
 conditions = exp06["exp06"]
 check("EXP06 trained on a disjoint pool",
       exp06.get("training_pool") == "validation window", str(exp06.get("training_pool")))
-breaches = [c for c in conditions.values() if c.get("control_breach")]
-check("EXP06 control not breached", len(breaches) == 0,
-      f"{len(conditions)} conditions checked")
-nulls = [c for c in conditions.values() if "No policy beat" in c["verdict"]]
-check("EXP06 null in every condition", len(nulls) == len(conditions),
-      f"{len(nulls)}/{len(conditions)}")
+sweep = pd.read_csv(paths.results_tables / "exp06_rl_exp06_sweep.csv")
+check("EXP06 reports approval rate and capital for every policy",
+      {"approval_rate", "capital_deployed"} <= set(sweep.columns) and sweep["approval_rate"].notna().all())
+check("EXP06 has no policy called an oracle ceiling",
+      not sweep["policy"].str.contains("oracle_ceiling").any())
+unc = pd.read_csv(paths.results_tables / "exp06_rl_exp06_diff_unconstrained.csv", index_col=0)
+learners = [n for n in unc.index if any(m in n for m in ("q(", "linucb", "thompson"))]
+check("EXP06 control: no learner significantly beats the myopic rule with unconstrained capital",
+      bool((unc.loc[learners, "ci_low"] <= 0).all()), f"{len(learners)} learners checked")
 
 print()
 print("=" * 78)

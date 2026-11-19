@@ -76,8 +76,8 @@ Commands, in dependency order, with measured run time and what each produces:
 
 | # | Command | Time | Produces |
 |---|---|---|---|
-| 1 | `python scripts/prepare_data.py --config configs/data/lending_club.yaml --max-threads 10` | not re-timed | `data/processed/loans.parquet`, `results/reports/data_profile.md`, `results/tables/data_profile.json` |
-| 2 | `python scripts/build_graph.py --config configs/graph/cohort_graph.yaml` | not re-timed | `data/processed/graph.npz`, `cohort_features.parquet` |
+| 1 | `python scripts/prepare_data.py --config configs/data/lending_club.yaml --max-threads 10` | 1.2 min | `data/processed/loans.parquet`, `results/reports/data_profile.md`, `results/tables/data_profile.json` |
+| 2 | `python scripts/build_graph.py --config configs/graph/cohort_graph.yaml` | 16 min | `data/processed/graph.npz`, `cohort_features.parquet` |
 | 3 | `python scripts/train_baseline.py --config configs/models/boosting.yaml` | 3 min | `artifacts/boosting_*`, `boosting_pd_test.npy`, EXP01/EXP02 tables, `boosting_calibration_choice.json` |
 | 4 | `python scripts/train_gnn.py --config configs/graph/cohort_graph.yaml` | 10 min | `cohort_graph_exp04_exp05*.csv`, GraphSAGE weights |
 | 5 | `python scripts/build_cohort_controls.py` | 23 min | `cohort_controls_exp04*.csv/json` (five seeds) |
@@ -93,7 +93,7 @@ Commands, in dependency order, with measured run time and what each produces:
 | 15 | `python scripts/analyze_apr_in_pd.py --config configs/experiments/exp06_rl.yaml` | 5 min | `apr_in_pd_*.csv` |
 | 16 | `python scripts/render_readme.py` | seconds | README and guide blocks |
 
-Total for steps 3 to 16: about 3 hours, of which the VGAE is half. Steps 6 to 9 need steps 2 and 3
+Total for steps 1 to 16: about 3.5 hours, of which the VGAE is about 90 minutes. Steps 6 to 9 need steps 2 and 3
 first (graph artifacts and `boosting_pd_test.npy`); steps 10, 11, 14 and 15 need step 3. Step 9 reads the KEEP/REJECT
 decision files written by steps 6 and 8, so run it after them. `--max-threads N` stops a long run
 monopolising the machine.
@@ -101,7 +101,26 @@ monopolising the machine.
 Every script that selects something asserts that its selection frame ends at 2015-06, and writes a
 manifest (`results/reports/*_manifest.json`) recording config, seed and data source.
 
-## 5. Where each README number comes from
+Steps 1 and 2 were re-run from the raw file in a fresh clone and reproduced `loans.parquet` (1,609,607
+rows by 162 columns), `cohort_features.parquet` and every array in `graph.npz` exactly.
+
+## 5. Verification status of the commands above
+
+Each command was run once on this branch (2026-11-19 to 2026-11-20), except where marked.
+
+| Command | Status |
+|---|---|
+| `python -m pytest -q`, fresh-clone test with `PYTHONPATH` (PowerShell) | executed |
+| `python scripts/render_readme.py` | executed |
+| `python scripts/check_docs.py` | executed |
+| steps 1 and 2 (`prepare_data`, `build_graph`) | executed in a fresh clone with a copy of the raw file; outputs identical |
+| steps 3 to 15 | executed with the current code (steps 6 to 9 and 12 in one chain run; 10, 11, 14 and 15 individually) |
+| `conda create ...`, `pip install torch ...`, `pip install -e . --no-deps` | **not re-run**: the environment already exists; needs conda and network access |
+| `python scripts/download_data.py` (real data) | **requires a Kaggle token**; would write the raw CSV and `checksums.json` |
+| `python scripts/download_data.py --synthetic --n-loans 200000` | **not run**, because it writes into `data/raw/` and would replace the processed data of this checkout; it produces a synthetic raw file |
+| `python scripts/validate_repository.py` | executed (needs the real processed data and the artifacts; all checks pass) |
+
+## 6. Where each README number comes from
 
 | README row | Script | Artifact |
 |---|---|---|
@@ -118,7 +137,7 @@ manifest (`results/reports/*_manifest.json`) recording config, seed and data sou
 | APR ablation | `analyze_apr_in_pd.py` | `apr_in_pd_*.csv` |
 | Data tables | `prepare_data.py` | `data_profile.json`, `data/processed/loans.parquet` |
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 Each entry is a problem that was actually hit on this project.
 
