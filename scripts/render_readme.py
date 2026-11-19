@@ -562,6 +562,77 @@ def render_apr_ablation_paragraph() -> str:
     return "\n".join(lines)
 
 
+def render_data_profile() -> str:
+    """Row funnel and default rate by vintage, read from the measured data profile."""
+    d = json.loads((TABLES_DIR / "data_profile.json").read_text(encoding="utf-8"))
+    final = d["rows_after_window_filter"] - d["rows_dropped_non_terminal"] - d["rows_dropped_unmapped_status"]
+    lines = [
+        "| Stage | Rows |",
+        "|---|---|",
+        f"| Read from the raw accepted-loans file | {d['rows_read']:,} |",
+        f"| After the 36-month term filter | {d['rows_after_term_filter']:,} |",
+        f"| After dropping loans issued outside every split window | {d['rows_after_window_filter']:,} |",
+        f"| Dropped: non-terminal or unmapped status inside a matured window | {d['rows_dropped_non_terminal'] + d['rows_dropped_unmapped_status']:,} |",
+        f"| **Modelling table** | **{final:,}** |",
+        "",
+        "Rows with a malformed id are dropped while reading: " + f"{d['rows_dropped_bad_id']:,}.",
+        "",
+        "| Issue year | Default rate |",
+        "|---|---|",
+    ]
+    for year, rate in d["default_rate_by_vintage"].items():
+        lines.append(f"| {year} | {float(rate):.2%} |")
+    return "\n".join(lines)
+
+
+GUIDE_DIR = PROJECT_ROOT / "docs" / "guide"
+
+
+def _blocks() -> dict:
+    """Named blocks a guide page may embed between BEGIN/END markers.
+
+    A page writes ``<!-- BEGIN:results-table -->`` ... ``<!-- END:results-table -->`` and this
+    script fills the space, so no result number in ``docs/guide`` is ever typed by hand.
+    """
+    return {
+        "data-table": render_data_table,
+        "data-profile": render_data_profile,
+        "results-table": render_results_table,
+        "rl-section": render_rl_paragraph,
+        "profit-audit": render_profit_paragraph,
+        "apr-ablation": render_apr_ablation_paragraph,
+    }
+
+
+def _block_pattern(name: str) -> "re.Pattern[str]":
+    return re.compile(
+        r"(<!-- BEGIN:" + re.escape(name) + r" -->\n)[\s\S]*?(<!-- END:" + re.escape(name) + r" -->)"
+    )
+
+
+def render_guide_page(text: str) -> str:
+    """Return ``text`` with every known block between markers regenerated from the artifacts."""
+    for name, fn in _blocks().items():
+        pattern = _block_pattern(name)
+        if pattern.search(text):
+            body = fn()
+            text = pattern.sub(lambda m: m.group(1) + body + "\n" + m.group(2), text)
+    unknown = set(re.findall(r"<!-- BEGIN:([a-z0-9-]+) -->", text)) - set(_blocks())
+    if unknown:
+        raise RuntimeError(f"unknown guide block(s): {sorted(unknown)}")
+    return text
+
+
+def update_guide() -> None:
+    """Regenerate the embedded blocks in every docs/guide page that has any."""
+    for path in sorted(GUIDE_DIR.glob("*.md")):
+        old = path.read_text(encoding="utf-8")
+        new = render_guide_page(old.replace("\r\n", "\n"))
+        if new != old.replace("\r\n", "\n"):
+            path.write_text(new, encoding="utf-8", newline="\n")
+            print(f"Updated blocks in {path}")
+
+
 def update_readme() -> None:
     """Read README.md, replace data and results tables, and write back."""
     content = README_PATH.read_text(encoding="utf-8")
@@ -588,6 +659,7 @@ def update_readme() -> None:
 
     README_PATH.write_text(content, encoding="utf-8")
     print(f"Successfully updated tables in {README_PATH}")
+    update_guide()
 
 
 if __name__ == "__main__":

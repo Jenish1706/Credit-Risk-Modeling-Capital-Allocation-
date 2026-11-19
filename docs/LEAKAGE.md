@@ -181,7 +181,7 @@ only around 40% of a borrower's cohort predecessors have a known outcome at the 
 
 **Selection bias.** Every row in the accepted file passed LendingClub's underwriting. The model
 estimates `P(default | approved)`, not `P(default | applied)`. Applying it to the full applicant
-population is extrapolation. This is quantified against the rejected-applications file, but reject
+population is extrapolation. The rejected-applications file is not analysed in this repository and reject
 inference is **not** implemented as a fix, because doing it properly requires propensity
 information that is not published. Pretending otherwise would be worse than naming the limitation.
 

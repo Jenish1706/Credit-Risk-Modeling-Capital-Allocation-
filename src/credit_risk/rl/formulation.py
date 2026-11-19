@@ -222,8 +222,9 @@ def analytical_shadow_price(
 
     This is the answer the Q-learner should approximately recover, and having it in closed form is
     what turns "the RL policy scored higher" into a checkable claim. It requires knowing the whole
-    pool in advance, which the online policy does not, so it is an upper bound rather than a
-    competitor.
+    pool in advance, which the online policy does not, so in the idealised problem it is a
+    reference rather than a competitor. It is optimal for the *predicted* profit it is given; on
+    the real book that prediction is mis-ordered (see README), so it is not an upper bound there.
     """
     order = np.argsort(-profit_densities)
     cumulative = np.cumsum(exposures[order])

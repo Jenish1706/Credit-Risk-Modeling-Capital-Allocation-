@@ -145,3 +145,16 @@ def test_apr_ablation_is_rendered_from_its_artifacts():
     assert f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan vs the 15% threshold under the same PD" in text
     metrics = pd.read_csv(TABLES_DIR / "apr_in_pd_metrics.csv").set_index("pd_source")
     assert f"{metrics.loc['with_lc_grade_pd', 'roc_auc']:.4f}" in text
+
+
+def test_guide_blocks_match_rendered_artifacts():
+    """D1: every <!-- BEGIN:x --> block in docs/guide is exactly what the artifacts render."""
+    from scripts.render_readme import GUIDE_DIR, render_guide_page
+
+    pages = sorted(GUIDE_DIR.glob("*.md"))
+    assert pages, "docs/guide has no pages"
+    for page in pages:
+        text = page.read_text(encoding="utf-8").replace("\r\n", "\n")
+        assert render_guide_page(text) == text, (
+            f"{page.name} has a stale embedded block; run `python scripts/render_readme.py`"
+        )

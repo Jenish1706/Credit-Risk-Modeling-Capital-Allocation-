@@ -265,8 +265,8 @@ python -m pytest -q
   here has been tested through a downturn.
 - **No causal claims.** SHAP explains the model, not the borrower and not the world.
 - **No reject inference.** The model estimates `P(default | approved)`, not `P(default | applied)`.
-  The gap is quantified against the rejected-applications file but not corrected — doing it properly
-  needs propensity data LendingClub never published.
+  The gap is neither measured nor corrected here (the rejected-applications file is not analysed) —
+  doing it properly needs propensity data LendingClub never published.
 - **No real-world impact claim.** No money was lent.
 
 ---

@@ -94,7 +94,7 @@ reported as a finding.**
 | File | Rows | Cols | Role |
 |------|------|------|------|
 | `accepted_2007_to_2018Q4.csv.gz` | ~2.26M *(verify)* | 151 *(verify)* | Funded loans with outcomes. The modelling table. |
-| `rejected_2007_to_2018Q4.csv.gz` | ~27.6M *(verify)* | 9 *(verify)* | Declined applications. Used only for the selection-bias analysis. |
+| `rejected_2007_to_2018Q4.csv.gz` | ~27.6M *(verify)* | 9 *(verify)* | Declined applications. Optional download; no analysis in this repository uses it. |
 
 The rejected file shares almost no columns with the accepted file (it has amount requested, a risk
 score, DTI, ZIP, state, employment length, policy code and date). It therefore **cannot** be used to
@@ -216,8 +216,8 @@ Stated plainly because an interviewer will ask.
 
 1. **Approved-only population.** Every accepted-file row passed LendingClub's underwriting. The PD
    model is trained on survivors, so it estimates *P(default | approved)*, not *P(default | applied)*.
-   Applying it to the full applicant population is extrapolation. Quantified against the rejected
-   file; reject inference is discussed but **not** implemented as a fix, because doing it properly
+   Applying it to the full applicant population is extrapolation. The rejected file is not
+   analysed in this repository, and reject inference is **not** implemented as a fix, because doing it properly
    needs propensity information that is not published.
 2. **Marketplace, not a bank.** LendingClub's economics (investor-funded notes, servicing fee) are
    not a bank's. The cost model in [`ASSUMPTIONS.md`](ASSUMPTIONS.md) is a simplification and is
