@@ -180,7 +180,7 @@ Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M d
 
 ## Architecture
 
-- **Layer A — Risk.** Logistic baseline vs LightGBM, then Platt/isotonic calibration. A hard
+- **Layer A — Risk.** Logistic baseline vs LightGBM, then calibration (Platt, isotonic and an intercept-only baseline are compared; the production calibrator is chosen on 2015-H1). A hard
   deny-list of 49 post-origination columns, enforced on every feature build.
 - **Layer B — Graph.** A time-respecting cohort graph (`zip3`, normalised `emp_title`) and a
   GraphSAGE written directly in PyTorch — no `torch-geometric`, so message passing is explainable
@@ -253,9 +253,10 @@ python -m pytest -q
 
 ## What this project does not claim
 
-- **Not deployable.** Every policy result comes from a simulator, on an *already-approved*
-  population, from one institution and one credit cycle in a long expansion. Nothing here has been
-  tested through a downturn.
+- **Not deployable.** The EXP06 policy results come from a simulator and the real-book audits (EXP03
+  real-book column, EXP11) are retrospective reallocations measured on observed cashflows. Both use an
+  *already-approved* population from one institution and one credit cycle in a long expansion. Nothing
+  here has been tested through a downturn.
 - **No causal claims.** SHAP explains the model, not the borrower and not the world.
 - **No reject inference.** The model estimates `P(default | approved)`, not `P(default | applied)`.
   The gap is quantified against the rejected-applications file but not corrected — doing it properly

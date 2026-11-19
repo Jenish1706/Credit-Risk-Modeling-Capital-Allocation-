@@ -66,6 +66,12 @@ marginally better score from a DQN.
 
 ## 3. The shadow price of capital
 
+> **Superseded by the v3 audit (2026-11-19).** The reasoning below is the design intent. Measured on the real book the validation-fitted lambda policy
+> does not beat the myopic rule or a plain 15% PD threshold, and leaves part of the budget undeployed; see the
+> README EXP06 section and `results/tables/exp06_rl_exp06_*.csv`. The sanity check at the end of this
+> section (a learner far above the analytical policy signals a simulator bug) has not fired, but the analytical
+> policy is also not an upper bound on the real book.
+
 The constrained problem has known structure, which is what makes the RL result *checkable* rather
 than mysterious. Maximising total profit subject to `sum(exposure) <= B` has the Lagrangian:
 
@@ -83,8 +89,8 @@ This gives the experiment a built-in check that most RL write-ups lack:
 
 - `analytical_shadow_price()` computes the exact `lambda` by continuous knapsack relaxation —
   sort by profit density, fill the budget, and `lambda` is the marginal applicant's density.
-  It requires knowing the whole pool in advance, so it is an **upper-bound reference**, not a
-  competitor.
+  It requires knowing the whole pool in advance, so in the idealised problem it is an
+  **upper-bound reference**, not a competitor (on the real book it is not one; see the note above).
 - `ExpectedProfitPolicy(capital_shadow_price=lambda)` is that solution as a policy.
 - `BudgetAwareQPolicy` must approximately recover it *online*, without seeing the pool in advance.
 

@@ -1,5 +1,11 @@
 # Audit report
 
+> **Superseded by the v3 audit (2026-11-19).** This is the record of the first audit and is kept as written. Several of its results were later
+> overturned: the RL evaluation kept learning from test outcomes (so the EXP06 figures below are void), policy
+> comparisons included simulated exposures, KEEP/REJECT verdicts and the production calibrator were chosen on
+> the same 2015 book they were reported on, and EXP10 no longer passes the H1 selection rule. Current numbers
+> are in the README results table, rendered from `results/tables/`; the corrections are in `docs/WHAT_BROKE.md`.
+
 A full correctness audit of the repository, carried out before submission. Every claim below is
 traceable to a file in `results/` or to a test in `tests/`.
 
@@ -100,10 +106,15 @@ modest result, and not the one originally claimed.
 
 ### I2. EXP08 — conclusion survives, on better evidence
 
+> **Superseded by the v3 audit (2026-11-19).** Figures here are full-2015. The v3 decision is taken on 2015-01..06 and confirmed on 2015-07..12; see the README.
+
 Anomaly is nearly orthogonal to PD (Spearman **+0.022**) and the effect holds **10/10 PD deciles**,
 sign-test **p=0.0010**, odds ratio **1.032** per SD. **KEEP.**
 
 ### I3. EXP10 — conclusion survives, much smaller than claimed
+
+> **Superseded by the v3 audit (2026-11-19).** The title no longer holds: under the v3 selection rule (two-sided sign test on 2015-01..06) the
+> disagreement signal is REJECT. The calibration paragraph below is full-2015; see the README for H2 figures.
 
 The marginal table showed AUC falling 0.693 → 0.624 across disagreement quintiles. On the log-odds
 scale and conditioned on PD, the effect is **9/10 deciles, p=0.0107, odds ratio 1.043** per SD —
@@ -120,6 +131,11 @@ Separately: the graph-augmented arm leaves AUC flat (0.6690 → 0.6679) while cu
 training budget. **REJECT.**
 
 ### I5. EXP06 — the RL win was a leakage artifact, and RL is not warranted
+
+> **Superseded by the v3 audit (2026-11-19).** The table and findings below are void. They were produced with learners that kept updating on test
+> outcomes during evaluation and with exposure-changing actions whose outcomes are model counterfactuals. Under
+> frozen learners and accept/reject at the observed exposure, the shadow-price policy does **not** beat the
+> myopic rule or the 15% threshold, and the "oracle ceiling" is not a ceiling. See the README EXP06 section.
 
 Re-run with learning policies trained on the **validation window** (90,615 applicants) and
 evaluated on the test window.
@@ -157,6 +173,8 @@ form, without learning. This is a negative result for the RL layer and is report
 On real data: tabular **0.6690**, tabular+cohort **0.6679**, GraphSAGE **0.6616**.
 
 ## J. Remaining limitations
+
+> **Superseded by the v3 audit (2026-11-19).** Item 1 refers to the superseded EXP06 table; see I5.
 
 1. **The shadow-price advantage is not statistically significant.** It leads every constrained
    condition and the ordering is stable, but all four confidence intervals include zero at 12

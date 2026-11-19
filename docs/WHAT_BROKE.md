@@ -63,6 +63,10 @@ $$\Delta_2 = |\text{total\_pymnt} - (\text{total\_rec\_prncp} + \text{total\_rec
 
 ### 2. P0-2 · Analytical Shadow Price Policy Evaluated with Test Pool Oracle
 
+> **Superseded by the v3 audit (2026-11-19).** The dollar figures in this section predate CR-01 (frozen learners), CR-03 (H2 holdout) and CR-04
+> (accept/reject headline) and are kept as a record of the P0-2 fix only. The "upper bound" described below
+> turned out not to be one: see the correction under Remediation.
+
 #### Defect Description
 In EXP06 (constrained capital allocation), the project evaluated an analytical shadow price benchmark against reinforcement learning policies (LinUCB, Thompson Sampling, Tabular Q-learning).
 
@@ -76,7 +80,7 @@ The test set represents the unseen out-of-time production environment. Computing
 #### Remediation
 - Separated the policy into two distinct benchmarks:
   1. **Deployable Analytical Benchmark (`expected_profit(lambda=...)`):** Fitted strictly on the **validation window** (`train_pool`, July 2014 -- Dec 2014, $N=90,615$), representing the parameter setting a risk officer would configure at deployment time.
-  2. **Theoretical Oracle Upper Bound (`oracle_ceiling(lambda=...)`):** Fitted on the test window solely to establish the continuous knapsack relaxation ceiling.
+  2. **Diagnostic, formerly called `oracle_ceiling(lambda=...)` (now `expected_profit(lambda_eval_pool=...)`):** Fitted on the evaluation pool solely to show what a clairvoyant lambda would do. It is **not an upper bound**: lambda is applied to predicted profit that is over-dispersed relative to realised profit, and in the v3 runs this policy scores below the myopic rule and the 15% threshold in the capital-constrained conditions (README EXP06).
 - Added automated unit test in `tests/test_policy.py::test_analytical_policy_uses_validation_split_not_test` asserting that the evaluated analytical policy parameters depend only on validation data.
 
 #### Headline Impact

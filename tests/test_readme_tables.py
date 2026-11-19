@@ -117,3 +117,16 @@ def test_exp06_table_reports_lambda_rows_approval_rates_and_collapsed_learners()
     ]
     for _, r in collapsed.iterrows():
         assert f"{r['policy']} at {r['condition']} (approval rate {r['approval_rate']:.2%}" in text
+
+
+def test_superseded_banners_and_stale_claims_are_handled():
+    """CR-09: pre-v3 documents are marked superseded; false README claims are gone."""
+    from scripts.render_readme import PROJECT_ROOT
+
+    readme = README_PATH.read_text(encoding="utf-8")
+    assert "Every policy result comes from a simulator" not in readme
+    assert "Platt/isotonic calibration" not in readme
+    audit = (PROJECT_ROOT / "docs" / "AUDIT_REPORT.md").read_text(encoding="utf-8")
+    assert audit.count("Superseded by the v3 audit") >= 4
+    broke = (PROJECT_ROOT / "docs" / "WHAT_BROKE.md").read_text(encoding="utf-8")
+    assert "not an upper bound" in broke

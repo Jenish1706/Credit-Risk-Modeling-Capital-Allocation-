@@ -106,7 +106,7 @@ Two exclusions worth stating explicitly because they are *tempting*:
 | Baseline | Logistic Regression | One-hot + scaling; the interpretable banking-standard reference |
 | Strong model | **LightGBM** | One boosting framework only. XGBoost is not also implemented — the comparison is not informative and doubles the surface area |
 | Imbalance | class weights, evaluated *against* doing nothing | ~15% default rate is not extreme; resampling usually harms calibration, so this is tested rather than assumed |
-| Calibration | Platt (sigmoid) **and** isotonic, fitted on the validation window | Mandatory — Layer C consumes probabilities, not scores |
+| Calibration | Platt (sigmoid), isotonic **and** an intercept-only baseline, fitted on the validation window; the production calibrator is chosen on 2015-H1 Brier | Mandatory — Layer C consumes probabilities, not scores |
 | Metrics | ROC-AUC, PR-AUC, Brier, log-loss, reliability curve, ECE, KS | Ranking quality and probability quality are reported separately, always |
 
 ---
