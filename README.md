@@ -121,7 +121,7 @@ Start at [`docs/guide/00_START_HERE.md`](docs/guide/00_START_HERE.md).
 
 Appendices: [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md),
 [`docs/LEAKAGE.md`](docs/LEAKAGE.md). Earlier design documents
-([`PROJECT_SPEC`](docs/PROJECT_SPEC.md), [`ASSUMPTIONS`](docs/ASSUMPTIONS.md),
+([`ASSUMPTIONS`](docs/ASSUMPTIONS.md),
 [`GRAPH_DESIGN`](docs/GRAPH_DESIGN.md), [`RL_FORMULATION`](docs/RL_FORMULATION.md),
 [`DATASET`](docs/DATASET.md)) and the audit record ([`AUDIT_REPORT`](docs/AUDIT_REPORT.md),
 [`WHAT_BROKE`](docs/WHAT_BROKE.md)) remain for detail.

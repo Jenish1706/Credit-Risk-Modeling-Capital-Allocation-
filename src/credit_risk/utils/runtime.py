@@ -137,21 +137,6 @@ def resolve_device(preference: str = "auto") -> str:
     return "cuda" if cuda_ok else "cpu"
 
 
-def describe_device(device: str) -> str:
-    """Human-readable device description for logs and manifests."""
-    if device != "cuda":
-        return f"cpu ({platform.processor() or platform.machine()})"
-    try:
-        import torch
-
-        idx = torch.cuda.current_device()
-        name = torch.cuda.get_device_name(idx)
-        total_gb = torch.cuda.get_device_properties(idx).total_memory / 1024**3
-        return f"cuda:{idx} ({name}, {total_gb:.1f} GiB)"
-    except Exception:  # pragma: no cover - diagnostics only
-        return "cuda (unavailable for description)"
-
-
 def _git_commit() -> str | None:
     try:
         out = subprocess.run(

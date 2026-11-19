@@ -179,11 +179,8 @@ print()
 print("=" * 78)
 print("6. NO STALE OUTPUT PRESENTED AS CURRENT")
 print("=" * 78)
-stale = ROOT / "results/reports/cohort_graph_exp09_uncertainty.md"
-check("EXP09 stale output is banner-marked",
-      "STALE OUTPUT" in stale.read_text(encoding="utf-8") if stale.exists() else False)
-for removed in ("boosting_exp11_swaps.md", "boosting_exp08_blindspots.md",
-                "boosting_exp10_disagreement.md"):
+for removed in ("cohort_graph_exp09_uncertainty.md", "boosting_exp11_swaps.md",
+                "boosting_exp08_blindspots.md", "boosting_exp10_disagreement.md"):
     check(f"superseded {removed} removed",
           not (ROOT / "results/reports" / removed).exists())
 

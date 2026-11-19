@@ -1,6 +1,6 @@
 """Graph-based credit risk and reinforcement-learning lending decision system.
 
-See ``docs/PROJECT_SPEC.md`` for the specification this package implements.
+See ``docs/guide/00_START_HERE.md`` for what this package implements.
 """
 
 from __future__ import annotations

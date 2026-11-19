@@ -240,21 +240,6 @@ def test_credit_history_is_measured_as_at_application(enriched):
     assert np.allclose(subset["credit_history_months"].to_numpy(), months.to_numpy(), atol=1e-6)
 
 
-def test_assign_test_holdout_freezes_2015_h2():
-    """P1-6c: Test-set reuse prevention. Verify that 2015-07..2015-12 is isolated as a frozen holdout."""
-    from credit_risk.data.splits import assign_test_holdout
-
-    months = pd.period_range("2015-01", "2015-12", freq="M").astype(str)
-    s = pd.Series(months)
-    holdout_splits = assign_test_holdout(s, cutoff="2015-06")
-
-    dev_months = s[holdout_splits == "test_dev"].tolist()
-    holdout_months = s[holdout_splits == "test_holdout"].tolist()
-
-    assert dev_months == [f"2015-0{i}" for i in range(1, 7)]
-    assert holdout_months == [f"2015-0{i}" if i < 10 else f"2015-{i}" for i in range(7, 13)]
-
-
 # ---------------------------------------------------------------------------
 # CR-03: selections use 2015-01..06 only
 # ---------------------------------------------------------------------------

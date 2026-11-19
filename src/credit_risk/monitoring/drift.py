@@ -279,21 +279,6 @@ def calibration_drift(
     return pd.DataFrame(rows)
 
 
-def policy_drift(
-    df: pd.DataFrame,
-    decision_column: str,
-    period_column: str = "issue_period",
-    freq: str = "Q",
-) -> pd.DataFrame:
-    """Approval mix over time -- the operational counterpart to prediction drift."""
-    frame = df.copy()
-    frame["_vintage"] = pd.PeriodIndex(frame[period_column], freq="M").asfreq(freq).astype(str)
-    counts = (
-        frame.groupby(["_vintage", decision_column]).size().unstack(fill_value=0)
-    )
-    return counts.div(counts.sum(axis=1), axis=0)
-
-
 def monitoring_summary(
     feature_report: FeatureDriftReport,
     prediction_report: PredictionDriftReport,

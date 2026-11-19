@@ -1,4 +1,4 @@
-# LightGBM. One boosting framework only -- see docs/PROJECT_SPEC.md section 4.
+# LightGBM. One boosting framework only -- see docs/guide/08_DESIGN_DECISIONS.md (ADR-04).
 model:
   type: lightgbm
   objective: binary

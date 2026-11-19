@@ -206,26 +206,3 @@ def verdict(differences: pd.DataFrame, baseline: str) -> str:
         f"{100 * best['win_rate']:.0f}% of seeds."
     )
 
-
-def sensitivity_sweep(
-    env_factory,
-    policies: Sequence[Policy],
-    seeds: Sequence[int],
-    parameter: str,
-    values: Sequence[float],
-) -> pd.DataFrame:
-    """Re-run the comparison across values of one assumption.
-
-    The point is to find out which conclusions survive the assumptions being wrong. A policy
-    ranking that flips when the cost of funds moves 100bp is not a finding worth reporting; one
-    that holds across the sweep is.
-    """
-    rows = []
-    for value in values:
-        env = env_factory(value)
-        evaluations = compare_policies(env, policies, seeds)
-        for name, evaluation in evaluations.items():
-            summary = evaluation.summary()
-            summary.update({parameter: value, "policy": name})
-            rows.append(summary)
-    return pd.DataFrame(rows).set_index([parameter, "policy"])

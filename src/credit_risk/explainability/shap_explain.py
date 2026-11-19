@@ -96,30 +96,6 @@ def explain_boosting(
     )
 
 
-def explain_logistic(model, X: pd.DataFrame) -> ShapResult:
-    """Contributions for the logistic baseline.
-
-    For a linear model the Shapley value has a closed form: ``phi_j = beta_j * (x_j - E[x_j])``.
-    No approximation and no explainer object needed -- which is worth pointing out, because it is
-    exactly why regulated lenders liked scorecards in the first place.
-    """
-    pipeline = model.pipeline
-    prep = pipeline.named_steps["prep"]
-    linear = pipeline.named_steps["model"]
-
-    design = prep.transform(model._prepare(X))
-    names = list(prep.get_feature_names_out())
-    coefs = linear.coef_[0]
-    means = design.mean(axis=0)
-    values = (design - means) * coefs
-
-    return ShapResult(
-        values=np.asarray(values),
-        feature_names=names,
-        base_value=float(linear.intercept_[0] + float(means @ coefs)),
-    )
-
-
 def explain_gnn_gradients(
     trainer,
     nodes: np.ndarray,
@@ -175,28 +151,6 @@ def save_importance(result: ShapResult, path: str | Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     result.global_importance().to_csv(path, index=False)
     return path
-
-
-def compare_importance(
-    results: dict[str, ShapResult], top_k: int = 20
-) -> pd.DataFrame:
-    """Side-by-side global importance ranking across models.
-
-    Useful as a sanity check rather than a metric: if two models with similar AUC rank their
-    drivers completely differently, at least one of them is fitting noise, and that is worth
-    knowing before either is trusted with a decision.
-    """
-    frames = []
-    for name, result in results.items():
-        frame = result.global_importance().head(top_k)[["feature", "mean_abs_shap"]]
-        frame = frame.assign(model=name, rank=np.arange(1, len(frame) + 1))
-        frames.append(frame)
-    if not frames:
-        return pd.DataFrame()
-    combined = pd.concat(frames, ignore_index=True)
-    return combined.pivot_table(
-        index="feature", columns="model", values="rank", aggfunc="min"
-    ).sort_values(by=list(results.keys())[0])
 
 
 def sample_explanations(

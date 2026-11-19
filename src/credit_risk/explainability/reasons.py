@@ -253,20 +253,3 @@ def explain_row(
         baseline_pd=baseline_pd,
     )
 
-
-def explanation_table(explanations: list[Explanation]) -> pd.DataFrame:
-    """Flatten explanations for review or audit sampling."""
-    rows = []
-    for i, exp in enumerate(explanations):
-        rows.append(
-            {
-                "applicant": i,
-                "pd": exp.pd_estimate,
-                "band": exp.risk_band,
-                "decision": exp.decision,
-                "exposure": exp.exposure,
-                "top_adverse": "; ".join(r.phrase for r in exp.reasons_against[:3]),
-                "top_supporting": "; ".join(r.phrase for r in exp.reasons_for[:3]),
-            }
-        )
-    return pd.DataFrame(rows)

@@ -51,8 +51,7 @@ Non-obvious lines:
   audit, never as a feature.
 - `default_observed` versus `default`: `default` is the modelling target for labelled windows;
   `default_observed` keeps the outcome for every row so the graph can use history rows' labels.
-- `assign_test_holdout` exists in `splits.py` but no script calls it; the scripts use
-  `test_window_masks` and `assert_selection_window`, which implement the same H1/H2 cut.
+- The H1/H2 cut is implemented by `test_window_masks` and `assert_selection_window` in `splits.py`.
 
 Tests: `tests/test_pipeline.py` (synthetic schema, parsing, split mapping, report counts),
 `tests/test_leakage.py` (deny-list, split overlap, windows).
@@ -110,8 +109,8 @@ Non-obvious lines:
   `n_resolved <= n_prior` does **not** hold in general (see the module docstring in `features.py`).
 - The only fitted quantity is the portfolio prior default rate, learned on the training window.
 - Both aggregates use prefix sums and `searchsorted` instead of a pairwise join.
-- `scripts/build_cohort_controls.py` also defines `compute_macro_default_rate` and
-  `shuffle_keys_within_period`; the versions in `graph/features.py` are the library copies.
+- `scripts/build_cohort_controls.py` imports both control helpers from `graph/features.py` (an earlier
+  duplicate copy in the script was removed).
 
 Tests: `tests/test_graph_leakage.py` (including a planted-violation test and a test that
 an ungated cohort rate leaks measurably).

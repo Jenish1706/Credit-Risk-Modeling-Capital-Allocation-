@@ -36,3 +36,12 @@ kaggle.json
 Thumbs.db
 .vscode/
 .idea/
+
+# Caches, logs and scratch output must never be committed
+catboost_info/
+.mypy_cache/
+logs/
+scratch/
+tmp/
+*.bak
+*.swp
