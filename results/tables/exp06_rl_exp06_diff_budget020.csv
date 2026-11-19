@@ -2,7 +2,7 @@ treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,r
 fixed_threshold@0.150,expected_profit,30,994.404,-14271.6,15672.3,0.466667,False,0.0449024
 budget_aware_q(greedy),expected_profit,30,844.202,-19384.7,18910.8,0.566667,False,0.03812
 linucb@alpha=1,expected_profit,30,-13455.9,-26812.5,-290.89,0.366667,True,-0.607604
-oracle_ceiling(lambda=0.0394),expected_profit,30,-16630.9,-41679.3,9120.43,0.333333,False,-0.750969
+expected_profit(lambda_eval_pool=0.0394),expected_profit,30,-16630.9,-41679.3,9120.43,0.333333,False,-0.750969
 expected_profit(lambda=0.0492),expected_profit,30,-18423.4,-43120.5,5576.09,0.433333,False,-0.831908
 thompson,expected_profit,30,-22184.2,-38366.1,-5400.66,0.333333,True,-1.00173
 risk_band,expected_profit,30,-30496.1,-43689.2,-17626,0.2,True,-1.37705

@@ -103,7 +103,7 @@
   "exp06": {
     "unconstrained": {
       "shadow_price_val": 0.0,
-      "shadow_price_oracle": 0.0,
+      "shadow_price_eval_pool_diagnostic": 0.0,
       "budget": null,
       "verdict": "fixed_threshold@0.150 beat expected_profit by +28,262 per episode (+84.4%), 95% CI [+2,616, +54,837], winning on 67% of seeds.",
       "control_breach": null,
@@ -215,7 +215,7 @@
     },
     "budget=0.60": {
       "shadow_price_val": 0.005317439624537762,
-      "shadow_price_oracle": 0.0,
+      "shadow_price_eval_pool_diagnostic": 0.0,
       "budget": 9320745.0,
       "verdict": "fixed_threshold@0.150 beat expected_profit by +26,396 per episode (+78.1%), 95% CI [+654, +52,743], winning on 70% of seeds.",
       "control_breach": null,
@@ -327,7 +327,7 @@
     },
     "budget=0.35": {
       "shadow_price_val": 0.02911343712291914,
-      "shadow_price_oracle": 0.016765910972345865,
+      "shadow_price_eval_pool_diagnostic": 0.016765910972345865,
       "budget": 5437101.25,
       "verdict": "No policy beat expected_profit significantly. Best was thompson at -178 per episode, 95% CI [-16,318, +16,402] -- the interval includes zero, so this is a null result.",
       "control_breach": null,
@@ -439,7 +439,7 @@
     },
     "budget=0.20": {
       "shadow_price_val": 0.04923978899181175,
-      "shadow_price_oracle": 0.039409985401981346,
+      "shadow_price_eval_pool_diagnostic": 0.039409985401981346,
       "budget": 3106915.0,
       "verdict": "No policy beat expected_profit significantly. Best was fixed_threshold@0.150 at +994 per episode, 95% CI [-14,272, +15,672] -- the interval includes zero, so this is a null result.",
       "control_breach": null,

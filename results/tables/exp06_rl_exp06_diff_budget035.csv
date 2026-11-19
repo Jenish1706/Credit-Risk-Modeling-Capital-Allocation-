@@ -1,7 +1,7 @@
 treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
 thompson,expected_profit,30,-178.467,-16318,16402.1,0.433333,False,-0.00343807
 fixed_threshold@0.150,expected_profit,30,-6008.23,-25781.7,14255.6,0.366667,False,-0.115745
-oracle_ceiling(lambda=0.0168),expected_profit,30,-17717.8,-42625.6,7415.66,0.4,False,-0.341325
+expected_profit(lambda_eval_pool=0.0168),expected_profit,30,-17717.8,-42625.6,7415.66,0.4,False,-0.341325
 budget_aware_q(greedy),expected_profit,30,-31747,-60165.2,-5220.68,0.366667,True,-0.611589
 expected_profit(lambda=0.0291),expected_profit,30,-49868.3,-73893.7,-26242.7,0.166667,True,-0.960687
 linucb@alpha=1,expected_profit,30,-52111,-76843.1,-26223.5,0.233333,True,-1.00389

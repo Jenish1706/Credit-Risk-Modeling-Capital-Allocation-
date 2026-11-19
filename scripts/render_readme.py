@@ -292,6 +292,98 @@ def _exp06_verdict(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) 
     return "; ".join(parts)
 
 
+def _exp06_meta() -> dict:
+    return json.loads((TABLES_DIR / "exp06_rl_exp03_exp06.json").read_text(encoding="utf-8"))["exp06"]
+
+
+def _exp06_policy_table(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) -> list[str]:
+    """Every policy in every capital condition, with approval rate and capital actually deployed."""
+    sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
+    meta = _exp06_meta()
+    rows = [
+        "| Condition | Policy | Mean profit | Approval rate | Capital deployed | vs expected-profit [95% CI] | vs 15% threshold [95% CI] |",
+        "|---|---|---|---|---|---|---|",
+    ]
+
+    def cell(frame: pd.DataFrame, policy: str) -> str:
+        if policy not in frame.index:
+            return "baseline"
+        d = frame.loc[policy]
+        return f"{d['mean_difference']:+,.0f}{'*' if d['significant'] else ''} [{d['ci_low']:+,.0f}, {d['ci_high']:+,.0f}]"
+
+    for name in cond:
+        budget = meta[name]["budget"]
+        sub = sweep[sweep["condition"] == name].sort_values("mean_reward", ascending=False)
+        for _, r in sub.iterrows():
+            capital = f"{r['capital_deployed'] / 1e6:.2f}M"
+            if budget:
+                capital += f" ({100 * r['capital_deployed'] / budget:.0f}% of budget)"
+            rows.append(
+                f"| {name} | {r['policy']} | {r['mean_reward']:+,.0f} | {r['approval_rate']:.1%} | {capital} | "
+                f"{cell(cond[name], r['policy'])} | {cell(thr[name], r['policy'])} |"
+            )
+    return rows
+
+
+def _exp06_policy_notes(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) -> list[str]:
+    """Plain-language reading of the table above, computed from the same artifacts."""
+    sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
+    meta = _exp06_meta()
+    reward = lambda c, p: float(sweep[(sweep["condition"] == c) & (sweep["policy"] == p)]["mean_reward"].iloc[0])  # noqa: E731
+    notes = ["", "\\* = 95% CI excludes zero.", ""]
+
+    lam_items, diag_below_myopic, diag_below_thr = [], [], []
+    for name in cond:
+        if name == "unconstrained":
+            continue
+        for p in cond[name].index:
+            if p.startswith("expected_profit(lambda="):
+                row = sweep[(sweep["condition"] == name) & (sweep["policy"] == p)].iloc[0]
+                d, t = cond[name].loc[p], thr[name].loc[p]
+                lam_items.append(
+                    f"{name}: {d['mean_difference']:+,.0f} vs expected-profit [{d['ci_low']:+,.0f}, {d['ci_high']:+,.0f}], "
+                    f"{t['mean_difference']:+,.0f} vs the 15% threshold [{t['ci_low']:+,.0f}, {t['ci_high']:+,.0f}], "
+                    f"deploying {100 * row['capital_deployed'] / meta[name]['budget']:.0f}% of the budget"
+                )
+            if p.startswith("expected_profit(lambda_eval_pool="):
+                if reward(name, p) < reward(name, "expected_profit"):
+                    diag_below_myopic.append(name)
+                if reward(name, p) < reward(name, "fixed_threshold@0.150"):
+                    diag_below_thr.append(name)
+    if lam_items:
+        notes.append(
+            "The knapsack shadow-price policy (lambda fitted on the validation pool) is the analytical "
+            "solution in the formulation, and here it does not help: " + "; ".join(lam_items) + "."
+        )
+        notes.append("")
+    if diag_below_myopic or diag_below_thr:
+        parts = []
+        if diag_below_myopic:
+            parts.append("below the myopic rule at " + ", ".join(diag_below_myopic))
+        if diag_below_thr:
+            parts.append("below the 15% threshold at " + ", ".join(diag_below_thr))
+        notes.append(
+            "`expected_profit(lambda_eval_pool=...)` fits lambda on the evaluation pool itself. It is a "
+            "diagnostic, not an upper bound: it scores " + " and ".join(parts) + ". Its lambda is applied to "
+            "predicted profit that is over-dispersed relative to realised profit (profit audit below), so "
+            "the knapsack optimum is for the wrong objective."
+        )
+        notes.append("")
+    collapsed = []
+    for _, r in sweep.iterrows():
+        if any(m in r["policy"] for m in LEARNER_MARKERS) and r["approval_rate"] < 0.01:
+            collapsed.append(
+                f"{r['policy']} at {r['condition']} (approval rate {r['approval_rate']:.2%}, "
+                f"{r['capital_deployed'] / 1e6:.3f}M deployed)"
+            )
+    if collapsed:
+        notes.append(
+            "Collapsed learners: " + "; ".join(collapsed) + ". These stopped lending (approval rate "
+            "below 1%); \"significantly worse\" understates it."
+        )
+    return notes
+
+
 def render_rl_paragraph() -> str:
     """The prose under the results table, with every number read from the EXP06 artifacts."""
     cond = _exp06_conditions()
@@ -320,21 +412,12 @@ def render_rl_paragraph() -> str:
         f"(95% CI [{thr_unc['ci_low']:+,.0f}, {thr_unc['ci_high']:+,.0f}]), consistent with the "
         "real-book audit below.",
         "",
-        "Paired difference by capital condition (mean over 30 episodes, 95% bootstrap CI), against "
-        "the myopic expected-profit policy and against the fixed 15% PD threshold:",
+        "Policy-level results by capital condition (mean over 30 episodes, 95% bootstrap CI on the "
+        "paired difference), against the myopic expected-profit policy and the fixed 15% PD threshold:",
         "",
-        "| Condition | Learner | vs expected-profit | 95% CI | vs 15% threshold | 95% CI |",
-        "|---|---|---|---|---|---|",
     ]
-    for name, diff in cond.items():
-        for learner in _learners(diff):
-            r, t = diff.loc[learner], thr[name].loc[learner]
-            lines.append(
-                f"| {name} | {learner} | {r['mean_difference']:+,.0f}{'*' if r['significant'] else ''} | "
-                f"[{r['ci_low']:+,.0f}, {r['ci_high']:+,.0f}] | {t['mean_difference']:+,.0f}{'*' if t['significant'] else ''} | "
-                f"[{t['ci_low']:+,.0f}, {t['ci_high']:+,.0f}] |"
-            )
-    lines += ["", "\\* = 95% CI excludes zero."]
+    lines += _exp06_policy_table(cond, thr)
+    lines += _exp06_policy_notes(cond, thr)
     return "\n".join(lines) + "\n\n" + render_sensitivity_table() + "\n\n" + render_profit_paragraph()
 
 

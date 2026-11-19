@@ -1,5 +1,5 @@
 treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
-oracle_ceiling(lambda=0.0168),expected_profit,30,22401,3859.74,40728.2,0.633333,True,0.627537
+expected_profit(lambda_eval_pool=0.0168),expected_profit,30,22401,3859.74,40728.2,0.633333,True,0.627537
 fixed_threshold@0.150,expected_profit,30,10204.1,-14263.1,35411.3,0.533333,False,0.285857
 linucb@alpha=1,expected_profit,30,-3536.67,-20688.7,14114.7,0.466667,False,-0.0990756
 thompson,expected_profit,30,-6453.21,-28219.1,15903.1,0.4,False,-0.180779

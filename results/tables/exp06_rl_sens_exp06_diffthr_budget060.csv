@@ -1,0 +1,8 @@
+treatment,baseline,n_pairs,mean_difference,ci_low,ci_high,win_rate,significant,relative_improvement
+expected_profit(lambda=0.0053),fixed_threshold@0.150,30,12877.8,-22404.1,46980.2,0.633333,False,0.213889
+expected_profit,fixed_threshold@0.150,30,-548.957,-34084,32473.9,0.533333,False,-0.0091177
+linucb@alpha=1,fixed_threshold@0.150,30,-1927.7,-18317.3,13669.8,0.533333,False,-0.0320174
+budget_aware_q(greedy),fixed_threshold@0.150,30,-19720.8,-51554.3,11397.8,0.466667,False,-0.327546
+thompson,fixed_threshold@0.150,30,-40763.9,-59881.8,-21744.6,0.166667,True,-0.677054
+risk_band,fixed_threshold@0.150,30,-53949.8,-73136.9,-34702.9,0.133333,True,-0.89606
+approve_all,fixed_threshold@0.150,30,-91671.1,-120701,-64641.3,0.0666667,True,-1.52258

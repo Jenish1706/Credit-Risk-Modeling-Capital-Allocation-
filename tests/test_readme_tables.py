@@ -95,3 +95,25 @@ def test_exp04_is_reported_over_at_least_three_seeds():
         (deltas["delta_ece_vs_macro_ci_high"] < 0).all() and (deltas["delta_ece_vs_shuffled_ci_high"] < 0).all()
     )
     assert summary["survives_controls_for_every_seed"] == every_seed
+
+
+def test_exp06_table_reports_lambda_rows_approval_rates_and_collapsed_learners():
+    """CR-08: nothing the EXP06 artifacts contain may be dropped from the README."""
+    import pandas as pd
+
+    from scripts.render_readme import LEARNER_MARKERS, TABLES_DIR
+
+    text = README_PATH.read_text(encoding="utf-8")
+    sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
+    assert "oracle_ceiling" not in text and "oracle_ceiling" not in " ".join(sweep["policy"])
+    lam = sweep[sweep["policy"].str.startswith("expected_profit(lambda=")]
+    assert len(lam) >= 3
+    for _, r in lam.iterrows():
+        assert f"| {r['condition']} | {r['policy']} |" in text
+        assert f"{r['approval_rate']:.1%}" in text
+    assert sweep["policy"].str.startswith("expected_profit(lambda_eval_pool=").any()
+    collapsed = sweep[
+        sweep["policy"].apply(lambda p: any(m in p for m in LEARNER_MARKERS)) & (sweep["approval_rate"] < 0.01)
+    ]
+    for _, r in collapsed.iterrows():
+        assert f"{r['policy']} at {r['condition']} (approval rate {r['approval_rate']:.2%}" in text

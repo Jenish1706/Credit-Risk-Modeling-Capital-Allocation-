@@ -90,24 +90,51 @@ the table and in `results/reports/exp11_swaps.md`.
 
 The experiment carries a control. With unconstrained capital the myopic expected-profit rule should be near-optimal. The best learner (thompson) earns 50,883 vs the myopic rule's 33,486 (paired difference +17,398, 95% CI [-2,574, +37,136]): **the control holds**. The plain 15% PD threshold beats the myopic rule by +28,262 (95% CI [+2,616, +54,837]), consistent with the real-book audit below.
 
-Paired difference by capital condition (mean over 30 episodes, 95% bootstrap CI), against the myopic expected-profit policy and against the fixed 15% PD threshold:
+Policy-level results by capital condition (mean over 30 episodes, 95% bootstrap CI on the paired difference), against the myopic expected-profit policy and the fixed 15% PD threshold:
 
-| Condition | Learner | vs expected-profit | 95% CI | vs 15% threshold | 95% CI |
-|---|---|---|---|---|---|
-| unconstrained | thompson | +17,398 | [-2,574, +37,136] | -10,865 | [-30,148, +7,562] |
-| unconstrained | linucb@alpha=1 | +10,861 | [-7,087, +29,571] | -17,401 | [-37,640, +1,251] |
-| unconstrained | budget_aware_q(greedy) | -33,218* | [-47,280, -18,552] | -61,480* | [-91,513, -32,778] |
-| budget=0.60 | thompson | +26,236* | [+7,044, +44,592] | -160 | [-15,333, +14,180] |
-| budget=0.60 | linucb@alpha=1 | +24,745* | [+5,999, +42,610] | -1,651 | [-16,958, +12,362] |
-| budget=0.60 | budget_aware_q(greedy) | -18,630* | [-36,370, -1,326] | -45,026* | [-76,395, -14,339] |
-| budget=0.35 | thompson | -178 | [-16,318, +16,402] | +5,830 | [-9,719, +20,364] |
-| budget=0.35 | budget_aware_q(greedy) | -31,747* | [-60,165, -5,221] | -25,739 | [-60,443, +7,692] |
-| budget=0.35 | linucb@alpha=1 | -52,111* | [-76,843, -26,224] | -46,103* | [-67,057, -26,201] |
-| budget=0.20 | budget_aware_q(greedy) | +844 | [-19,385, +18,911] | -150 | [-28,657, +26,114] |
-| budget=0.20 | linucb@alpha=1 | -13,456* | [-26,812, -291] | -14,450* | [-25,601, -3,329] |
-| budget=0.20 | thompson | -22,184* | [-38,366, -5,401] | -23,179* | [-38,016, -9,083] |
+| Condition | Policy | Mean profit | Approval rate | Capital deployed | vs expected-profit [95% CI] | vs 15% threshold [95% CI] |
+|---|---|---|---|---|---|---|
+| unconstrained | fixed_threshold@0.150 | +61,748 | 63.4% | 10.22M | +28,262* [+2,616, +54,837] | baseline |
+| unconstrained | thompson | +50,883 | 39.0% | 9.41M | +17,398 [-2,574, +37,136] | -10,865 [-30,148, +7,562] |
+| unconstrained | linucb@alpha=1 | +44,347 | 47.0% | 10.56M | +10,861 [-7,087, +29,571] | -17,401 [-37,640, +1,251] |
+| unconstrained | expected_profit | +33,486 | 49.4% | 8.86M | baseline | -28,262* [-54,837, -2,616] |
+| unconstrained | budget_aware_q(greedy) | +268 | 41.7% | 7.36M | -33,218* [-47,280, -18,552] | -61,480* [-91,513, -32,778] |
+| unconstrained | risk_band | -46,114 | 95.3% | 14.75M | -79,600* [-98,773, -60,798] | -107,862* [-133,989, -82,728] |
+| unconstrained | approve_all | -95,984 | 100.0% | 15.41M | -129,470* [-150,815, -109,765] | -157,733* [-190,223, -126,730] |
+| budget=0.60 | fixed_threshold@0.150 | +60,208 | 57.7% | 9.32M (100% of budget) | +26,396* [+654, +52,743] | baseline |
+| budget=0.60 | thompson | +60,048 | 39.8% | 9.30M (100% of budget) | +26,236* [+7,044, +44,592] | -160 [-15,333, +14,180] |
+| budget=0.60 | linucb@alpha=1 | +58,557 | 39.6% | 9.30M (100% of budget) | +24,745* [+5,999, +42,610] | -1,651 [-16,958, +12,362] |
+| budget=0.60 | expected_profit(lambda=0.0053) | +38,649 | 43.4% | 7.85M (84% of budget) | +4,836 [-3,352, +13,424] | -21,559 [-48,018, +4,330] |
+| budget=0.60 | expected_profit | +33,812 | 49.3% | 8.84M (95% of budget) | baseline | -26,396* [-52,743, -654] |
+| budget=0.60 | budget_aware_q(greedy) | +15,182 | 32.2% | 5.87M (63% of budget) | -18,630* [-36,370, -1,326] | -45,026* [-76,395, -14,339] |
+| budget=0.60 | risk_band | +4,568 | 60.2% | 9.32M (100% of budget) | -29,244 [-58,062, +1,296] | -55,640* [-83,601, -28,556] |
+| budget=0.60 | approve_all | -31,463 | 60.5% | 9.32M (100% of budget) | -65,276* [-93,044, -36,445] | -91,671* [-120,701, -64,641] |
+| budget=0.35 | expected_profit | +51,909 | 30.4% | 5.44M (100% of budget) | baseline | +6,008 [-14,256, +25,782] |
+| budget=0.35 | thompson | +51,731 | 24.1% | 5.43M (100% of budget) | -178 [-16,318, +16,402] | +5,830 [-9,719, +20,364] |
+| budget=0.35 | fixed_threshold@0.150 | +45,901 | 33.8% | 5.44M (100% of budget) | -6,008 [-25,782, +14,256] | baseline |
+| budget=0.35 | expected_profit(lambda_eval_pool=0.0168) | +34,191 | 29.4% | 5.42M (100% of budget) | -17,718 [-42,626, +7,416] | -11,710 [-46,201, +21,784] |
+| budget=0.35 | budget_aware_q(greedy) | +20,162 | 29.0% | 5.32M (98% of budget) | -31,747* [-60,165, -5,221] | -25,739 [-60,443, +7,692] |
+| budget=0.35 | expected_profit(lambda=0.0291) | +2,041 | 22.0% | 4.17M (77% of budget) | -49,868* [-73,894, -26,243] | -43,860* [-74,604, -15,568] |
+| budget=0.35 | linucb@alpha=1 | -202 | 0.1% | 0.01M (0% of budget) | -52,111* [-76,843, -26,224] | -46,103* [-67,057, -26,201] |
+| budget=0.35 | risk_band | -4,306 | 34.9% | 5.44M (100% of budget) | -56,215* [-72,648, -38,539] | -50,207* [-66,652, -33,746] |
+| budget=0.35 | approve_all | -29,379 | 35.1% | 5.44M (100% of budget) | -81,288* [-99,393, -61,909] | -75,279* [-95,310, -55,511] |
+| budget=0.20 | fixed_threshold@0.150 | +23,140 | 19.1% | 3.11M (100% of budget) | +994 [-14,272, +15,672] | baseline |
+| budget=0.20 | budget_aware_q(greedy) | +22,990 | 17.1% | 3.11M (100% of budget) | +844 [-19,385, +18,911] | -150 [-28,657, +26,114] |
+| budget=0.20 | expected_profit | +22,146 | 17.2% | 3.11M (100% of budget) | baseline | -994 [-15,672, +14,272] |
+| budget=0.20 | linucb@alpha=1 | +8,690 | 14.5% | 3.10M (100% of budget) | -13,456* [-26,812, -291] | -14,450* [-25,601, -3,329] |
+| budget=0.20 | expected_profit(lambda_eval_pool=0.0394) | +5,515 | 15.4% | 2.99M (96% of budget) | -16,631 [-41,679, +9,120] | -17,625 [-46,585, +11,205] |
+| budget=0.20 | expected_profit(lambda=0.0492) | +3,723 | 11.0% | 2.18M (70% of budget) | -18,423 [-43,120, +5,576] | -19,418 [-49,386, +8,968] |
+| budget=0.20 | thompson | -38 | 0.0% | 0.00M (0% of budget) | -22,184* [-38,366, -5,401] | -23,179* [-38,016, -9,083] |
+| budget=0.20 | risk_band | -8,350 | 20.0% | 3.11M (100% of budget) | -30,496* [-43,689, -17,626] | -31,490* [-46,203, -17,053] |
+| budget=0.20 | approve_all | -15,482 | 20.0% | 3.11M (100% of budget) | -37,628* [-51,460, -23,857] | -38,622* [-54,976, -22,969] |
 
 \* = 95% CI excludes zero.
+
+The knapsack shadow-price policy (lambda fitted on the validation pool) is the analytical solution in the formulation, and here it does not help: budget=0.60: +4,836 vs expected-profit [-3,352, +13,424], -21,559 vs the 15% threshold [-48,018, +4,330], deploying 84% of the budget; budget=0.35: -49,868 vs expected-profit [-73,894, -26,243], -43,860 vs the 15% threshold [-74,604, -15,568], deploying 77% of the budget; budget=0.20: -18,423 vs expected-profit [-43,120, +5,576], -19,418 vs the 15% threshold [-49,386, +8,968], deploying 70% of the budget.
+
+`expected_profit(lambda_eval_pool=...)` fits lambda on the evaluation pool itself. It is a diagnostic, not an upper bound: it scores below the myopic rule at budget=0.35, budget=0.20 and below the 15% threshold at budget=0.35, budget=0.20. Its lambda is applied to predicted profit that is over-dispersed relative to realised profit (profit audit below), so the knapsack optimum is for the wrong objective.
+
+Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M deployed); thompson at budget=0.20 (approval rate 0.04%, 0.000M deployed). These stopped lending (approval rate below 1%); "significantly worse" understates it.
 
 **Sensitivity: exposure-changing actions.** Adding 0.5x and 1.5x exposure actions makes off-diagonal outcomes model counterfactuals rather than measurements, so these are not headline numbers. Expected-profit vs the 15% threshold in that space: -29,042 per episode (95% CI [-62,824, +4,620]). Learners vs the myopic expected-profit policy:
 

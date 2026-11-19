@@ -246,7 +246,7 @@ def main() -> int:
             pols.append(priced_val)
         if shadow_oracle > 0:
             oracle = ExpectedProfitPolicy(cashflow, economics, space, capital_shadow_price=shadow_oracle)
-            oracle.name = f"oracle_ceiling(lambda={shadow_oracle:.4f})"
+            oracle.name = f"expected_profit(lambda_eval_pool={shadow_oracle:.4f})"
             pols.append(oracle)
         return pols
 
@@ -293,7 +293,7 @@ def main() -> int:
                 else analytical_shadow_price(densities[:n_steps], exposures[:n_steps], budget)
             )
             LOG.info(
-                "EXP06 | %s | validation shadow price lambda=%.4f (oracle ceiling=%.4f)",
+                "EXP06 | %s | validation shadow price lambda=%.4f (evaluation-pool lambda, diagnostic only=%.4f)",
                 label, shadow_val, shadow_oracle,
             )
 
@@ -384,7 +384,7 @@ def main() -> int:
 
             budget_reports[label] = {
                 "shadow_price_val": shadow_val,
-                "shadow_price_oracle": shadow_oracle,
+                "shadow_price_eval_pool_diagnostic": shadow_oracle,
                 "budget": budget,
                 "verdict": verdict(diffs, "expected_profit"),
                 "control_breach": control_breach,
@@ -454,12 +454,12 @@ def main() -> int:
             "",
             "## EXP06 - can a learned policy beat static policies?",
             "",
-            "| condition | validation shadow price lambda | oracle ceiling lambda | verdict |",
+            "| condition | validation shadow price lambda | evaluation-pool lambda (diagnostic, not a ceiling) | verdict |",
             "|---|---|---|---|",
         ]
         for label, payload in budget_reports.items():
             s_val = payload.get("shadow_price_val", payload.get("shadow_price", 0.0))
-            s_orc = payload.get("shadow_price_oracle", payload.get("shadow_price", 0.0))
+            s_orc = payload.get("shadow_price_eval_pool_diagnostic", payload.get("shadow_price", 0.0))
             lines.append(f"| {label} | {s_val:.4f} | {s_orc:.4f} | {payload['verdict']} |")
 
         breaches = [p["control_breach"] for p in budget_reports.values() if p.get("control_breach")]

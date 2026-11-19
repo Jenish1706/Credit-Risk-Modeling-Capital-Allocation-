@@ -27,12 +27,12 @@ Why the expected-profit rule loses to a PD threshold is analysed on the real boo
 
 ## EXP06 - can a learned policy beat static policies?
 
-| condition | validation shadow price lambda | oracle ceiling lambda | verdict |
+| condition | validation shadow price lambda | evaluation-pool lambda (diagnostic, not a ceiling) | verdict |
 |---|---|---|---|
 | unconstrained | 0.0000 | 0.0000 | linucb@alpha=1 beat expected_profit by +39,697 per episode (+121.4%), 95% CI [+13,802, +65,501], winning on 63% of seeds. |
 | budget=0.60 | 0.0053 | 0.0000 | No policy beat expected_profit significantly. Best was expected_profit(lambda=0.0053) at +13,427 per episode, 95% CI [-4,512, +31,399] -- the interval includes zero, so this is a null result. |
-| budget=0.35 | 0.0291 | 0.0168 | oracle_ceiling(lambda=0.0168) beat expected_profit by +22,401 per episode (+62.8%), 95% CI [+3,860, +40,728], winning on 63% of seeds. |
-| budget=0.20 | 0.0492 | 0.0394 | No policy beat expected_profit significantly. Best was oracle_ceiling(lambda=0.0394) at +10,541 per episode, 95% CI [-17,016, +35,747] -- the interval includes zero, so this is a null result. |
+| budget=0.35 | 0.0291 | 0.0168 | expected_profit(lambda_eval_pool=0.0168) beat expected_profit by +22,401 per episode (+62.8%), 95% CI [+3,860, +40,728], winning on 63% of seeds. |
+| budget=0.20 | 0.0492 | 0.0394 | No policy beat expected_profit significantly. Best was expected_profit(lambda_eval_pool=0.0394) at +10,541 per episode, 95% CI [-17,016, +35,747] -- the interval includes zero, so this is a null result. |
 
 ### Control check
 
@@ -40,20 +40,20 @@ Why the expected-profit rule loses to a PD threshold is analysed on the real boo
 
 Learning-policy results in the unconstrained condition should therefore **not** be read as evidence for reinforcement learning. The myopic policy's PD and cashflow inputs are measurably mis-calibrated on the real book (see profit_calibration_*.csv), which this experiment does not isolate.
 
-| policy                         |   budget=0.20 |   budget=0.35 |   budget=0.60 |   unconstrained |
-|:-------------------------------|--------------:|--------------:|--------------:|----------------:|
-| approve_all                    |        -15482 |        -29379 |        -31463 |          -95984 |
-| budget_aware_q(greedy)         |          7500 |         13389 |         40487 |            6231 |
-| expected_profit                |         14376 |         35697 |         59659 |           32707 |
-| expected_profit(lambda=0.0053) |           nan |           nan |         73086 |             nan |
-| expected_profit(lambda=0.0291) |           nan |          4677 |           nan |             nan |
-| expected_profit(lambda=0.0492) |          9700 |           nan |           nan |             nan |
-| fixed_threshold@0.150          |         23140 |         45901 |         60208 |           61748 |
-| linucb@alpha=1                 |         10438 |         32160 |         58280 |           72403 |
-| oracle_ceiling(lambda=0.0168)  |           nan |         58098 |           nan |             nan |
-| oracle_ceiling(lambda=0.0394)  |         24917 |           nan |           nan |             nan |
-| risk_band                      |          1256 |         11990 |          6258 |           -4960 |
-| thompson                       |         17857 |         29243 |         19444 |           63814 |
+| policy                                   |   budget=0.20 |   budget=0.35 |   budget=0.60 |   unconstrained |
+|:-----------------------------------------|--------------:|--------------:|--------------:|----------------:|
+| approve_all                              |        -15482 |        -29379 |        -31463 |          -95984 |
+| budget_aware_q(greedy)                   |          7500 |         13389 |         40487 |            6231 |
+| expected_profit                          |         14376 |         35697 |         59659 |           32707 |
+| expected_profit(lambda=0.0053)           |           nan |           nan |         73086 |             nan |
+| expected_profit(lambda=0.0291)           |           nan |          4677 |           nan |             nan |
+| expected_profit(lambda=0.0492)           |          9700 |           nan |           nan |             nan |
+| expected_profit(lambda_eval_pool=0.0168) |           nan |         58098 |           nan |             nan |
+| expected_profit(lambda_eval_pool=0.0394) |         24917 |           nan |           nan |             nan |
+| fixed_threshold@0.150                    |         23140 |         45901 |         60208 |           61748 |
+| linucb@alpha=1                           |         10438 |         32160 |         58280 |           72403 |
+| risk_band                                |          1256 |         11990 |          6258 |           -4960 |
+| thompson                                 |         17857 |         29243 |         19444 |           63814 |
 
 **Reading this table.** The `unconstrained` column is the control. There, the myopic expected-profit rule is optimal by construction and the learned policies should not beat it -- if they appear to, the simulator has a bug. As the budget tightens, the shadow price of capital rises and the ranking should change: pricing capital correctly (either analytically via `expected_profit(lambda=...)` or by learning it via `budget_aware_q`) starts to matter more than per-applicant accuracy.
 
