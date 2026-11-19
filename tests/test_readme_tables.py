@@ -130,3 +130,18 @@ def test_superseded_banners_and_stale_claims_are_handled():
     assert audit.count("Superseded by the v3 audit") >= 4
     broke = (PROJECT_ROOT / "docs" / "WHAT_BROKE.md").read_text(encoding="utf-8")
     assert "not an upper bound" in broke
+
+
+def test_apr_ablation_is_rendered_from_its_artifacts():
+    """CR-10: the with-LendingClub-pricing ablation is reported, labelled, and matches its CSVs."""
+    import pandas as pd
+
+    from scripts.render_readme import TABLES_DIR
+
+    text = README_PATH.read_text(encoding="utf-8")
+    assert "**Ablation: a PD that sees LendingClub's own pricing.**" in text
+    rules = pd.read_csv(TABLES_DIR / "apr_in_pd_rules.csv")
+    row = rules[(rules["pd_source"] == "with_lc_grade_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
+    assert f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan vs the 15% threshold under the same PD" in text
+    metrics = pd.read_csv(TABLES_DIR / "apr_in_pd_metrics.csv").set_index("pd_source")
+    assert f"{metrics.loc['with_lc_grade_pd', 'roc_auc']:.4f}" in text

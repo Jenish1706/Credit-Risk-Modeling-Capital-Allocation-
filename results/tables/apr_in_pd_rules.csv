@@ -1,0 +1,5 @@
+pd_source,rule,n_accepted,realised_profit_total,diff_vs_same_pd_threshold_per_loan,same_ci_low,same_ci_high,diff_vs_primary_pd_threshold_per_loan,ref_ci_low,ref_ci_high
+primary_pd,fixed_threshold@0.15,102545,7.03034e+06,0,0,0,0,0,0
+primary_pd,expected_profit>0,79924,1.04289e+06,-36.9058,-47.0559,-26.9011,-36.9058,-47.0559,-26.9011
+with_lc_grade_pd,fixed_threshold@0.15,107930,6.67234e+06,0,0,0,-2.20667,-9.06918,4.70594
+with_lc_grade_pd,expected_profit>0,92426,2.847e+06,-23.5789,-33.8509,-13.3537,-25.7855,-35.807,-16.1509

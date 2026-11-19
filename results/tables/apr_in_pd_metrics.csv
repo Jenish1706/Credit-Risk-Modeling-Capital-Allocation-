@@ -1,0 +1,3 @@
+pd_source,window,roc_auc,ece,brier,observed_expected_ratio
+primary_pd,"2015-07..12 (H2, untouched holdout)",0.673164,0.0116756,0.119626,1.08153
+with_lc_grade_pd,"2015-07..12 (H2, untouched holdout)",0.693439,0.0178164,0.118319,1.13442

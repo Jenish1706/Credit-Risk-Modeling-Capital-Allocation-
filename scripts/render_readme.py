@@ -418,7 +418,7 @@ def render_rl_paragraph() -> str:
     ]
     lines += _exp06_policy_table(cond, thr)
     lines += _exp06_policy_notes(cond, thr)
-    return "\n".join(lines) + "\n\n" + render_sensitivity_table() + "\n\n" + render_profit_paragraph()
+    return "\n".join(lines) + "\n\n" + render_sensitivity_table() + "\n\n" + render_profit_paragraph() + "\n\n" + render_apr_ablation_paragraph()
 
 
 def render_sensitivity_table() -> str:
@@ -517,6 +517,48 @@ def render_profit_paragraph() -> str:
             f"| {int(r['decile'])} | {r['mean_pd_hat']:.3f} | {r['observed_default_rate']:.3f} | "
             f"{r['mean_predicted_profit']:+,.0f} | {r['mean_realised_profit']:+,.0f} |"
         )
+    return "\n".join(lines)
+
+
+def render_apr_ablation_paragraph() -> str:
+    """CR-10: the profit audit repeated with a PD that sees LendingClub's own pricing."""
+    m = pd.read_csv(TABLES_DIR / "apr_in_pd_metrics.csv").set_index("pd_source")
+    by_apr = pd.read_csv(TABLES_DIR / "apr_in_pd_by_apr.csv")
+    rules = pd.read_csv(TABLES_DIR / "apr_in_pd_rules.csv")
+    prim, grade = m.loc["primary_pd"], m.loc["with_lc_grade_pd"]
+
+    def oe_range(pool: str) -> tuple[float, float]:
+        sub = by_apr[by_apr["pool"] == pool].sort_values("apr_quintile")
+        return float(sub.iloc[0]["observed_over_expected"]), float(sub.iloc[-1]["observed_over_expected"])
+
+    p_lo, p_hi = oe_range("primary_pd")
+    g_lo, g_hi = oe_range("with_lc_grade_pd")
+    row = rules[(rules["pd_source"] == "with_lc_grade_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
+    row_p = rules[(rules["pd_source"] == "primary_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
+    if row["same_ci_high"] < 0:
+        outcome = "still loses to the 15% PD threshold under that PD"
+    elif row["same_ci_low"] > 0:
+        outcome = "beats the 15% PD threshold under that PD"
+    else:
+        outcome = "is statistically indistinguishable from the 15% PD threshold under that PD"
+    lines = [
+        "**Ablation: a PD that sees LendingClub's own pricing.** The production PD excludes `int_rate`, "
+        "`grade` and `sub_grade` by design, because they are LendingClub's own risk score. This ablation "
+        "refits the PD with them (calibrator chosen on 2015-01..06; every number on 2015-07..12). It "
+        "is not a replacement: a PD that consumes the incumbent's pricing does not underwrite from "
+        "primary evidence.",
+        "",
+        f"- ROC-AUC {prim['roc_auc']:.4f} → {grade['roc_auc']:.4f}; ECE {prim['ece']:.4f} → {grade['ece']:.4f}; "
+        f"O/E {prim['observed_expected_ratio']:.3f} → {grade['observed_expected_ratio']:.3f}.",
+        f"- Observed/expected defaults from the lowest to the highest APR quintile: production PD "
+        f"{p_lo:.2f} → {p_hi:.2f}; PD with LendingClub's pricing {g_lo:.2f} → {g_hi:.2f}.",
+        f"- With that PD, accepting every loan with predicted profit above zero earns "
+        f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan vs the 15% threshold under the same PD "
+        f"(95% CI [{row['same_ci_low']:+.1f}, {row['same_ci_high']:+.1f}]), so the rule {outcome}. Against the "
+        f"production-PD threshold the figure is {row['diff_vs_primary_pd_threshold_per_loan']:+.1f} "
+        f"[{row['ref_ci_low']:+.1f}, {row['ref_ci_high']:+.1f}] (production-PD expected-profit rule: "
+        f"{row_p['diff_vs_primary_pd_threshold_per_loan']:+.1f}).",
+    ]
     return "\n".join(lines)
 
 

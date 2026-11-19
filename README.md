@@ -176,6 +176,12 @@ Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M d
 | 9 | 0.116 | 0.169 | +541 | +21 |
 | 10 | 0.114 | 0.182 | +1,426 | +132 |
 
+**Ablation: a PD that sees LendingClub's own pricing.** The production PD excludes `int_rate`, `grade` and `sub_grade` by design, because they are LendingClub's own risk score. This ablation refits the PD with them (calibrator chosen on 2015-01..06; every number on 2015-07..12). It is not a replacement: a PD that consumes the incumbent's pricing does not underwrite from primary evidence.
+
+- ROC-AUC 0.6732 → 0.6934; ECE 0.0117 → 0.0178; O/E 1.082 → 1.134.
+- Observed/expected defaults from the lowest to the highest APR quintile: production PD 0.67 → 1.38; PD with LendingClub's pricing 0.97 → 1.18.
+- With that PD, accepting every loan with predicted profit above zero earns -23.6 per loan vs the 15% threshold under the same PD (95% CI [-33.9, -13.4]), so the rule still loses to the 15% PD threshold under that PD. Against the production-PD threshold the figure is -25.8 [-35.8, -16.2] (production-PD expected-profit rule: -36.9).
+
 ---
 
 ## Architecture
