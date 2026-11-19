@@ -1,69 +1,57 @@
-"""Test that README.md tables match rendered artifact outputs exactly.
+"""README and guide pages are rendered from artifacts; a hand-edited number cannot survive.
 
-Enforces BRIEF_A §7 step S4.4:
-'Render the README tables from artifacts with a script. Add a test that
-re-renders them and fails on any difference, so a hand-edited number can't survive.'
+``scripts/render_readme.py`` fills named BEGIN/END blocks from ``results/tables/``. These tests
+re-render every block and fail on any difference, and check the specific results the README and the
+results page must not drop.
 """
 
-import re
-from pathlib import Path
+from __future__ import annotations
+
+import json
+
+import pandas as pd
 
 from scripts.render_readme import (
+    GUIDE_DIR,
+    PROJECT_ROOT,
     README_PATH,
-    render_data_table,
-    render_results_table,
-    render_rl_paragraph,
+    TABLES_DIR,
+    render_guide_page,
 )
 
-
-def test_readme_data_table_matches_rendered():
-    content = README_PATH.read_text(encoding="utf-8")
-    expected = render_data_table()
-    data_pattern = re.compile(
-        r"\| Split \| Window \| Loans \| Default rate \|[\s\S]*?(?=\n\nThe rising default rate)"
-    )
-    match = data_pattern.search(content)
-    assert match is not None, "Data table not found in README.md"
-    assert match.group(0).strip() == expected.strip(), (
-        "README.md data table differs from rendered artifact values! "
-        "Run `python scripts/render_readme.py` to synchronize."
-    )
+RESULTS_PAGE = GUIDE_DIR / "09_RESULTS_AND_LIMITATIONS.md"
 
 
-def test_readme_results_table_matches_rendered():
-    content = README_PATH.read_text(encoding="utf-8")
-    expected = render_results_table()
-    results_pattern = re.compile(
-        r"\| # \| Question \| Result \| Verdict \|[\s\S]*?(?=\n\n### Four results worth reading twice)"
-    )
-    match = results_pattern.search(content)
-    assert match is not None, "Results table not found in README.md"
-    assert match.group(0).strip() == expected.strip(), (
-        "README.md results table differs from rendered artifact values! "
-        "Run `python scripts/render_readme.py` to synchronize."
+def _read(path) -> str:
+    return path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def test_readme_blocks_match_rendered_artifacts():
+    text = _read(README_PATH)
+    assert "<!-- BEGIN:results-table -->" in text and "<!-- BEGIN:data-table -->" in text
+    assert render_guide_page(text) == text, (
+        "README.md has a stale embedded block; run `python scripts/render_readme.py`"
     )
 
 
-def test_readme_rl_paragraph_matches_rendered():
-    content = README_PATH.read_text(encoding="utf-8")
-    expected = render_rl_paragraph()
-    pattern = re.compile(r"\*\*RL does not earn its place here[\s\S]*?(?=\n\n---\n\n## Architecture)")
-    match = pattern.search(content)
-    assert match is not None, "RL paragraph not found in README.md"
-    assert match.group(0).strip() == expected.strip(), (
-        "README.md RL paragraph differs from rendered artifact values! "
-        "Run `python scripts/render_readme.py` to synchronize."
-    )
+def test_guide_blocks_match_rendered_artifacts():
+    pages = sorted(GUIDE_DIR.glob("*.md"))
+    assert pages, "docs/guide has no pages"
+    for page in pages:
+        text = _read(page)
+        assert render_guide_page(text) == text, (
+            f"{page.name} has a stale embedded block; run `python scripts/render_readme.py`"
+        )
+
+
+def test_readme_is_a_short_landing_page():
+    assert len(_read(README_PATH).splitlines()) < 200
+    assert "docs/guide/00_START_HERE.md" in _read(README_PATH)
 
 
 def test_calibration_ratios_use_one_convention_and_match_artifacts():
     """CR-05: observed/expected (O/E) only; P/O must not appear in public text."""
-    import pandas as pd
-
-    from scripts.render_readme import PROJECT_ROOT, TABLES_DIR
-
-    texts = {p: p.read_text(encoding="utf-8")
-             for p in [README_PATH, *sorted((PROJECT_ROOT / "docs").rglob("*.md"))]}
+    texts = {p: _read(p) for p in [README_PATH, *sorted((PROJECT_ROOT / "docs").rglob("*.md"))]}
     for path, text in texts.items():
         assert "P/O" not in text, f"{path} uses the P/O convention; use O/E"
 
@@ -81,12 +69,6 @@ def test_calibration_ratios_use_one_convention_and_match_artifacts():
 
 def test_exp04_is_reported_over_at_least_three_seeds():
     """CR-06: the calibration claim must rest on several model fits, not one."""
-    import json
-
-    import pandas as pd
-
-    from scripts.render_readme import TABLES_DIR
-
     summary = json.loads((TABLES_DIR / "cohort_controls_exp04.json").read_text(encoding="utf-8"))["seed_summary"]
     assert len(summary["seeds"]) >= 3
     deltas = pd.read_csv(TABLES_DIR / "cohort_controls_exp04_seed_deltas.csv")
@@ -98,12 +80,10 @@ def test_exp04_is_reported_over_at_least_three_seeds():
 
 
 def test_exp06_table_reports_lambda_rows_approval_rates_and_collapsed_learners():
-    """CR-08: nothing the EXP06 artifacts contain may be dropped from the README."""
-    import pandas as pd
+    """CR-08: nothing the EXP06 artifacts contain may be dropped from the results page."""
+    from scripts.render_readme import LEARNER_MARKERS
 
-    from scripts.render_readme import LEARNER_MARKERS, TABLES_DIR
-
-    text = README_PATH.read_text(encoding="utf-8")
+    text = _read(RESULTS_PAGE)
     sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
     assert "oracle_ceiling" not in text and "oracle_ceiling" not in " ".join(sweep["policy"])
     lam = sweep[sweep["policy"].str.startswith("expected_profit(lambda=")]
@@ -121,40 +101,21 @@ def test_exp06_table_reports_lambda_rows_approval_rates_and_collapsed_learners()
 
 def test_superseded_banners_and_stale_claims_are_handled():
     """CR-09: pre-v3 documents are marked superseded; false README claims are gone."""
-    from scripts.render_readme import PROJECT_ROOT
-
-    readme = README_PATH.read_text(encoding="utf-8")
+    readme = _read(README_PATH)
     assert "Every policy result comes from a simulator" not in readme
     assert "Platt/isotonic calibration" not in readme
-    audit = (PROJECT_ROOT / "docs" / "AUDIT_REPORT.md").read_text(encoding="utf-8")
+    audit = _read(PROJECT_ROOT / "docs" / "AUDIT_REPORT.md")
     assert audit.count("Superseded by the v3 audit") >= 4
-    broke = (PROJECT_ROOT / "docs" / "WHAT_BROKE.md").read_text(encoding="utf-8")
+    broke = _read(PROJECT_ROOT / "docs" / "WHAT_BROKE.md")
     assert "not an upper bound" in broke
 
 
 def test_apr_ablation_is_rendered_from_its_artifacts():
     """CR-10: the with-LendingClub-pricing ablation is reported, labelled, and matches its CSVs."""
-    import pandas as pd
-
-    from scripts.render_readme import TABLES_DIR
-
-    text = README_PATH.read_text(encoding="utf-8")
+    text = _read(RESULTS_PAGE)
     assert "**Ablation: a PD that sees LendingClub's own pricing.**" in text
     rules = pd.read_csv(TABLES_DIR / "apr_in_pd_rules.csv")
     row = rules[(rules["pd_source"] == "with_lc_grade_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
     assert f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan vs the 15% threshold under the same PD" in text
     metrics = pd.read_csv(TABLES_DIR / "apr_in_pd_metrics.csv").set_index("pd_source")
     assert f"{metrics.loc['with_lc_grade_pd', 'roc_auc']:.4f}" in text
-
-
-def test_guide_blocks_match_rendered_artifacts():
-    """D1: every <!-- BEGIN:x --> block in docs/guide is exactly what the artifacts render."""
-    from scripts.render_readme import GUIDE_DIR, render_guide_page
-
-    pages = sorted(GUIDE_DIR.glob("*.md"))
-    assert pages, "docs/guide has no pages"
-    for page in pages:
-        text = page.read_text(encoding="utf-8").replace("\r\n", "\n")
-        assert render_guide_page(text) == text, (
-            f"{page.name} has a stale embedded block; run `python scripts/render_readme.py`"
-        )

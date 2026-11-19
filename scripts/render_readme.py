@@ -634,31 +634,14 @@ def update_guide() -> None:
 
 
 def update_readme() -> None:
-    """Read README.md, replace data and results tables, and write back."""
-    content = README_PATH.read_text(encoding="utf-8")
-
-    # Replace Data table
-    data_table = render_data_table()
-    data_pattern = re.compile(r"\| Split \| Window \| Loans \| Default rate \|[\s\S]*?(?=\n\nThe rising default rate)")
-    if not data_pattern.search(content):
-        raise RuntimeError("Could not locate Data table in README.md")
-    content = data_pattern.sub(lambda m: data_table, content)
-
-    # Replace Results table
-    results_table = render_results_table()
-    results_pattern = re.compile(r"\| # \| Question \| Result \| Verdict \|[\s\S]*?(?=\n\n### Four results worth reading twice)")
-    if not results_pattern.search(content):
-        raise RuntimeError("Could not locate Results table in README.md")
-    content = results_pattern.sub(lambda m: results_table, content)
-
-    # Replace RL paragraph
-    rl_pattern = re.compile(r"\*\*RL does not earn its place here[\s\S]*?(?=\n\n---\n\n## Architecture)")
-    if not rl_pattern.search(content):
-        raise RuntimeError("Could not locate RL paragraph in README.md")
-    content = rl_pattern.sub(lambda m: render_rl_paragraph(), content)
-
-    README_PATH.write_text(content, encoding="utf-8")
-    print(f"Successfully updated tables in {README_PATH}")
+    """Regenerate the BEGIN/END blocks in README.md, then in every guide page."""
+    old = README_PATH.read_text(encoding="utf-8").replace("\r\n", "\n")
+    new = render_guide_page(old)
+    if new != old:
+        README_PATH.write_text(new, encoding="utf-8", newline="\n")
+        print(f"Successfully updated tables in {README_PATH}")
+    else:
+        print(f"{README_PATH} is up to date")
     update_guide()
 
 
