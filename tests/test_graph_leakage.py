@@ -273,8 +273,8 @@ def test_ungated_cohort_rate_leaks_measurably():
 
 def test_macro_default_rate_and_shuffled_controls_interface(enriched):
     """P0-4: Verify non-graph controls (macro default rate, monthly key shuffle) and bootstrap."""
-    from credit_risk.graph.features import compute_macro_default_rate, shuffle_keys_within_period
     from credit_risk.evaluation.metrics import paired_bootstrap_calibration_comparison
+    from credit_risk.graph.features import compute_macro_default_rate, shuffle_keys_within_period
 
     # 1. Macro default rate is finite and valid
     rate = compute_macro_default_rate(enriched)
@@ -285,7 +285,7 @@ def test_macro_default_rate_and_shuffled_controls_interface(enriched):
     # 2. Shuffled cohort keys preserve within-period marginal distribution
     shuffled = shuffle_keys_within_period(enriched, keys=("zip3",), seed=42)
     assert len(shuffled) == len(enriched)
-    for period, grp in enriched.groupby("issue_period"):
+    for _period, grp in enriched.groupby("issue_period"):
         orig_counts = grp["zip3"].value_counts().to_dict()
         shuf_counts = shuffled.loc[grp.index, "zip3"].value_counts().to_dict()
         assert orig_counts == shuf_counts

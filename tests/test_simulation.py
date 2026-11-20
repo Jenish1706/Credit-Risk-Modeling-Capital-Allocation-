@@ -242,9 +242,7 @@ def test_shadow_price_is_the_marginal_applicant():
 def test_shadow_price_validation_split_separation(pool, cashflow, space):
     """Test candidate analytical policy shadow price is fit on validation data, not test evaluation pool."""
     from credit_risk.decision.policies import ExpectedProfitPolicy
-    from credit_risk.rl.formulation import StateEncoder
 
-    encoder = StateEncoder(cashflow, EconomicsConfig(), space)
     # Simulate a validation pool of applicants disjoint from test pool
     val_densities = np.array([0.12, 0.09, 0.06, 0.03, 0.01])
     val_exposures = np.array([1000.0, 1000.0, 1000.0, 1000.0, 1000.0])

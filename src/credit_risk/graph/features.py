@@ -335,7 +335,7 @@ def shuffle_keys_within_period(
     rng = np.random.default_rng(seed)
     df_shuffled = df.copy()
     grouped = df.groupby(period_col).indices
-    for period, indices in grouped.items():
+    for indices in grouped.values():
         for k in keys:
             if k in df_shuffled.columns:
                 vals = df_shuffled.loc[indices, k].to_numpy().copy()
