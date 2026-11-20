@@ -47,4 +47,4 @@ On 2015-01..06 (selection window): Graph uncertainty (VGAE sigma): correlation w
 
 Sigma correlates with node degree at Spearman +0.006. It is not simply a proxy for neighbourhood size.
 
-> **Correction.** The first version of this experiment trained for 10 epochs with no validation split and no early stopping, which made 'no signal' and 'undertrained' indistinguishable. See `docs/AUDIT_REPORT.md`.
+> **Correction.** The first version of this experiment trained for 10 epochs with no validation split and no early stopping, which made 'no signal' and 'undertrained' indistinguishable. The earlier version is in the git history.

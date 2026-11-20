@@ -11,7 +11,7 @@ question and a second that followed from it:
 > unreliable, and can that information improve lending decisions?
 
 Several answers are null or negative and are reported as findings. A number of earlier headline
-conclusions were reversed by audit (see [`docs/WHAT_BROKE.md`](docs/WHAT_BROKE.md)).
+conclusions were reversed by audit (see [`docs/guide/09_RESULTS_AND_LIMITATIONS.md`](docs/guide/09_RESULTS_AND_LIMITATIONS.md)).
 
 ## Approach
 
@@ -147,8 +147,7 @@ Appendices: [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md),
 [`docs/LEAKAGE.md`](docs/LEAKAGE.md). Earlier design documents
 ([`ASSUMPTIONS`](docs/ASSUMPTIONS.md),
 [`GRAPH_DESIGN`](docs/GRAPH_DESIGN.md), [`RL_FORMULATION`](docs/RL_FORMULATION.md),
-[`DATASET`](docs/DATASET.md)) and the audit record ([`AUDIT_REPORT`](docs/AUDIT_REPORT.md),
-[`WHAT_BROKE`](docs/WHAT_BROKE.md)) remain for detail.
+[`DATASET`](docs/DATASET.md)) remain for detail.
 
 ## Limitations
 

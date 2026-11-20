@@ -47,4 +47,4 @@ On 2015-01..06 (selection window): Disagreement (logodds scale): correlation wit
 
 **Decision: REJECT.**
 
-> **Correction.** The first version of this experiment compared the production PD against an alternative model that differed in hyper-parameters *and* calibrator *and* features, using an absolute probability difference. The disagreement it measured was therefore partly a measure of those choices and partly a restatement of the PD level. See `docs/AUDIT_REPORT.md`.
+> **Correction.** The first version of this experiment compared the production PD against an alternative model that differed in hyper-parameters *and* calibrator *and* features, using an absolute probability difference. The disagreement it measured was therefore partly a measure of those choices and partly a restatement of the PD level. The earlier version is in the git history.

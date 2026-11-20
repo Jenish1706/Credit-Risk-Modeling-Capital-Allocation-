@@ -169,8 +169,7 @@ These are findings, not failures to find something.
 
 ## Corrections made during the audit
 
-The first audit's conclusions that no longer stand are listed in
-[WHAT_BROKE.md](../WHAT_BROKE.md) and marked superseded in [AUDIT_REPORT.md](../AUDIT_REPORT.md):
+The first audit's conclusions that no longer stand (the earlier versions are in the git history) are:
 test-set learning in the RL evaluation, comparisons that mixed real and counterfactual outcomes,
 selections made on the reporting window (including the production calibrator), reciprocal
 calibration ratios quoted under the wrong label, and unsupported causal explanations.

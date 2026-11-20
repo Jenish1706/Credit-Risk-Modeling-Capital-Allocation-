@@ -200,7 +200,7 @@ def main() -> int:
         "",
         "> **Correction.** The first version of this experiment trained for 10 epochs with no "
         "validation split and no early stopping, which made 'no signal' and 'undertrained' "
-        "indistinguishable. See `docs/AUDIT_REPORT.md`.",
+        "indistinguishable. The earlier version is in the git history.",
     ]
     write_report(lines, paths, f"{run_name}", source)
     save_json(

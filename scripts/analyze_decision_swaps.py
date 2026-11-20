@@ -23,7 +23,7 @@ fixed on the selection window. The headline portfolios are built and scored on t
 
 An earlier version of this experiment used a hardcoded ``LGD=0.5`` profit formula and compared the
 swap sets. That understated book profit by a factor of 2.4 and **reversed the sign** of the
-headline result. See docs/AUDIT_REPORT.md.
+headline result. The earlier version is in the git history.
 """
 
 from __future__ import annotations
@@ -292,8 +292,8 @@ def main() -> int:
         "`amount x apr x 1.55 - amount x 0.5 x default` and compared the two swap sets rather "
         "than the portfolios. That formula understated realised book profit by roughly a factor "
         "of 2.4, and it reported a **$9.8M loss** as a *'net increase in profit'* -- the "
-        "conclusion was asserted regardless of the sign of the number printed above it. See "
-        "`docs/AUDIT_REPORT.md`.",
+        "conclusion was asserted regardless of the sign of the number printed above it. "
+        "The earlier version is in the git history.",
     ]
     write_report(lines, paths, f"{run_name}", source)
     save_json(

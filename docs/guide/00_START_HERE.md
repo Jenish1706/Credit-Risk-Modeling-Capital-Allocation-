@@ -19,7 +19,7 @@ exercise, not a deployable system: no money was lent.
 
 Several answers are negative or null, and they are reported as findings. Two earlier headline
 conclusions were reversed by audit (test-set learning in the reinforcement-learning evaluation, and
-selections made on the reporting data); the corrections are in [WHAT_BROKE.md](../WHAT_BROKE.md).
+selections made on the reporting data); the corrections are listed in [09_RESULTS_AND_LIMITATIONS.md](09_RESULTS_AND_LIMITATIONS.md).
 
 ## How the project is built
 

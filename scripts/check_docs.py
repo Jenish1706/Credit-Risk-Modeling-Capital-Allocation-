@@ -72,8 +72,6 @@ POOL_NAMES = {"test_h1", "test_h2", "test_full"}
 DEFINED: set[str] = set()  # filled in missing_repository_references()
 
 REPO_PATH = re.compile(r"^(?:scripts|src|tests|configs|docs|results/tables|results/reports)/[\w./\-]+$")
-#: Documents that describe superseded history may name files that no longer exist.
-HISTORICAL = {"AUDIT_REPORT.md"}
 
 
 def missing_repository_references() -> list[str]:
@@ -82,8 +80,6 @@ def missing_repository_references() -> list[str]:
     DEFINED.update(defined_names())
     problems = []
     for md in markdown_files():
-        if md.name in HISTORICAL:
-            continue
         for token in BACKTICK.findall(md.read_text(encoding="utf-8")):
             token = token.strip()
             if re.fullmatch(r"test_\w+", token) and token not in test_names | DEFINED | POOL_NAMES:

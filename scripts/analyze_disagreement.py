@@ -196,7 +196,7 @@ def main() -> int:
         "against an alternative model that differed in hyper-parameters *and* calibrator *and* "
         "features, using an absolute probability difference. The disagreement it measured was "
         "therefore partly a measure of those choices and partly a restatement of the PD level. "
-        "See `docs/AUDIT_REPORT.md`.",
+        "The earlier version is in the git history.",
     ]
     write_report(lines, paths, f"{run_name}", source)
     save_json(
