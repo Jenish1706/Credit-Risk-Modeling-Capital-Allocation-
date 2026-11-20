@@ -25,6 +25,16 @@
     "2014": 0.13726394783785445,
     "2015": 0.14886264866125373
   },
+  "test_window_counts": {
+    "test_h1": {
+      "rows": 120790,
+      "default_rate": 0.15124596406987334
+    },
+    "test_h2": {
+      "rows": 162236,
+      "default_rate": 0.14708819250967725
+    }
+  },
   "missingness_top": {
     "member_id": 1.0,
     "orig_projected_additional_accrued_interest": 0.9966612968258711,

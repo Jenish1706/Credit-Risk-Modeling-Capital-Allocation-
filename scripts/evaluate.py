@@ -128,6 +128,13 @@ def main() -> int:
     h2_rows = labelled[test_window_masks(labelled["issue_period"])["holdout"]]
     cdrift_h2 = calibration_drift(h2_rows, "_pd", period_column="issue_period", freq="Y")
     save_table(cdrift_h2, paths, f"{run_name}_exp07_calibration_drift_2015h2", index=False)
+    # G4: vintages 2010 to 2014-06 are the *training* window, so their AUC is in-sample. Label every
+    # quarter with its split so out-of-sample ranking can be read separately from in-sample.
+    cquarter = calibration_drift(labelled, "_pd", period_column="issue_period", freq="Q")
+    quarter_of = pd.PeriodIndex(labelled["issue_period"], freq="M").asfreq("Q").astype(str)
+    split_of_quarter = labelled["split"].groupby(quarter_of).agg(lambda v: v.mode().iloc[0])
+    cquarter.insert(1, "split", cquarter["vintage"].map(split_of_quarter))
+    save_table(cquarter, paths, f"{run_name}_exp07_calibration_drift_quarterly", index=False)
 
     lines += [
         "## EXP07 - how do model and policy degrade under drift?",

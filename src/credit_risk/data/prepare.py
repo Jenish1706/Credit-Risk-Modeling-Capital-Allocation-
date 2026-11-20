@@ -48,6 +48,7 @@ class PrepareReport:
     split_counts: dict[str, int] = field(default_factory=dict)
     default_rate_by_split: dict[str, float] = field(default_factory=dict)
     default_rate_by_vintage: dict[str, float] = field(default_factory=dict)
+    test_window_counts: dict[str, dict[str, float]] = field(default_factory=dict)
     missingness: dict[str, float] = field(default_factory=dict)
     availability_shift: dict[str, float] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
@@ -63,6 +64,7 @@ class PrepareReport:
             "split_counts": self.split_counts,
             "default_rate_by_split": self.default_rate_by_split,
             "default_rate_by_vintage": self.default_rate_by_vintage,
+            "test_window_counts": self.test_window_counts,
             "missingness_top": dict(
                 sorted(self.missingness.items(), key=lambda kv: -kv[1])[:40]
             ),
@@ -336,6 +338,19 @@ def _fill_report(df: pd.DataFrame, report: PrepareReport, windows: SplitWindows)
         sub = target[df["split"] == split].dropna()
         if len(sub):
             report.default_rate_by_split[split] = float(sub.mean())
+
+    # The test year is split in time (2015-H1 for selection, 2015-H2 for headlines); record both.
+    test_rows = df[df["split"] == "test"]
+    if len(test_rows):
+        from credit_risk.data.splits import test_window_masks
+
+        masks = test_window_masks(test_rows["issue_period"])
+        for key, label in (("dev", "test_h1"), ("holdout", "test_h2")):
+            window = test_rows.loc[masks[key], schema.TARGET_COLUMN].dropna()
+            report.test_window_counts[label] = {
+                "rows": int(masks[key].sum()),
+                "default_rate": float(window.mean()) if len(window) else float("nan"),
+            }
 
     vintage = df["issue_period"].dt.year if hasattr(df["issue_period"], "dt") else None
     if vintage is not None:
