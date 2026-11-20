@@ -5,9 +5,15 @@
 
 1. Every relative link in README.md and docs/ resolves to a file or directory.
 2. Every repository path named in backticks in docs/guide/05_CODE_WALKTHROUGH.md exists.
-3. Every path or test name in backticks in any markdown file (except the historical audit report) exists.
-4. Every function, method or class named in backticks with a call or class shape in the guide pages
-   that describe code (01, 05, 07) is defined somewhere in src/ or scripts/.
+3. Every path (under scripts/, src/, tests/, configs/, docs/, results/tables/, results/reports/) or
+   `path::test_name` in backticks in any markdown file (except the historical audit report) exists, and so
+   does every bare `test_...` name. A path followed by arguments (`scripts/x.py --flag`) is checked as a path;
+   the flags themselves are not checked.
+4. Every function, method or class named in backticks with a call shape (`name(`) in every guide page
+   is defined somewhere in src/, scripts/ or tests/.
+
+Not checked: command-line flags, paths under artifacts/, data/ or results/figures/ (untracked or
+generated), and prose descriptions of behaviour.
 
 Exit status is non-zero when anything is missing, and each problem is printed with its file.
 """
@@ -23,12 +29,11 @@ ROOT = Path(__file__).resolve().parents[1]
 LINK = re.compile(r"\]\(([^)\s]+)\)")
 BACKTICK = re.compile(r"`([^`\n]+)`")
 PATH_ROOTS = ("scripts/", "src/", "configs/", "tests/", "docs/")
-CODE_PAGES = ("01_CONCEPTS.md", "05_CODE_WALKTHROUGH.md", "07_TESTING.md")
 
 #: Names that appear as `name(...)` in prose but are not defined in this repository.
 EXTERNAL = {
     "pytest", "python", "pip", "conda", "git", "argmax", "sqrt", "ln", "mean", "ReLU", "act", "N",
-    "N_r", "importorskip", "qcut", "searchsorted", "pd", "np", "torch", "lgb", "bool", "int", "float", "len",
+    "N_r", "P", "l", "importorskip", "qcut", "searchsorted", "pd", "np", "torch", "lgb", "bool", "int", "float", "len",
 }
 
 
@@ -62,6 +67,10 @@ def missing_paths() -> list[str]:
     return problems
 
 
+#: Window/pool labels that look like test names but are data pools (`test_h1`, `test_h2`, `test_full`).
+POOL_NAMES = {"test_h1", "test_h2", "test_full"}
+DEFINED: set[str] = set()  # filled in missing_repository_references()
+
 REPO_PATH = re.compile(r"^(?:scripts|src|tests|configs|docs|results/tables|results/reports)/[\w./\-]+$")
 #: Documents that describe superseded history may name files that no longer exist.
 HISTORICAL = {"AUDIT_REPORT.md"}
@@ -70,13 +79,17 @@ HISTORICAL = {"AUDIT_REPORT.md"}
 def missing_repository_references() -> list[str]:
     """Every path-like or test-name token in backticks, in every markdown file, must exist."""
     test_names = _test_function_names()
+    DEFINED.update(defined_names())
     problems = []
     for md in markdown_files():
         if md.name in HISTORICAL:
             continue
         for token in BACKTICK.findall(md.read_text(encoding="utf-8")):
             token = token.strip()
-            path_part, _, func = token.partition("::")
+            if re.fullmatch(r"test_\w+", token) and token not in test_names | DEFINED | POOL_NAMES:
+                problems.append(f"{md.relative_to(ROOT)}: test does not exist -> {token}")
+                continue
+            path_part, _, func = token.split()[0].partition("::") if token.split() else ("", "", "")
             if REPO_PATH.match(path_part) and "*" not in path_part and "{" not in path_part:
                 if not (ROOT / path_part).exists():
                     problems.append(f"{md.relative_to(ROOT)}: path does not exist -> {token}")
@@ -112,8 +125,8 @@ def defined_names() -> set[str]:
 def missing_functions() -> list[str]:
     defined = defined_names()
     problems = []
-    for name in CODE_PAGES:
-        text = (ROOT / "docs" / "guide" / name).read_text(encoding="utf-8")
+    for page in sorted((ROOT / "docs" / "guide").glob("*.md")):
+        name, text = page.name, page.read_text(encoding="utf-8")
         for token in BACKTICK.findall(text):
             match = re.match(r"^(?:[A-Za-z_][\w]*\.)*([A-Za-z_][\w]*)\(", token.strip())
             if not match:
