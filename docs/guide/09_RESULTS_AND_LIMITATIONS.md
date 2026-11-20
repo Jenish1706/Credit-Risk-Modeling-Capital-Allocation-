@@ -7,24 +7,26 @@ each claim are in [04_METHODOLOGY.md](04_METHODOLOGY.md).
 
 ## Headline results with uncertainty
 
-Each row gives its interval or seed spread. The artifact behind each row is listed in the runbook
-([06_RUNBOOK.md](06_RUNBOOK.md), section 5).
+Rows carry a paired-bootstrap interval (EXP01, EXP03, EXP06), a seed spread (EXP04), a sign test with an
+odds-ratio interval (EXP08 to EXP10) or placebo intervals (EXP11). EXP02, EXP05, EXP07 and the deployment-realism
+row are single-fit point estimates with no interval. The artifact behind each row is listed in the runbook
+([06_RUNBOOK.md](06_RUNBOOK.md), section 6).
 
 <!-- BEGIN:results-table -->
 | # | Question | Result | Verdict |
 |---|---|---|---|
-| **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6606 → 0.6732** (+0.0126) on 2015-07..12 (full 2015: 0.6581 → 0.6705) `OBSERVED` | Material. Boosting justified |
+| **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6606 → 0.6732** (+0.0126, paired-bootstrap 95% CI [+0.0110, +0.0142], 2,000 draws) on 2015-07..12 (full 2015: 0.6581 → 0.6705) `OBSERVED` | Material: the whole interval is above the +0.01 AUC threshold. Boosting justified |
 | **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0198 → 0.0117** (intercept_only, chosen on 2015-01..06) on 2015-07..12 (full 2015: 0.0193 → 0.0110); slope 1.003 → 1.004 `OBSERVED` | Ranking is unchanged and ECE falls, but this is mostly a base-rate shift: a one-parameter intercept shift recovers 94% of the best calibrator's ECE gain |
-| **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Simulated diff vs 15% threshold: **-28,262**/episode (95% CI [-54,837, -2,616]) `SIMULATED` on 2015-07..12. Real book at observed exposure: **-36.9**/loan (95% CI [-47.1, -26.9]) `OBSERVED` on 2015-07..12 | **Expected-profit rule loses to a PD threshold on the real book.** Simulation CI excludes zero. Mechanism is measured below, not assumed |
+| **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Simulated diff vs 15% threshold: **-28,262**/episode (95% CI [-54,837, -2,616]) `SIMULATED` on 2015-07..12. Real book at observed exposure: **-36.9**/pool applicant (95% CI [-47.1, -26.9]) `OBSERVED` on 2015-07..12 | **Expected-profit rule loses to a PD threshold on the real book.** Simulation CI excludes zero. Mechanism is measured below, not assumed |
 | **EXP04** | Do graph cohort features add signal? | AUC **-0.0012** (mean over 5 LightGBM seeds). On 2015-07..12: ECE **0.0110 ± 0.0001 → 0.0048 ± 0.0005**, O/E **1.081 → 0.998** (EXP04/05 single-fit run: ECE 0.0109 → 0.0043, O/E 1.080 → 0.989) `OBSERVED` | No discrimination gain; **calibration gain survives both controls in every one of 5 seeds** (ΔECE B−tabular -0.0062 ± 0.0005, B−macro -0.0066 ± 0.0002, B−shuffled -0.0038 ± 0.0006; mean ± sd over seeds, per-seed paired bootstrap, 2015-07..12) |
-| **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6637** vs 0.6704 (aggregates) vs 0.6712 (tabular) on 2015-07..12 `OBSERVED` | **No.** The GNN loses to both |
-| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners, accept/reject at observed exposure (2015-07..12). Unconstrained: best learner thompson +17,398 vs myopic expected-profit (95% CI [-2,574, +37,136]). 60% budget: thompson -160 vs the 15% threshold (95% CI [-15,333, +14,180]) `SIMULATED` | Control holds: no learner significantly beats the myopic rule with unconstrained capital; **no learner significantly beats the fixed 15% threshold in any condition**; significantly worse than the threshold: budget_aware_q(greedy) (unconstrained, budget=0.60); linucb@alpha=1 (budget=0.35, budget=0.20); thompson (budget=0.20); learners that stopped lending (approval below 1%): linucb@alpha=1 (budget=0.35); thompson (budget=0.20); the validation-fitted shadow-price policy is significantly worse than the myopic rule at budget=0.35 |
-| **EXP07** | How does the model degrade under vintage drift? | O/E **0.861 (2010, a training vintage) → 1.082 (2015-07..12)** (full 2015: 1.077). AUC by quarter: in-sample training vintages 0.700–0.761, out-of-sample (validation and test) 0.665–0.675 `OBSERVED` | Calibration drifts across vintages (O/E rises from below 1 to above 1). Out-of-sample ranking is flat, so most of the fall in AUC across vintages is in-sample optimism, not drift |
-| **Deployment realism** | What if the model only knows the labels available at the deployment date? | Trained only on outcomes knowable by 2014-12, on 2015-07..12: AUC **0.6712 → 0.6503**, ECE **0.0109 → 0.0367**, O/E **1.080 → 1.294** (full 2015: AUC 0.6690 → 0.6478, O/E 1.076 → 1.286) `OBSERVED` | **The standard out-of-time benchmark overstates day-one performance:** most training labels were not yet knowable at the deployment date, and using only those that were makes ranking and calibration worse |
+| **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6637** vs 0.6704 (aggregates) vs 0.6712 (tabular) on 2015-07..12; the GNN is one training run `OBSERVED` | **No.** The GNN loses to both |
+| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners, accept/reject at observed exposure (2015-07..12). Unconstrained: best learner thompson +17,398 vs myopic expected-profit (95% CI [-2,574, +37,136]). 60% budget: thompson -160 vs the 15% threshold (95% CI [-15,333, +14,180]) `SIMULATED` | Control: no learner significantly beats the myopic rule with unconstrained capital (not significant is not equal: the best interval reaches +37,136); under a binding budget some learners do significantly beat the myopic rule: thompson, linucb@alpha=1 (budget=0.60); **no learner significantly beats the fixed 15% threshold in any condition**; significantly worse than the threshold: budget_aware_q(greedy) (unconstrained, budget=0.60); linucb@alpha=1 (budget=0.35, budget=0.20); thompson (budget=0.20); learners that stopped lending (approval below 1%): linucb@alpha=1 (budget=0.35); thompson (budget=0.20); the validation-fitted shadow-price policy is significantly worse than the myopic rule at budget=0.35 |
+| **EXP07** | How does the model degrade under vintage drift? | O/E **0.861 (2010, a training vintage) → 1.082 (2015-07..12)** (full 2015: 1.077). AUC by quarter: in-sample training vintages 0.700–0.761, out-of-sample (validation and test) 0.665–0.675 `OBSERVED` | Calibration drifts across vintages (O/E rises from below 1 to above 1). Out-of-sample ranking is flat over the 18 months observed, so the fall in AUC from the training vintages to the out-of-sample quarters is mostly in-sample optimism. Every out-of-sample quarter is a late one, so this cannot rule out drift in ranking between earlier vintages |
+| **Deployment realism** | What if the model only knows the labels available at the deployment date? | Trained only on loans resolved by 2014-12, on 2015-07..12: AUC **0.6712 → 0.6503**, ECE **0.0109 → 0.0367**, O/E **1.080 → 1.294** (full 2015: AUC 0.6690 → 0.6478, O/E 1.076 → 1.286). The resolved loans are a selected sample: default rate 16.3% against 12.6% for all loans issued in the training window, 10.4% against 13.3% in the calibration window `OBSERVED` | **A naive 'train on what has resolved' model is clearly worse on day one:** ranking and calibration both fall. The comparison mixes staleness with selection on resolution, so it does not isolate staleness, and no arm here trains on matured vintages only |
 | **EXP08** | Does autoencoder anomaly flag untrustworthy PDs? | H1 decision **KEEP**. On 2015-07..12: survives PD control in **10/10** PD strata, two-sided sign test p=0.0020, odds ratio 1.033/SD [1.021, 1.046] (full 2015: 10/10, OR 1.032) `OBSERVED` | **KEEP**, confirmed on holdout |
-| **EXP09** | Does VGAE relational uncertainty flag them? | H1 decision **REJECT**. On 2015-07..12: survives PD control in **3/10** PD strata, two-sided sign test p=0.3438, odds ratio 1.002/SD [0.988, 1.017] (full 2015: 5/10, OR 1.002) `OBSERVED` | **REJECT** |
-| **EXP10** | Does model disagreement flag them? | H1 decision **REJECT**. On 2015-07..12: survives PD control in **7/10** PD strata, two-sided sign test p=0.3438, odds ratio 1.050/SD [1.033, 1.068] (full 2015: 9/10, OR 1.045) `OBSERVED` | **REJECT** |
-| **EXP11** | Does acting on those signals improve the book? | Default rate **16.62% → 15.88%** on 2015-07..12. Placebo exclusion (200 draws, 95% intervals): random 16.08%–16.26%, APR-matched 15.87%–16.05% `OBSERVED` | **Beats random exclusion but not the APR-matched placebo.** The signal book is 0.09 points below the APR-matched placebo mean, 12% of its 0.74-point reduction, and +0.008 points from that interval's lower edge, so most of the reduction is the lower-APR refill; the margin is borderline |
+| **EXP09** | Does VGAE relational uncertainty flag them? | H1 decision **REJECT**. On 2015-07..12: survives PD control in **3/10** PD strata, two-sided sign test p=0.3438, odds ratio 1.002/SD [0.988, 1.017] (full 2015: 5/10, OR 1.002) `OBSERVED` | **REJECT** on H1 (4/10 strata, two-sided sign-test p=0.7539; the rule needs p<0.05 with the gap in the right direction). The odds-ratio interval is reported but is not part of the rule |
+| **EXP10** | Does model disagreement flag them? | H1 decision **REJECT**. On 2015-07..12: survives PD control in **7/10** PD strata, two-sided sign test p=0.3438, odds ratio 1.050/SD [1.033, 1.068] (full 2015: 9/10, OR 1.045) `OBSERVED` | **REJECT** on H1 (8/10 strata, two-sided sign-test p=0.1094; the rule needs p<0.05 with the gap in the right direction). The odds-ratio interval is reported but is not part of the rule |
+| **EXP11** | Does acting on those signals improve the book? | Default rate **16.62% → 15.88%** on 2015-07..12. Placebo exclusion (200 draws, 95% intervals): random 16.08%–16.26%, APR-matched 15.87%–16.05%. Return on capital 6.82% → 6.87% (random 6.73%–6.87%, APR-matched 6.77%–6.91%) `OBSERVED` | **Beats random exclusion but not the APR-matched placebo.** The signal book is 0.09 points below the APR-matched placebo mean, 12% of its 0.74-point reduction, and +0.008 points from that interval's lower edge, so most of the reduction is the lower-APR refill; the margin is borderline; return on capital sits inside both placebo intervals, so there is no evidence of a profit gain |
 <!-- END:results-table -->
 
 ## Decision layer and reinforcement learning in detail
@@ -36,7 +38,9 @@ Intervals are 95% paired-bootstrap intervals; a starred difference has an interv
 <!-- BEGIN:rl-section -->
 **RL does not earn its place here, and that is the finding.** Learning policies (LinUCB, Thompson sampling, Q-learning) choose between accept and reject at the exposure that was actually funded, so every simulated outcome is a real one. They are trained on the validation pool and their parameters are **frozen** during every test-pool episode; an earlier version kept updating them on realised test outcomes after every decision, which no deployed policy can do (loan outcomes take up to 36 months to arrive).
 
-The experiment carries a control. With unconstrained capital the myopic expected-profit rule should be near-optimal. The best learner (thompson) earns 50,883 vs the myopic rule's 33,486 (paired difference +17,398, 95% CI [-2,574, +37,136]): **the control holds**. The plain 15% PD threshold beats the myopic rule by +28,262 (95% CI [+2,616, +54,837]), consistent with the real-book audit below.
+The experiment carries a control. With unconstrained capital the myopic expected-profit rule should be near-optimal. The best learner (thompson) earns 50,883 vs the myopic rule's 33,486 (paired difference +17,398, 95% CI [-2,574, +37,136]): **the control is not breached** (the difference is not significant, though the interval is wide). The plain 15% PD threshold beats the myopic rule by +28,262 (95% CI [+2,616, +54,837]), consistent with the real-book audit below.
+
+Under budget=0.60, learners do significantly beat the myopic rule (thompson +26,236 [+7,044, +44,592]; linucb@alpha=1 +24,745 [+5,999, +42,610]) (the myopic rule is itself -26,396 against the threshold there); against the 15% threshold the best of them, thompson, is -160 [-15,333, +14,180].
 
 Policy-level results by capital condition (mean over 30 episodes, 95% bootstrap CI on the paired difference), against the myopic expected-profit policy and the fixed 15% PD threshold:
 
@@ -103,9 +107,9 @@ Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M d
 
 **Why the expected-profit rule underperforms.** Measured on the real book at the exposure that was actually funded, so no simulator is involved:
 
-- On the 2015-07..12 holdout, accepting every loan with predicted profit above zero earns **-36.9** per loan vs the 15% PD threshold (95% CI [-47.1, -26.9], -5.99M in total). On the validation pool the two rules are indistinguishable (-1.5 per loan, CI [-14.8, +11.8]).
+- On the 2015-07..12 holdout, accepting every loan with predicted profit above zero earns **-36.9** per pool applicant vs the 15% PD threshold (95% CI [-47.1, -26.9], -5.99M in total). On the validation pool the two rules are indistinguishable (-1.5 per pool applicant, CI [-14.8, +11.8]).
 - Predicted profit on the holdout exceeds realised profit by **31.0M** (19% of the prediction). By source: default count (PD too low) 55%, good-loan yield curve 22%, loss-severity curve 23%. Refitting the two cashflow curves on the holdout itself (an oracle diagnostic, not deployable) removes the yield and severity errors (+0.4M, -0.9M) and leaves the PD effect (-18.5M).
-- Cashflow drift is therefore a real but secondary cause. Refitting the curves on the validation window narrows the shortfall to -28.2 per loan (CI [-38.2, -18.6]), still significantly negative.
+- Cashflow drift is therefore a real but secondary cause. Refitting the curves on the validation window narrows the shortfall to -28.2 per pool applicant (CI [-38.2, -18.6]), still significantly negative.
 - The PD model excludes `int_rate` by design, while the rule's revenue term rises with APR. Observed/expected defaults on the holdout run from **0.67** in the lowest APR quintile to **1.38** in the highest, so risk is understated exactly where predicted profit is largest. Predicted profit is over-dispersed: the top predicted-profit decile is predicted at +1,426 per loan and realises +132.
 - Simulator caveat: in the exposure-changing sensitivity space 0% of the expected-profit policy's approvals are at the observed exposure (mean multiplier 1.47x) vs 100% for the threshold, so that comparison mixes realised and modelled returns. The headline EXP03/EXP06 tables use accept/reject at the observed exposure, where every outcome is real.
 
@@ -126,14 +130,14 @@ Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M d
 
 **PD ablations: LendingClub's pricing and the cohort features.** The production PD excludes `int_rate`, `grade` and `sub_grade` by design (they are LendingClub's own risk score). Two refits are audited on the same real book (calibrator chosen on 2015-01..06, every number on 2015-07..12). Neither is a replacement for the production PD: the first consumes the incumbent's pricing, and the second is the EXP04 comparison arm.
 
-| PD | ROC-AUC | ECE | O/E | O/E, lowest → highest APR quintile | Expected-profit rule vs 15% threshold, same PD (per loan, 95% CI) | vs production-PD threshold |
+| PD | ROC-AUC | ECE | O/E | O/E, lowest → highest APR quintile | Expected-profit rule vs 15% threshold, same PD (per pool applicant, 95% CI) | vs production-PD threshold |
 |---|---|---|---|---|---|---|
 | Production PD (primary features) | 0.6732 | 0.0117 | 1.082 | 0.67 → 1.38 | -36.9 [-47.1, -26.9] | -36.9 [-47.1, -26.9] |
 | + LendingClub grade and APR (ablation) | 0.6934 | 0.0178 | 1.134 | 0.97 → 1.18 | -23.6 [-33.9, -13.4] | -25.8 [-35.8, -16.2] |
 | + cohort features (EXP04 arm B) | 0.6704 | 0.0043 | 0.989 | 0.61 → 1.30 | -34.3 [-45.0, -23.8] | -27.7 [-38.1, -17.8] |
 
-- With LendingClub's grade and APR in the PD, the observed/expected gradient across APR quintiles flattens to 0.97–1.18 and the expected-profit rule still loses to the 15% threshold under that PD (-23.6 per loan, against -36.9 with the production PD).
-- With the cohort features, overall observed/expected is 0.989 (level fixed), the gradient across APR quintiles is 0.61–1.30, and the expected-profit rule still loses to the 15% threshold under that PD (-34.3 per loan).
+- With LendingClub's grade and APR in the PD, the observed/expected gradient across APR quintiles flattens to 0.97–1.18 and the expected-profit rule still loses to the 15% threshold under that PD (-23.6 per pool applicant, against -36.9 with the production PD).
+- With the cohort features, overall observed/expected is 0.989 (level fixed), the gradient across APR quintiles is 0.61–1.30, and the expected-profit rule still loses to the 15% threshold under that PD (-34.3 per pool applicant).
 - Fixing the level of the PD did not fix the decision: the rule still loses while an APR gradient in the PD's errors remains. The refit that flattens that gradient (LendingClub's pricing) narrows the shortfall more, though it does not close it, so pricing information along APR matters more here than calibration in the large.
 <!-- END:rl-section -->
 
@@ -184,14 +188,17 @@ calibration ratios quoted under the wrong label, and unsupported causal explanat
   holdout, so episodes overlap and the paired intervals understate population-level uncertainty.
 - **Pre-specified, not tuned, but arbitrary:** the 15% threshold, the 80% budget fraction, the 90th
   percentile flag, the half-exposure cap, learner hyper-parameters.
-- **Single runs.** GraphSAGE, the autoencoder and the VGAE are single runs; only EXP04's LightGBM
+- **Single runs.** The bandits and the Q-learner are trained once per capital condition, so the
+  learners that stopped lending are single-run outcomes, not a measured failure rate. GraphSAGE, the
+  autoencoder and the VGAE are single runs; only EXP04's LightGBM
   arms are repeated over seeds, and the seed varies the model fit only (the data, the cohort features
   and the single key shuffle are fixed).
 
 **Method**
 
 - **Training labels were not all knowable at the deployment date.** Most validation-window loans were
-  still open at the cutoff; the deployment-realism audit quantifies the effect on the PD model, and
+  still open at the cutoff; the deployment-realism audit measures what a resolved-only training set does to the PD model (a
+  selected sample, so it does not isolate staleness), and
   the bandits' training on validation outcomes is optimistic for them. A delayed-feedback mode is not
   built.
 - **The PD is blind to APR by design,** and the decision rule leans on APR; the audit and the

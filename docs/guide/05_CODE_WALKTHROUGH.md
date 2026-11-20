@@ -121,7 +121,7 @@ an ungated cohort rate leaks measurably).
 
 | | |
 |---|---|
-| Script | [`scripts/train_baseline.py`](../../scripts/train_baseline.py) (`--skip-logistic`, `--skip-search`, `--no-figures`) |
+| Script | [`scripts/train_baseline.py`](../../scripts/train_baseline.py) (`--skip-logistic`, `--skip-search`, `--no-figures`), then [`scripts/analyze_exp01_ci.py`](../../scripts/analyze_exp01_ci.py) (paired-bootstrap interval on the EXP01 AUC difference) |
 | Config | [`configs/models/boosting.yaml`](../../configs/models/boosting.yaml), [`configs/models/logistic.yaml`](../../configs/models/logistic.yaml) |
 | Out | `artifacts/boosting_{features,logistic,boosting}.pkl`, `artifacts/boosting_calibrator_*.pkl`, `artifacts/boosting_pd_test.npy`, `results/tables/boosting_exp01_*`, `boosting_exp02_*`, `boosting_calibration_choice.json` |
 
@@ -270,7 +270,7 @@ Tests: `tests/test_decision.py`, `tests/test_simulation.py`.
 |---|---|
 | Scripts | [`scripts/analyze_profit_calibration.py`](../../scripts/analyze_profit_calibration.py), [`scripts/analyze_apr_in_pd.py`](../../scripts/analyze_apr_in_pd.py), [`scripts/analyze_deployment_realism.py`](../../scripts/analyze_deployment_realism.py) |
 | Library | [`decision/profit_audit.py`](../../src/credit_risk/decision/profit_audit.py) |
-| Out | `results/tables/profit_calibration_*.csv`, `apr_in_pd_*.csv`, `deployment_realism_p1_5.csv` |
+| Out | `results/tables/profit_calibration_*.csv`, `apr_in_pd_*.csv`, `deployment_realism_p1_5.csv`, `deployment_realism_selection.csv` |
 
 - `gap_decomposition(pd_hat, exposure, apr, realised_return, defaulted, cashflow) -> dict` splits
   realised minus predicted profit into `pd_effect`, `yield_effect` and `severity_effect`, which sum to

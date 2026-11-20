@@ -53,10 +53,17 @@ def render_results_table() -> str:
     df_fu = pd.read_csv(TABLES_DIR / "boosting_exp01_models.csv", index_col=0)
     auc = lambda d: (float(d.loc["logistic", "roc_auc"]), float(d.loc["lightgbm", "roc_auc"]))  # noqa: E731
     (l2, g2), (lf, gf) = auc(df_h2), auc(df_fu)
+    ci1 = json.loads((TABLES_DIR / "exp01_auc_difference.json").read_text(encoding="utf-8"))
     res_exp01 = (
-        f"AUC **{l2:.4f} → {g2:.4f}** ({g2 - l2:+.4f}) on {H2} ({FULL}: {lf:.4f} → {gf:.4f}) `OBSERVED`"
+        f"AUC **{l2:.4f} → {g2:.4f}** ({g2 - l2:+.4f}, paired-bootstrap 95% CI [{ci1['ci_low']:+.4f}, "
+        f"{ci1['ci_high']:+.4f}], {ci1['n_bootstrap']:,} draws) on {H2} ({FULL}: {lf:.4f} → {gf:.4f}) `OBSERVED`"
     )
-    exp01_verdict = "Material. Boosting justified" if g2 - l2 >= 0.01 else "Small margin; logistic remains defensible"
+    if ci1["ci_low"] >= 0.01:
+        exp01_verdict = "Material: the whole interval is above the +0.01 AUC threshold. Boosting justified"
+    elif ci1["ci_low"] > 0:
+        exp01_verdict = "Real but small: the interval excludes zero but reaches below +0.01 AUC; logistic remains defensible"
+    else:
+        exp01_verdict = "No significant difference; logistic regression is enough"
 
     # EXP02
     choice = json.loads((TABLES_DIR / "boosting_calibration_choice.json").read_text(encoding="utf-8"))
@@ -91,7 +98,7 @@ def render_results_table() -> str:
     real = _profit_rules("test_h2").loc["expected_profit>0 (train-fit cashflow)"]
     res_exp03 = (
         f"Simulated diff vs 15% threshold: **{diff_m:+,.0f}**/episode (95% CI [{ci_l:+,.0f}, {ci_u:+,.0f}]) `SIMULATED` on {H2}. "
-        f"Real book at observed exposure: **{real['diff_vs_fixed_threshold_per_loan']:+.1f}**/loan "
+        f"Real book at observed exposure: **{real['diff_vs_fixed_threshold_per_loan']:+.1f}**/pool applicant "
         f"(95% CI [{real['diff_ci_low']:+.1f}, {real['diff_ci_high']:+.1f}]) `OBSERVED` on {H2}"
     )
     if real["diff_ci_high"] < 0:
@@ -134,7 +141,7 @@ def render_results_table() -> str:
     )
 
     auc_c = float(df_exp04.loc["C_graphsage", "roc_auc"])
-    res_exp05 = f"AUC **{auc_c:.4f}** vs {auc_b:.4f} (aggregates) vs {auc_a:.4f} (tabular) on {H2} `OBSERVED`"
+    res_exp05 = f"AUC **{auc_c:.4f}** vs {auc_b:.4f} (aggregates) vs {auc_a:.4f} (tabular) on {H2}; the GNN is one training run `OBSERVED`"
     exp05_verdict = (
         "**No.** The GNN loses to both" if auc_c < min(auc_a, auc_b)
         else "**Mixed.** See table" if auc_c < max(auc_a, auc_b) else "**Yes.** The GNN beats both"
@@ -175,9 +182,12 @@ def render_results_table() -> str:
         f"{out_sample.min():.3f}–{out_sample.max():.3f} `OBSERVED`"
     )
     oos_flat = float(out_sample.max() - out_sample.min()) < 0.02
+    oos_months = 3 * len(out_sample)
     exp07_verdict = (
         "Calibration drifts across vintages (O/E rises from below 1 to above 1). Out-of-sample ranking is "
-        "flat, so most of the fall in AUC across vintages is in-sample optimism, not drift"
+        f"flat over the {oos_months} months observed, so the fall in AUC from the training vintages to the "
+        "out-of-sample quarters is mostly in-sample optimism. Every out-of-sample quarter is a late one, so "
+        "this cannot rule out drift in ranking between earlier vintages"
         if oos_flat and float(in_sample.mean() - out_sample.mean()) > 0.02
         else "Calibration and ranking both move across vintages; see the quarterly table"
     )
@@ -185,17 +195,24 @@ def render_results_table() -> str:
     # CR-12: deployment realism (labels that were not yet knowable at the deployment date)
     dr = pd.read_csv(TABLES_DIR / "deployment_realism_p1_5.csv")
     std, real = dr.iloc[0], dr.iloc[1]
+    sel = pd.read_csv(TABLES_DIR / "deployment_realism_selection.csv")
+    tr_s, va_s = sel.iloc[0], sel.iloc[1]
     res_dr = (
-        f"Trained only on outcomes knowable by 2014-12, on {H2}: AUC **{std['h2_test_auc']:.4f} → {real['h2_test_auc']:.4f}**, "
+        f"Trained only on loans resolved by 2014-12, on {H2}: AUC **{std['h2_test_auc']:.4f} → {real['h2_test_auc']:.4f}**, "
         f"ECE **{std['h2_test_ece']:.4f} → {real['h2_test_ece']:.4f}**, O/E **{std['h2_observed_expected_ratio']:.3f} → "
         f"{real['h2_observed_expected_ratio']:.3f}** ({FULL}: AUC {std['test_auc']:.4f} → {real['test_auc']:.4f}, "
-        f"O/E {std['observed_expected_ratio']:.3f} → {real['observed_expected_ratio']:.3f}) `OBSERVED`"
+        f"O/E {std['observed_expected_ratio']:.3f} → {real['observed_expected_ratio']:.3f}). The resolved loans are "
+        f"a selected sample: default rate {tr_s['default_rate_resolved_loans']:.1%} against "
+        f"{tr_s['default_rate_all_loans']:.1%} for all loans issued in the training window, "
+        f"{va_s['default_rate_resolved_loans']:.1%} against {va_s['default_rate_all_loans']:.1%} in the calibration "
+        "window `OBSERVED`"
     )
     worse = real["h2_test_auc"] < std["h2_test_auc"] and real["h2_test_ece"] > std["h2_test_ece"]
     dr_verdict = (
-        "**The standard out-of-time benchmark overstates day-one performance:** most training labels were not "
-        "yet knowable at the deployment date, and using only those that were makes ranking and calibration worse"
-        if worse else "Using only labels knowable at the deployment date does not make the model worse"
+        "**A naive 'train on what has resolved' model is clearly worse on day one:** ranking and calibration both "
+        "fall. The comparison mixes staleness with selection on resolution, so it does not isolate staleness, and "
+        "no arm here trains on matured vintages only"
+        if worse else "Training only on resolved loans does not make the model worse"
     )
 
     # EXP08 / EXP09 / EXP10: decision on 2015-01..06, evidence on the 2015-07..12 holdout
@@ -212,7 +229,12 @@ def render_results_table() -> str:
         if rec["decision"] == "KEEP":
             verdict = "**KEEP**, confirmed on holdout" if rec["holdout_confirms"] else "**KEEP** on H1, **not confirmed** on holdout"
         else:
-            verdict = "**REJECT**"
+            sel_h1 = w["selection_h1"]
+            verdict = (
+                f"**REJECT** on H1 ({sel_h1['n_strata_positive']}/{sel_h1['n_strata']} strata, two-sided sign-test "
+                f"p={sel_h1['sign_test_p_twosided']:.4f}; the rule needs p<0.05 with the gap in the right direction). "
+                "The odds-ratio interval is reported but is not part of the rule"
+            )
         return res, verdict
 
     res_exp08, exp08_verdict = signal_row("exp08_blindspots", "survives PD control")
@@ -227,10 +249,16 @@ def render_results_table() -> str:
     rnd_lo, rnd_hi = (x * 100 for x in pj["random_default_ci"])
     apr_lo, apr_hi = (x * 100 for x in pj["apr_matched_default_ci"])
     apr_mean = pj["apr_matched_default_mean"] * 100
+    roc_a = float(df_exp11[df_exp11["policy"] == "A_pd_ranked"]["return_on_capital"].iloc[0]) * 100
+    roc_b = float(df_exp11[df_exp11["policy"] == "B_blindspot_aware"]["return_on_capital"].iloc[0]) * 100
+    rr_lo, rr_hi = (x * 100 for x in pj["random_roc_ci"])
+    ar_lo, ar_hi = (x * 100 for x in pj["apr_matched_roc_ci"])
     res_exp11 = (
         f"Default rate **{def_a:.2f}% → {def_b:.2f}%** on {H2}. Placebo exclusion (200 draws, 95% intervals): "
-        f"random {rnd_lo:.2f}%–{rnd_hi:.2f}%, APR-matched {apr_lo:.2f}%–{apr_hi:.2f}% `OBSERVED`"
+        f"random {rnd_lo:.2f}%–{rnd_hi:.2f}%, APR-matched {apr_lo:.2f}%–{apr_hi:.2f}%. Return on capital "
+        f"{roc_a:.2f}% → {roc_b:.2f}% (random {rr_lo:.2f}%–{rr_hi:.2f}%, APR-matched {ar_lo:.2f}%–{ar_hi:.2f}%) `OBSERVED`"
     )
+    roc_inside = rr_lo <= roc_b <= rr_hi and ar_lo <= roc_b <= ar_hi
     below_mean = apr_mean - def_b
     share = below_mean / (def_a - def_b) if def_a > def_b else float("nan")
     if pj["signal_beats_random"] and pj["signal_beats_apr_matched"]:
@@ -244,6 +272,8 @@ def render_results_table() -> str:
         )
     else:
         exp11_verdict = "**Null result.** Risk reduction is driven by refilling budget with safer loans, not blind-spot selectivity"
+    if roc_inside:
+        exp11_verdict += "; return on capital sits inside both placebo intervals, so there is no evidence of a profit gain"
 
     rows = [
         ("EXP01", "Does non-linear modelling beat logistic regression?", res_exp01, exp01_verdict),
@@ -299,7 +329,18 @@ def _exp06_verdict(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) 
     if sig(cond, "unconstrained", "win"):
         parts.append("**Control breached:** learners significantly beat the myopic rule with unconstrained capital")
     else:
-        parts.append("Control holds: no learner significantly beats the myopic rule with unconstrained capital")
+        unc = cond["unconstrained"].loc[_learners(cond["unconstrained"])]
+        parts.append(
+            "Control: no learner significantly beats the myopic rule with unconstrained capital (not significant "
+            f"is not equal: the best interval reaches {unc['ci_high'].max():+,.0f})"
+        )
+    beat_myopic = {c: sig(cond, c, "win") for c in constrained}
+    beat_myopic = {c: v for c, v in beat_myopic.items() if v}
+    if beat_myopic:
+        parts.append(
+            "under a binding budget some learners do significantly beat the myopic rule: "
+            + "; ".join(f"{', '.join(v)} ({c})" for c, v in beat_myopic.items())
+        )
     def by_learner(side):
         found: dict[str, list[str]] = {}
         for c in cond:
@@ -327,7 +368,6 @@ def _exp06_verdict(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) 
     ]
     if lam_loss:
         parts.append("the validation-fitted shadow-price policy is significantly worse than the myopic rule at " + ", ".join(lam_loss))
-    del constrained
     return "; ".join(parts)
 
 
@@ -423,6 +463,34 @@ def _exp06_policy_notes(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFra
     return notes
 
 
+def _binding_budget_notes(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) -> list[str]:
+    """Where learners significantly beat the myopic rule under a budget, say so and say what that is worth."""
+    notes = []
+    for c in cond:
+        if c == "unconstrained":
+            continue
+        d = cond[c].loc[_learners(cond[c])]
+        wins = d[d["ci_low"] > 0]
+        if wins.empty:
+            continue
+        t = thr[c]
+        listed = "; ".join(
+            f"{n} {r['mean_difference']:+,.0f} [{r['ci_low']:+,.0f}, {r['ci_high']:+,.0f}]" for n, r in wins.iterrows()
+        )
+        best = max(wins.index, key=lambda n: t.loc[n, "mean_difference"])
+        myopic = (
+            f" (the myopic rule is itself {t.loc['expected_profit', 'mean_difference']:+,.0f} against the threshold there)"
+            if "expected_profit" in t.index else ""
+        )
+        notes.append(
+            f"Under {c}, learners do significantly beat the myopic rule ({listed}){myopic}; against the 15% threshold "
+            f"the best of them, {best}, is {t.loc[best, 'mean_difference']:+,.0f} "
+            f"[{t.loc[best, 'ci_low']:+,.0f}, {t.loc[best, 'ci_high']:+,.0f}]."
+        )
+        notes.append("")
+    return notes
+
+
 def render_rl_paragraph() -> str:
     """The prose under the results table, with every number read from the EXP06 artifacts."""
     cond = _exp06_conditions()
@@ -446,11 +514,13 @@ def render_rl_paragraph() -> str:
         f"rule should be near-optimal. The best learner ({best}) earns {float(unc[best]):,.0f} vs the "
         f"myopic rule's {float(unc['expected_profit']):,.0f} (paired difference "
         f"{bd['mean_difference']:+,.0f}, 95% CI [{bd['ci_low']:+,.0f}, {bd['ci_high']:+,.0f}]): "
-        + ("**the control is breached**." if breached else "**the control holds**.")
+        + ("**the control is breached**." if breached else
+           "**the control is not breached** (the difference is not significant, though the interval is wide).")
         + f" The plain 15% PD threshold beats the myopic rule by {thr_unc['mean_difference']:+,.0f} "
         f"(95% CI [{thr_unc['ci_low']:+,.0f}, {thr_unc['ci_high']:+,.0f}]), consistent with the "
         "real-book audit below.",
         "",
+        *_binding_budget_notes(cond, thr),
         "Policy-level results by capital condition (mean over 30 episodes, 95% bootstrap CI on the "
         "paired difference), against the myopic expected-profit policy and the fixed 15% PD threshold:",
         "",
@@ -516,11 +586,11 @@ def render_profit_paragraph() -> str:
         "exposure that was actually funded, so no simulator is involved:",
         "",
         f"- On the 2015-07..12 holdout, accepting every loan with predicted profit above zero earns "
-        f"**{test.loc[ep, 'diff_vs_fixed_threshold_per_loan']:+.1f}** per loan vs the 15% PD "
+        f"**{test.loc[ep, 'diff_vs_fixed_threshold_per_loan']:+.1f}** per pool applicant vs the 15% PD "
         f"threshold (95% CI [{test.loc[ep, 'diff_ci_low']:+.1f}, {test.loc[ep, 'diff_ci_high']:+.1f}], "
         f"{test.loc[ep, 'diff_vs_fixed_threshold_total'] / 1e6:+.2f}M in total). On the validation "
         f"pool the two rules are indistinguishable ({valid.loc[ep, 'diff_vs_fixed_threshold_per_loan']:+.1f} "
-        f"per loan, CI [{valid.loc[ep, 'diff_ci_low']:+.1f}, {valid.loc[ep, 'diff_ci_high']:+.1f}]).",
+        f"per pool applicant, CI [{valid.loc[ep, 'diff_ci_low']:+.1f}, {valid.loc[ep, 'diff_ci_high']:+.1f}]).",
         f"- Predicted profit on the holdout exceeds realised profit by **{gap / 1e6:.1f}M** "
         f"({gap / float(d['predicted_total']):.0%} of the prediction). By source: default count "
         f"(PD too low) {pct(d['pd_effect']):.0f}%, good-loan yield curve {pct(d['yield_effect']):.0f}%, "
@@ -530,7 +600,7 @@ def render_profit_paragraph() -> str:
         f"and leaves the PD effect ({d_oracle['pd_effect'] / 1e6:+.1f}M).",
         f"- Cashflow drift is therefore a real but secondary cause. Refitting the curves on the "
         f"validation window narrows the shortfall to {test.loc[ep_valid_fit, 'diff_vs_fixed_threshold_per_loan']:+.1f} "
-        f"per loan (CI [{test.loc[ep_valid_fit, 'diff_ci_low']:+.1f}, {test.loc[ep_valid_fit, 'diff_ci_high']:+.1f}]), "
+        f"per pool applicant (CI [{test.loc[ep_valid_fit, 'diff_ci_low']:+.1f}, {test.loc[ep_valid_fit, 'diff_ci_high']:+.1f}]), "
         f"still significantly negative.",
         f"- The PD model excludes `int_rate` by design, while the rule's revenue term rises with APR. "
         f"Observed/expected defaults on the holdout run from **{by_apr.iloc[0]['observed_over_expected']:.2f}** in the "
@@ -595,7 +665,7 @@ def render_apr_ablation_paragraph() -> str:
         "2015-07..12). Neither is a replacement for the production PD: the first consumes the "
         "incumbent's pricing, and the second is the EXP04 comparison arm.",
         "",
-        "| PD | ROC-AUC | ECE | O/E | O/E, lowest → highest APR quintile | Expected-profit rule vs 15% threshold, same PD (per loan, 95% CI) | vs production-PD threshold |",
+        "| PD | ROC-AUC | ECE | O/E | O/E, lowest → highest APR quintile | Expected-profit rule vs 15% threshold, same PD (per pool applicant, 95% CI) | vs production-PD threshold |",
         "|---|---|---|---|---|---|---|",
     ]
     for source in sources:
@@ -615,7 +685,7 @@ def render_apr_ablation_paragraph() -> str:
         lines.append(
             f"- With LendingClub's grade and APR in the PD, the observed/expected gradient across APR quintiles "
             f"flattens to {glo:.2f}–{ghi:.2f} and the expected-profit rule {_rule_phrase(g)} the 15% threshold under "
-            f"that PD ({g['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan, against "
+            f"that PD ({g['diff_vs_same_pd_threshold_per_loan']:+.1f} per pool applicant, against "
             f"{base['diff_vs_same_pd_threshold_per_loan']:+.1f} with the production PD)."
         )
     if "cohort_features_pd" in sources:
@@ -628,7 +698,7 @@ def render_apr_ablation_paragraph() -> str:
             f"- With the cohort features, overall observed/expected is {level:.3f} "
             f"({'level fixed' if level_fixed else 'level not fixed'}), the gradient across APR quintiles is "
             f"{clo:.2f}–{chi:.2f}, and the expected-profit rule {_rule_phrase(c)} the 15% threshold under that PD "
-            f"({c['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan)."
+            f"({c['diff_vs_same_pd_threshold_per_loan']:+.1f} per pool applicant)."
         )
         if level_fixed and gradient_left and c["same_ci_high"] < 0:
             sentence = (
@@ -655,6 +725,16 @@ def render_how_built() -> str:
     by_apr = pd.read_csv(TABLES_DIR / "apr_in_pd_by_apr.csv")
     prim = by_apr[by_apr["pool"] == "primary_pd"].sort_values("apr_quintile")
     lo, hi = float(prim.iloc[0]["observed_over_expected"]), float(prim.iloc[-1]["observed_over_expected"])
+    cond6, thr6 = _exp06_conditions(), _exp06_conditions(kind="diffthr")
+    learner_wins = [c for c in thr6 if (thr6[c].loc[_learners(thr6[c]), "ci_low"] > 0).any()]
+    lam_worse = [
+        c for c in cond6
+        if any(p.startswith("expected_profit(lambda=") and cond6[c].loc[p, "ci_high"] < 0 for p in cond6[c].index)
+    ]
+    step4_tail = (
+        "no learned policy significantly beats the threshold in any capital condition"
+        if not learner_wins else f"learned policies beat the threshold in {', '.join(learner_wins)}"
+    ) + ("; the validation-fitted shadow-price policy is worse than the myopic rule" if lam_worse else "")
     lines = [
         "Each step answers a question the previous result made necessary. The experiment ids refer to the "
         "table below, which keeps them as references.",
@@ -663,14 +743,14 @@ def render_how_built() -> str:
         "a logistic baseline on a window no selection touched.",
         "2. **Trust the probability (EXP02, EXP07, deployment realism).** A decision multiplies the probability "
         "by dollars, so ranking is not enough. Calibration gains are mostly a base-rate correction, the PD's "
-        "level drifts across vintages while out-of-sample ranking does not, and training only on labels that "
-        "were knowable at the deployment date is worse than the usual benchmark suggests.",
+        "level drifts across vintages while out-of-sample ranking is flat over the months observed, and a model "
+        "trained only on the loans already resolved at the deployment date does clearly worse than the usual "
+        "benchmark, though that comparison mixes staleness with selection on resolution.",
         "3. **Add relational information (EXP04, EXP05).** Do cohorts help? Not ranking. They fix the *level* of "
         "the PD in every training seed tested, though shuffled cohort keys reproduce part of that gain; GraphSAGE is "
         "the weakest arm.",
         "4. **Decide (EXP03, EXP06).** Does a profit rule built on the PD beat a plain PD threshold, and does "
-        "learning or capital pricing help? No: the profit rule loses to the threshold on the real book, and "
-        "neither a learned policy nor the shadow-price policy recovers it.",
+        f"learning or capital pricing help? The profit rule loses to the threshold on the real book; {step4_tail}.",
         "5. **Diagnose the failure.** Where does predicted profit go wrong? A dollar decomposition of predicted "
         "versus realised profit, a PD refit with LendingClub's pricing, and a PD refit with the cohort features "
         "(correct level, remaining APR gradient). The PD's default-count error is the largest single source, it "

@@ -18,8 +18,8 @@ Every defect here was reproduced with an isolated script, quantified on the full
 | **P0-2** | High | `scripts/train_policy.py` | Analytical shadow price ($\lambda$) used test-window oracle | **Fixed** | Deployable validation-tuned policy: \$138.8M vs.\ clairvoyant oracle \$153.8M at 60% budget |
 | **P0-3** | High | `scripts/analyze_decision_swaps.py` | EXP11 risk reduction was an artifact of budget refilling, not blind spots | **Fixed** | Policy B default rate (15.98%) falls inside placebo intervals (Random 16.01%, APR-matched 16.08%) |
 | **P0-4** | High | `scripts/train_gnn.py` | Cohort graph calibration lacked non-graph macro and shuffled controls | **Fixed** | Arm B calibration gain confirmed: outperforms macro default ($\Delta\text{ECE} = -0.0071$, $p < 0.0001$) and month-shuffled keys ($\Delta\text{ECE} = -0.0044$, $p < 0.0001$) |
-| **P1-5** | High | `scripts/analyze_deployment_realism.py` | Benchmark assumed mature labels for loans immature at deployment cutoff | **Quantified** | Deployment-realistic retraining: test AUC $0.6690 \to 0.6478$ ($\Delta = -0.0212$); ECE surges $0.0105 \to 0.0374$ ($+256\%$) |
-| **P1-6a** | Medium | `models/calibration.py` | EXP02 calibration gain reported without base-rate decomposition | **Fixed** | Intercept-only baseline proves 101.3% of ECE reduction is base-rate shift ($\bar{y}: 12.7\% \to 14.1\%$) with unit slope |
+| **P1-5** | High | `scripts/analyze_deployment_realism.py` | Benchmark assumed mature labels for loans immature at deployment cutoff | **Quantified** | Deployment-realistic retraining: test AUC $0.6690 \to 0.6478$ ($\Delta = -0.0212$); ECE surges $0.0105 \to 0.0374$ ($+256\%$); the realistic arm is a resolution-selected sample, so staleness is not isolated |
+| **P1-6a** | Medium | `models/calibration.py` | EXP02 calibration gain reported without base-rate decomposition | **Fixed** | Intercept-only baseline recovers 94% of the best calibrator's ECE gain on 2015-07..12 (the v2 figure was 101.3% and is superseded) as the base rate moved ($\bar{y}: 12.7\% \to 14.1\%$) with unit slope |
 | **P1-6b** | Medium | `scripts/train_policy.py` | EXP06 control check breaches under vintage drift reported as "control holds" | **Fixed; superseded by CR-01** | Scaled to 30 seeds. The original figures (Thompson 101,203 vs myopic 36,943) were inflated by test-set learning (see CR-01) and the attribution to stale cashflows was unsupported |
 | **CR-01** | Critical | `simulation/environment.py`, `simulation/evaluation.py` | Learning policies kept updating on realised test-pool outcomes during evaluation, and carried that state across episodes | **Fixed** | Evaluation runs with `learn=False`. Unconstrained Thompson 101,203 -> 92,696; the 60%-budget "bandits adapt" result (Thompson 84,737, LinUCB 76,908) disappears: LinUCB +6,916 vs expected-profit, 95% CI [-17,235, +30,160] |
 | **P1-6c** | Medium | `data/splits.py` | 2015 test book reused across threshold/hyperparameter selection | **Fixed** | Isolated 2015-07..2015-12 as frozen final holdout (implemented by `test_window_masks`; an unused first helper was removed) |
@@ -138,10 +138,10 @@ We implemented two non-graph control arms and evaluated them via 2,000 paired bo
 #### Results (2,000 Paired Bootstrap Resamples)
 - **Arm B vs.\ Macro Default Control:**
   - $\Delta\text{ECE} = -0.00707$ (95% CI: $[-0.00786, -0.00462]$, $p < 0.0001$)
-  - $\Delta|\text{O/E} - 1| = -0.07317$ (95% CI: $[-0.08985, -0.05739]$, $p < 0.0001$)
+  - $\Delta|\text{O/E} - 1| = -0.07317$ (95% CI: $[-0.07408, -0.05792]$, $p < 0.0001$)
 - **Arm B vs.\ Shuffled Keys Control:**
   - $\Delta\text{ECE} = -0.00442$ (95% CI: $[-0.00526, -0.00220]$, $p < 0.0001$)
-  - $\Delta|\text{O/E} - 1| = -0.05149$ (95% CI: $[-0.06908, -0.03478]$, $p < 0.0001$)
+  - $\Delta|\text{O/E} - 1| = -0.05149$ (95% CI: $[-0.05225, -0.03675]$, $p < 0.0001$)
 
 #### Remediation
 - Integrated control arms and paired bootstrap tests into `scripts/train_gnn.py`.
@@ -155,7 +155,7 @@ We implemented two non-graph control arms and evaluated them via 2,000 paired bo
 #### Defect Description
 Standard out-of-time backtesting protocols partition loans by origination date (e.g., Train: 2010--2014, Test: 2015). However, 36-month consumer installment loans take three full years to mature.
 At the deployment cutoff date (**2014-12-31**):
-- **68.4% of training loans** (originated 2012--2014) had not yet matured.
+- **68.4% of training loans** (all of 2010-01..2014-06; 75.6% of those originated from 2012 on) had not yet matured.
 - **97.9% of validation loans** (originated July 2014--Dec 2014) had not matured.
 
 In the standard benchmark, the LightGBM classifier and probability calibrator were trained on the eventual 36-month terminal outcome ("Fully Paid" vs.\ "Charged Off") of these loans, which were resolved between 2015 and 2018. The calibrator was effectively fitted on outcome labels that co-occurred in time with the out-of-time test period.
@@ -166,12 +166,12 @@ We implemented `scripts/analyze_deployment_realism.py` and trained a strictly de
 | Metric | Standard Out-of-Time Benchmark | Strictly Deployment-Realistic | Gap ($\Delta$) | Operational Significance |
 |---|---|---|---|---|
 | **Test ROC-AUC** | 0.6690 | 0.6478 | **-0.0212** | Model discrimination degrades when immature vintages are excluded |
-| **Test Brier Score** | 0.1211 | 0.1245 | **+0.0034** | Overall probability accuracy worsens |
+| **Test Brier Score** | 0.1211 | 0.1240 | **+0.0029** | Overall probability accuracy worsens |
 | **Test ECE** | 0.0105 | 0.0374 | **+0.0270 (+256%)** | Severe miscalibration in production |
 | **Observed / Expected (O/E)** | 1.0755 | 1.2860 | **+0.2105** | Production model underpredicts defaults by 28.6% |
 
 #### Takeaway
-Out-of-time benchmarks that rely on retroactively resolved loan outcomes flatter production reliability. In real-world lending systems, survival analysis (hazard rate modeling) or rolling dynamic calibration is essential to bridge the mature-outcome observation gap.
+Out-of-time benchmarks that rely on retroactively resolved loan outcomes flatter production reliability, with one caveat: the realistic arm trains only on loans resolved by 2014-12, a selected sample (default rate 16.3% against 12.6% for all loans issued in the training window; 10.4% against 13.3% in the calibration window; `results/tables/deployment_realism_selection.csv`), so the gap mixes staleness with selection on resolution. In real-world lending systems, survival analysis (hazard rate modeling) or rolling dynamic calibration is essential to bridge the mature-outcome observation gap.
 
 ---
 

@@ -57,8 +57,8 @@ features.
 - Tests that need torch import it with `pytest.importorskip("torch")` and are skipped with a reason
   when it is absent; they are not counted as failures.
 - Tests do not need `data/processed/` or `artifacts/` (both are untracked). The README tests read
-  `results/tables/`, which **is** tracked. The data-table renderer reads `data/processed/loans.parquet`
-  when it exists and otherwise falls back to the recorded counts, so the suite passes on a fresh clone.
+  `results/tables/`, which **is** tracked. The data-table renderer reads only the tracked
+  `results/tables/data_profile.json`, so the suite passes on a fresh clone.
 
 ## Adding a test
 

@@ -88,7 +88,7 @@ Commands, in dependency order, with measured run time and what each produces:
 | 10 | `python scripts/train_policy.py --config configs/experiments/exp06_rl.yaml` | 12 min | `exp06_rl_*` (headline) |
 | 11 | `python scripts/train_policy.py --config configs/experiments/exp06_rl.yaml --multi-exposure` | 14 min | `exp06_rl_sens_*` (sensitivity) |
 | 12 | `python scripts/evaluate.py --config configs/models/boosting.yaml` | 1.5 min | `boosting_exp07_*`, fairness, SHAP |
-| 13 | `python scripts/analyze_deployment_realism.py` | 1 min | `deployment_realism_p1_5.csv` |
+| 13 | `python scripts/analyze_deployment_realism.py` | 1 min | `deployment_realism_p1_5.csv`, `deployment_realism_selection.csv` |
 | 14 | `python scripts/analyze_profit_calibration.py --config configs/experiments/exp06_rl.yaml` | 3 min | `profit_calibration_*.csv` |
 | 15 | `python scripts/analyze_apr_in_pd.py --config configs/experiments/exp06_rl.yaml` | 5 min | `apr_in_pd_*.csv` |
 | 16 | `python scripts/render_readme.py` | seconds | README and guide blocks |
@@ -124,7 +124,7 @@ Each command was run once on this branch (2026-11-19 to 2026-11-20), except wher
 
 | README row | Script | Artifact |
 |---|---|---|
-| EXP01 | `train_baseline.py` | `boosting_exp01_models_h2.csv`, `boosting_exp01_models.csv` |
+| EXP01 | `train_baseline.py`, then `analyze_exp01_ci.py` (4 min) | `boosting_exp01_models_h2.csv`, `boosting_exp01_models.csv`, `exp01_auc_difference.json` |
 | EXP02 | `train_baseline.py` | `boosting_exp02_calibration_h2.csv`, `boosting_calibration_choice.json` |
 | EXP03 | `train_policy.py`, `analyze_profit_calibration.py` | `exp06_rl_exp03_differences.csv`, `profit_calibration_rules.csv` |
 | EXP04 | `build_cohort_controls.py`, `train_gnn.py` | `cohort_controls_exp04.json`, `cohort_controls_exp04_seed_*.csv` |
