@@ -1,12 +1,11 @@
 # Deployment Realism Audit (Finding P1-5)
 
 ## Motivation
-In academic credit scoring benchmarks, researchers split data chronologically by origination date 
-(e.g., train on 2010-01..2014-06, valid on 2014-07..2014-12, test on 2015) and assume all 36-month loan outcomes 
-are fully known. However, at deployment time on 2015-01-01, 68.4% of training loans and 97.9% of validation loans 
-had not yet matured. Their final outcomes occurred during 2015-2018—the exact period in which the test loans ran.
+The standard out-of-time split trains on 2010-01..2014-06 and calibrates on 2014-07..12 using terminal 
+labels, most of which were not yet knowable on 2015-01-01 (the 36-month outcomes arrive in 2015-2018). 
+The realistic arm keeps only loans whose outcome was resolved by 2014-12.
 
-## Results Table
+## Results Table (all figures from the table below; regenerate with this script)
 
 | model                                      |   train_loans |   valid_loans |   test_auc |   test_ece |   observed_expected_ratio |      brier |   h2_test_auc |   h2_test_ece |   h2_observed_expected_ratio |
 |:-------------------------------------------|--------------:|--------------:|-----------:|-----------:|--------------------------:|-----------:|--------------:|--------------:|-----------------------------:|
@@ -15,12 +14,16 @@ had not yet matured. Their final outcomes occurred during 2015-2018—the exact 
 | Delta (Realistic - Standard)               |       -182262 |        -69902 | -0.0211532 |  0.0269899 |                  0.210435 | 0.00287952 |    -0.0209952 |     0.0257659 |                     0.213849 |
 
 ## Key Findings
-- **Discrimination Drop:** Out-of-time test AUC drops from 0.6690 to 0.6478 (-0.0212).
-- **Calibration Deterioration:** ECE increases nearly four-fold from 0.0105 to 0.0374 (+0.0270).
-- **Level Bias:** Observed/Expected ratio rises from 1.0755 to 1.2860, meaning the realistic model underpredicts 2015 defaults by 28.6% (compared to 7.5% under omniscient labeling).
+- **Discrimination:** 2015 AUC 0.6690 -> 0.6478 (-0.0212); 2015-07..12: 0.6712 -> 0.6503.
+- **Calibration:** 2015 ECE 0.0105 -> 0.0374; 2015-07..12: 0.0109 -> 0.0367.
+- **Level:** observed/expected 1.076 -> 1.286 (2015-07..12: 1.080 -> 1.294).
 
-## Conclusion for Interview Defense
-The standard out-of-time evaluation significantly flatters true operational performance because the calibrator 
-is allowed to peek at outcomes from the test era. When constrained to truly observable historical data, 
-the model suffers severe calibration drift, proving why continuous vintage monitoring and adaptive calibration 
-are essential in production credit risk systems.
+## What this comparison can and cannot say
+The realistic arm is not a random sample of the loans issued in the same months. Selection on resolution:
+
+| window                                       |   loans_issued |   loans_resolved_by_as_of |   share_resolved |   default_rate_all_loans |   default_rate_resolved_loans |
+|:---------------------------------------------|---------------:|--------------------------:|-----------------:|-------------------------:|------------------------------:|
+| train window (issued <= 2013-06)             |         107851 |                     56842 |           0.5270 |                   0.1264 |                        0.1629 |
+| calibration window (issued 2013-07..2014-12) |         221868 |                     20713 |           0.0934 |                   0.1328 |                        0.1040 |
+
+In the training window resolved loans default at 16.3% against 12.6% for all loans issued then; in the calibration window the figures are 10.4% and 13.3%. So the drop in performance mixes staleness (older vintages, fewer recent examples) with selection on resolution. It measures the cost of the naive approach 'train on what has resolved', not staleness alone. There is no arm here that trains on fully matured vintages only, so the two effects are not separated.

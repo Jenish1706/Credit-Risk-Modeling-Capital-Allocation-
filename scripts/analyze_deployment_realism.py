@@ -31,6 +31,36 @@ from credit_risk.utils.runtime import get_logger
 LOG = get_logger("scripts.deployment_realism")
 
 
+def resolution_selection_table(df: pd.DataFrame, as_of: str = "2014-12", split_issue: str = "2013-06") -> pd.DataFrame:
+    """G4-r2: is a training set restricted to loans resolved by ``as_of`` a fair sample of the loans issued?
+
+    For the same issue windows the realistic arm uses, compare the default rate among loans whose outcome
+    was already resolved at ``as_of`` with the default rate among *all* loans issued then (terminal labels).
+    A gap means the realistic arm differs from the standard arm by *selection on resolution* as well as by
+    staleness, so the two effects cannot be separated by this comparison alone.
+    """
+    dev = df[df["split"].isin(["train", "valid"])]
+    windows = {
+        f"train window (issued <= {split_issue})": dev["issue_period"] <= split_issue,
+        f"calibration window (issued {pd.Period(split_issue, 'M') + 1}..2014-12)": dev["issue_period"] > split_issue,
+    }
+    rows = []
+    for name, mask in windows.items():
+        allw = dev[mask]
+        resolved = allw[allw["outcome_observed_period"] <= as_of]
+        rows.append(
+            {
+                "window": name,
+                "loans_issued": len(allw),
+                "loans_resolved_by_as_of": len(resolved),
+                "share_resolved": len(resolved) / len(allw),
+                "default_rate_all_loans": float(allw["default"].mean()),
+                "default_rate_resolved_loans": float(resolved["default"].mean()),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def evaluate_deployment_realism(df: pd.DataFrame, seed: int = 42) -> tuple[pd.DataFrame, dict[str, object]]:
     """Train and compare standard vs deployment-realistic models."""
     spec = FeatureSpec(feature_set="primary")
@@ -168,33 +198,49 @@ def main() -> int:
     print(table.to_string(index=False))
     print("=" * 80 + "\n")
 
+    selection = resolution_selection_table(df)
+    print(selection.to_string(index=False))
+    out_sel = paths_root / "results" / "tables" / "deployment_realism_selection.csv"
+    selection.to_csv(out_sel, index=False)
+    LOG.info("Saved %s", out_sel)
+
     out_csv = paths_root / "results" / "tables" / "deployment_realism_p1_5.csv"
     table.to_csv(out_csv, index=False)
     LOG.info("Saved %s", out_csv)
 
+    std, real, delta = table.iloc[0], table.iloc[1], table.iloc[2]
+    tr_sel, va_sel = selection.iloc[0], selection.iloc[1]
     report_lines = [
         "# Deployment Realism Audit (Finding P1-5)",
         "",
         "## Motivation",
-        "In academic credit scoring benchmarks, researchers split data chronologically by origination date ",
-        "(e.g., train on 2010-01..2014-06, valid on 2014-07..2014-12, test on 2015) and assume all 36-month loan outcomes ",
-        "are fully known. However, at deployment time on 2015-01-01, 68.4% of training loans and 97.9% of validation loans ",
-        "had not yet matured. Their final outcomes occurred during 2015-2018—the exact period in which the test loans ran.",
+        "The standard out-of-time split trains on 2010-01..2014-06 and calibrates on 2014-07..12 using terminal ",
+        "labels, most of which were not yet knowable on 2015-01-01 (the 36-month outcomes arrive in 2015-2018). ",
+        "The realistic arm keeps only loans whose outcome was resolved by 2014-12.",
         "",
-        "## Results Table",
+        "## Results Table (all figures from the table below; regenerate with this script)",
         "",
         table.to_markdown(index=False),
         "",
         "## Key Findings",
-        "- **Discrimination Drop:** Out-of-time test AUC drops from 0.6690 to 0.6478 (-0.0212).",
-        "- **Calibration Deterioration:** ECE increases nearly four-fold from 0.0105 to 0.0374 (+0.0270).",
-        "- **Level Bias:** Observed/Expected ratio rises from 1.0755 to 1.2860, meaning the realistic model underpredicts 2015 defaults by 28.6% (compared to 7.5% under omniscient labeling).",
+        f"- **Discrimination:** 2015 AUC {std['test_auc']:.4f} -> {real['test_auc']:.4f} ({delta['test_auc']:+.4f}); "
+        f"2015-07..12: {std['h2_test_auc']:.4f} -> {real['h2_test_auc']:.4f}.",
+        f"- **Calibration:** 2015 ECE {std['test_ece']:.4f} -> {real['test_ece']:.4f}; "
+        f"2015-07..12: {std['h2_test_ece']:.4f} -> {real['h2_test_ece']:.4f}.",
+        f"- **Level:** observed/expected {std['observed_expected_ratio']:.3f} -> {real['observed_expected_ratio']:.3f} "
+        f"(2015-07..12: {std['h2_observed_expected_ratio']:.3f} -> {real['h2_observed_expected_ratio']:.3f}).",
         "",
-        "## Conclusion for Interview Defense",
-        "The standard out-of-time evaluation significantly flatters true operational performance because the calibrator ",
-        "is allowed to peek at outcomes from the test era. When constrained to truly observable historical data, ",
-        "the model suffers severe calibration drift, proving why continuous vintage monitoring and adaptive calibration ",
-        "are essential in production credit risk systems.",
+        "## What this comparison can and cannot say",
+        "The realistic arm is not a random sample of the loans issued in the same months. Selection on resolution:",
+        "",
+        selection.to_markdown(index=False, floatfmt=".4f"),
+        "",
+        f"In the training window resolved loans default at {tr_sel['default_rate_resolved_loans']:.1%} against "
+        f"{tr_sel['default_rate_all_loans']:.1%} for all loans issued then; in the calibration window the "
+        f"figures are {va_sel['default_rate_resolved_loans']:.1%} and {va_sel['default_rate_all_loans']:.1%}. "
+        "So the drop in performance mixes staleness (older vintages, fewer recent examples) with selection on "
+        "resolution. It measures the cost of the naive approach 'train on what has resolved', not staleness alone. "
+        "There is no arm here that trains on fully matured vintages only, so the two effects are not separated.",
     ]
     out_md = paths_root / "results" / "reports" / "deployment_realism.md"
     with open(out_md, "w", encoding="utf-8") as f:

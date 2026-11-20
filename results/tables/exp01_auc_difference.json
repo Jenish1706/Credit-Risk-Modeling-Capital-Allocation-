@@ -1,0 +1,11 @@
+{
+  "window": "2015-07..12 (H2, untouched holdout)",
+  "n_loans": 162236,
+  "auc_logistic": 0.6605882679166429,
+  "auc_lightgbm": 0.6731639796515627,
+  "auc_difference": 0.012575711734919781,
+  "ci_low": 0.011023500097692323,
+  "ci_high": 0.01421088944756464,
+  "n_bootstrap": 2000,
+  "seed": 42
+}
