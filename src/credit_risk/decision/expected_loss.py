@@ -2,7 +2,7 @@
 
 The distinction this module exists to enforce is between **observed**, **estimated** and
 **assumed** quantities. Portfolio simulations go wrong when an invented number is quietly given the
-same status as a measured one, so each is labelled here and in ``docs/ASSUMPTIONS.md``.
+same status as a measured one, so each is labelled here and in ``docs/reference/ASSUMPTIONS.md``.
 
 **Observed** (read directly from the data)
     ``funded_amnt``, ``int_rate``, ``term``, ``total_pymnt``, ``total_rec_prncp``,

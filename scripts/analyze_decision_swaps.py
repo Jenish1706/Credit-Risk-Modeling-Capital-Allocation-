@@ -183,7 +183,7 @@ def main() -> int:
         )
         # Realised profit scales with the exposure actually taken, so a half-size loan earns half
         # the realised return. Same linear-scaling assumption the simulator makes for
-        # counterfactual exposures; it is an assumption -- see docs/ASSUMPTIONS.md.
+        # counterfactual exposures; it is an assumption -- see docs/reference/ASSUMPTIONS.md.
         scale = np.where(flagged, float(args.exposure_cap), 1.0)
         capped_profit = float((realised_profit(sub) * scale)[approve_c].sum())
         capped_capital = float(exposure_c[approve_c].sum())

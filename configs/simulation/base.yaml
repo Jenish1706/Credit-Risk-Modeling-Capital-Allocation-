@@ -1,4 +1,4 @@
-# Lending simulator. Assumptions are catalogued in docs/ASSUMPTIONS.md.
+# Lending simulator. Assumptions are catalogued in docs/reference/ASSUMPTIONS.md.
 
 economics:
   annual_cost_of_funds: 0.03

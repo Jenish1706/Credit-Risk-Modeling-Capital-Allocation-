@@ -25,7 +25,7 @@ later. Those are different information sets, and the gap between them is large:
 Feature aggregates use the first column; label aggregates use the second. Using the
 first for a label aggregate is the standard way graph credit models leak, and it would
 inflate AUC substantially, because the cohort default rate would then contain outcomes
-from the same period the model is being scored on. See docs/GRAPH_DESIGN.md.
+from the same period the model is being scored on. See docs/reference/GRAPH_DESIGN.md.
 
 ## Leakage checks
 

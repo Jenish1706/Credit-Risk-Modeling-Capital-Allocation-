@@ -106,7 +106,7 @@ def main() -> int:
         "temporal split is impossible. These metrics are therefore optimistic relative to "
         "deployment and are **not comparable** with the LendingClub results, which use a strict "
         "out-of-time test window. This is the principal reason the dataset was not selected as "
-        "the primary one; see docs/DATASET.md.",
+        "the primary one; see docs/reference/DATASET.md.",
         "",
         f"Rows: {report.rows:,}. Default rate: {report.default_rate:.4f}. "
         f"Features: {len(numeric)} numeric, {len(categorical)} categorical.",

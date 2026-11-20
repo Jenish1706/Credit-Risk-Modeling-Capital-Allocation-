@@ -16,7 +16,7 @@ The headline claim is a pair, not a single number:
 
 The analytical shadow price is computed alongside as a reference. If the learned policy wildly
 exceeds an expected-profit policy given the correct shadow price, that is a bug in the simulator,
-not a breakthrough -- see docs/RL_FORMULATION.md.
+not a breakthrough -- see docs/reference/RL_FORMULATION.md.
 """
 
 from __future__ import annotations
@@ -501,7 +501,7 @@ def main() -> int:
             "",
             "**What this does not establish.** That any of these policies is safe to deploy. "
             "Every number is generated inside a simulator whose assumptions are listed in "
-            "docs/ASSUMPTIONS.md, on a population of already-approved LendingClub borrowers from "
+            "docs/reference/ASSUMPTIONS.md, on a population of already-approved LendingClub borrowers from "
             "a single credit cycle. The defensible claim is a ranking under stated assumptions.",
         ]
 

@@ -1,4 +1,4 @@
-# Time-respecting cohort graph. Full rationale in docs/GRAPH_DESIGN.md.
+# Time-respecting cohort graph. Full rationale in docs/reference/GRAPH_DESIGN.md.
 
 relations:
   - name: zip3

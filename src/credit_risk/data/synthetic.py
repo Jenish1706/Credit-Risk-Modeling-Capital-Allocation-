@@ -474,7 +474,7 @@ def write_synthetic_raw(
     (out_dir / "SYNTHETIC").write_text(
         "Files in this directory were produced by credit_risk.data.synthetic.\n"
         "They are NOT real LendingClub data. Results computed from them are pipeline\n"
-        "checks only and must not be reported as findings. See docs/DATASET.md.\n",
+        "checks only and must not be reported as findings. See docs/reference/DATASET.md.\n",
         encoding="utf-8",
     )
     LOG.info("wrote %s (%.1f MB)", path, path.stat().st_size / 1024**2)

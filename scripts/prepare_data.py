@@ -75,7 +75,7 @@ def _profile_lines(df: pd.DataFrame, report, windows: SplitWindows, source: str)
             "",
             "Columns whose *missingness* moves between windows. These partly encode the",
             "origination date, so a model can learn 'is this populated?' as a vintage proxy.",
-            "The feature builder's availability guard drops them; see docs/LEAKAGE.md section 5.",
+            "The feature builder's availability guard drops them; see docs/reference/LEAKAGE.md section 5.",
             "",
             "| column | shift in missing rate |",
             "|---|---|",

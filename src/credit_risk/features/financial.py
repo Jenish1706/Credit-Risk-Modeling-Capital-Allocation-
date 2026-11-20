@@ -21,7 +21,7 @@ import pandas as pd
 #: Reference APR used *only* to estimate the monthly payment of a hypothetical loan when
 #: re-scoring counterfactual exposures in the decision simulator. It is deliberately a fixed
 #: constant rather than the model's own price, which would make the feature circular.
-#: See docs/ASSUMPTIONS.md.
+#: See docs/reference/ASSUMPTIONS.md.
 REFERENCE_APR = 0.13
 
 #: Values LendingClub uses as sentinels rather than real measurements.

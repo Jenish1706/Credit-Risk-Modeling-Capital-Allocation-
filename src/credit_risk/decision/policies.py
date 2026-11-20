@@ -119,7 +119,7 @@ class ActionSpace:
 
         Used for the headline policy comparisons (EXP03, EXP06). The value of a manual review
         depends entirely on how much a human underwriter learns, which is an *assumption* rather
-        than anything measurable in this dataset -- see ``docs/ASSUMPTIONS.md``. Leaving review in
+        than anything measurable in this dataset -- see ``docs/reference/ASSUMPTIONS.md``. Leaving review in
         would mean the gap between two policies partly reflects that assumption rather than the
         decision rules being compared. Review is analysed separately, on its own terms.
         """

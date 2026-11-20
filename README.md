@@ -143,11 +143,11 @@ Start at [`docs/guide/00_START_HERE.md`](docs/guide/00_START_HERE.md).
 | [`09_RESULTS_AND_LIMITATIONS`](docs/guide/09_RESULTS_AND_LIMITATIONS.md) | results with uncertainty, null results, threats to validity |
 | [`GLOSSARY`](docs/guide/GLOSSARY.md) | every term and acronym |
 
-Appendices: [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md),
-[`docs/LEAKAGE.md`](docs/LEAKAGE.md). Earlier design documents
-([`ASSUMPTIONS`](docs/ASSUMPTIONS.md),
-[`GRAPH_DESIGN`](docs/GRAPH_DESIGN.md), [`RL_FORMULATION`](docs/RL_FORMULATION.md),
-[`DATASET`](docs/DATASET.md)) remain for detail.
+Appendices: [`docs/reference/DATA_DICTIONARY.md`](docs/reference/DATA_DICTIONARY.md),
+[`docs/reference/LEAKAGE.md`](docs/reference/LEAKAGE.md). Earlier design documents
+([`ASSUMPTIONS`](docs/reference/ASSUMPTIONS.md),
+[`GRAPH_DESIGN`](docs/reference/GRAPH_DESIGN.md), [`RL_FORMULATION`](docs/reference/RL_FORMULATION.md),
+[`DATASET`](docs/reference/DATASET.md)) remain for detail.
 
 ## Limitations
 

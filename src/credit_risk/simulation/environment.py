@@ -35,7 +35,7 @@ What is still assumed
 
 None of this makes the simulator a truth machine. It makes it a *consistent* testbed in which
 policies can be compared to each other, which is a much weaker and much more defensible claim, and
-it is the claim made in ``docs/RL_FORMULATION.md``.
+it is the claim made in ``docs/reference/RL_FORMULATION.md``.
 """
 
 from __future__ import annotations
@@ -154,7 +154,7 @@ class LendingEnvironment:
 
     One step is one application. The state carries the applicant *and* the portfolio position
     (capital left, applications left), because that is exactly what makes the problem sequential
-    rather than a sequence of independent decisions -- see ``docs/RL_FORMULATION.md``.
+    rather than a sequence of independent decisions -- see ``docs/reference/RL_FORMULATION.md``.
     """
 
     def __init__(

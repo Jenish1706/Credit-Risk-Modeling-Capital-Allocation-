@@ -12,7 +12,7 @@ writes a schema-faithful synthetic extract; every artifact built from it is stam
 `data_source: synthetic` and is not reported as a finding. The optional rejected-applications file
 (`--with-rejected`) is downloadable but **no analysis in this repository uses it**.
 
-**Why this dataset** (full evaluation of alternatives in [DATASET.md](../DATASET.md)): it has real
+**Why this dataset** (full evaluation of alternatives in [DATASET.md](../reference/DATASET.md)): it has real
 calendar time (needed for out-of-time validation and drift), real loan economics (cashflows from
 which realised profit and loss are computed rather than assumed), and two usable relational keys
 (3-digit ZIP, employer text). Home Credit was rejected because it has no absolute calendar date.
@@ -87,8 +87,8 @@ Column groups in `loans.parquet`, as classified in
 
 The deny-list (`FORBIDDEN_AS_FEATURES`: post-origination, identifier, exposure, dropped columns and
 the target) is enforced by `assert_no_leakage` on every feature build and by tests. The column-by-
-column ruling is in [DATA_DICTIONARY.md](../DATA_DICTIONARY.md); the reasoning is in
-[LEAKAGE.md](../LEAKAGE.md).
+column ruling is in [DATA_DICTIONARY.md](../reference/DATA_DICTIONARY.md); the reasoning is in
+[LEAKAGE.md](../reference/LEAKAGE.md).
 
 ## Known quality problems and how each is handled
 

@@ -2,7 +2,7 @@
 
 These are the tests that matter most in this repository. A credit model that leaks does not fail
 loudly -- it produces an excellent AUC and a worthless model, and the failure only becomes visible
-after deployment. So every leakage rule in docs/LEAKAGE.md gets an assertion here, and each one
+after deployment. So every leakage rule in docs/reference/LEAKAGE.md gets an assertion here, and each one
 fails the build rather than logging a warning.
 """
 

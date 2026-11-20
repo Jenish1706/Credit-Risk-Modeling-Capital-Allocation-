@@ -26,5 +26,5 @@ NOTE ON DATA LICENSING
 
 This licence covers the source code in this repository only. It does not cover
 any dataset. The LendingClub data used by this project is obtained separately
-from Kaggle under its own terms; see docs/DATASET.md. No raw data is
+from Kaggle under its own terms; see docs/reference/DATASET.md. No raw data is
 redistributed in this repository.

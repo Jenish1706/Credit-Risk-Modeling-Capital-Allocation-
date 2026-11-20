@@ -19,9 +19,9 @@ alongside the mean, because in lending the left tail is the whole subject.
 What this cannot tell you
 -------------------------
 That a policy is safe to deploy. Every number here is generated inside a simulator whose
-assumptions are listed in ``docs/ASSUMPTIONS.md``, on a population of *already-approved*
+assumptions are listed in ``docs/reference/ASSUMPTIONS.md``, on a population of *already-approved*
 LendingClub borrowers from one credit cycle. The correct claim is "policy A dominates policy B
-under these assumptions", and ``docs/RL_FORMULATION.md`` makes no larger one.
+under these assumptions", and ``docs/reference/RL_FORMULATION.md`` makes no larger one.
 """
 
 from __future__ import annotations

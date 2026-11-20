@@ -3,7 +3,7 @@
 Why this exists
 ---------------
 Home Credit was the nominated primary dataset and was rejected for the reasons in
-``docs/DATASET.md``. It is retained here as a *secondary* loader so that EXP01-EXP03 can be
+``docs/reference/DATASET.md``. It is retained here as a *secondary* loader so that EXP01-EXP03 can be
 reproduced on a completely different schema, which is worth demonstrating: it shows the pipeline
 is not fitted to one file's quirks.
 
@@ -88,7 +88,7 @@ def load_application(path: str | Path, nrows: int | None = None) -> pd.DataFrame
             f"{path} not found. Home Credit is a separate download:\n"
             "  kaggle competitions download -c home-credit-default-risk\n"
             "Accepting the competition rules on Kaggle is required first. Note that the "
-            "competition's data terms permit academic and non-commercial use; see docs/DATASET.md."
+            "competition's data terms permit academic and non-commercial use; see docs/reference/DATASET.md."
         )
     return pd.read_csv(path, nrows=nrows, low_memory=False)
 

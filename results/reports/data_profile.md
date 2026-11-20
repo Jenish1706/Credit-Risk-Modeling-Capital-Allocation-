@@ -68,7 +68,7 @@ Final modelling table: **1,609,607** rows x 162 columns
 
 Columns whose *missingness* moves between windows. These partly encode the
 origination date, so a model can learn 'is this populated?' as a vintage proxy.
-The feature builder's availability guard drops them; see docs/LEAKAGE.md section 5.
+The feature builder's availability guard drops them; see docs/reference/LEAKAGE.md section 5.
 
 | column | shift in missing rate |
 |---|---|

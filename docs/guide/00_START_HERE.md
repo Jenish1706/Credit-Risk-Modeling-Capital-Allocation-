@@ -92,8 +92,8 @@ Reading the table as a whole:
 | understand why it is built this way | [08_DESIGN_DECISIONS.md](08_DESIGN_DECISIONS.md) |
 | see results with uncertainty and limits | [09_RESULTS_AND_LIMITATIONS.md](09_RESULTS_AND_LIMITATIONS.md) |
 
-Appendices: [DATA_DICTIONARY.md](../DATA_DICTIONARY.md) (column ruling) and
-[LEAKAGE.md](../LEAKAGE.md) (every leakage rule and its test).
+Appendices: [DATA_DICTIONARY.md](../reference/DATA_DICTIONARY.md) (column ruling) and
+[LEAKAGE.md](../reference/LEAKAGE.md) (every leakage rule and its test).
 
 ## Ten-minute quickstart
 

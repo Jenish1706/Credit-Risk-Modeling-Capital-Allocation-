@@ -364,5 +364,5 @@ def assert_no_leakage(columns: list[str] | tuple[str, ...]) -> None:
     if offenders:
         raise ValueError(
             "Post-origination or forbidden columns reached the feature matrix: "
-            f"{offenders}. See docs/LEAKAGE.md."
+            f"{offenders}. See docs/reference/LEAKAGE.md."
         )

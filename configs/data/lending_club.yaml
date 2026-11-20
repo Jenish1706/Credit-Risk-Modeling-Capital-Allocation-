@@ -1,5 +1,5 @@
 # LendingClub data preparation.
-# Every choice here is argued in docs/DATASET.md and docs/LEAKAGE.md.
+# Every choice here is argued in docs/reference/DATASET.md and docs/reference/LEAKAGE.md.
 
 dataset:
   name: lending_club

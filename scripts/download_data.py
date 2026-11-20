@@ -5,7 +5,7 @@
     python scripts/download_data.py --synthetic --n-loans 200000
 
 Credentials come from ``~/.kaggle/kaggle.json`` or ``KAGGLE_USERNAME``/``KAGGLE_KEY``. See
-docs/DATASET.md section 2 for how to create the token.
+docs/reference/DATASET.md section 2 for how to create the token.
 """
 
 from __future__ import annotations

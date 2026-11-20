@@ -31,7 +31,7 @@ _LC_DATE_FORMAT = "%b-%Y"
 #: Months between the last payment received and the charge-off being booked. LendingClub charges
 #: off at 150 days delinquent, so a defaulted loan's outcome becomes *known* roughly five months
 #: after its final payment. Used to date when a neighbour's label was observable -- see
-#: docs/GRAPH_DESIGN.md. Not a feature; it only ever gates information availability.
+#: docs/reference/GRAPH_DESIGN.md. Not a feature; it only ever gates information availability.
 CHARGE_OFF_LAG_MONTHS = 5
 
 
@@ -176,7 +176,7 @@ def prepare_loans(
 ) -> tuple[pd.DataFrame, PrepareReport]:
     """Produce the modelling table.
 
-    Steps, in order, each of which is a decision documented in ``docs/DATASET.md``:
+    Steps, in order, each of which is a decision documented in ``docs/reference/DATASET.md``:
 
     1. Read and drop malformed rows.
     2. Restrict to a single loan term, so every loan has the same outcome horizon.
@@ -231,7 +231,7 @@ def prepare_loans(
         report.notes.append(msg)
         if share > 0.5:
             report.notes.append(
-                "WARNING: this exceeds the 0.5% tolerance in docs/DATASET.md section 4. "
+                "WARNING: this exceeds the 0.5% tolerance in docs/reference/DATASET.md section 4. "
                 "The maturity assumption should be revisited rather than accepted."
             )
         df = df.loc[~drop_mask].copy()
@@ -245,7 +245,7 @@ def prepare_loans(
     # what the graph's neighbour-label aggregates draw on.
     #
     # `default` — the modelling target. Populated only on train/valid/test, where the maturity
-    # argument in docs/DATASET.md section 4 actually holds. Monitoring-window rows are excluded
+    # argument in docs/reference/DATASET.md section 4 actually holds. Monitoring-window rows are excluded
     # even when they happen to have resolved, because keeping only the ones that resolved early
     # would select for fast defaults and bias the rate upward.
     df["default_observed"] = mapped.astype("Float64")

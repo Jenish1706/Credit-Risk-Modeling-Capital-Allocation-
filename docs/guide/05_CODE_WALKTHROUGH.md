@@ -324,7 +324,7 @@ statistic on the holdout half only; it re-scores with the calibrator named in
   [`data/home_credit.py`](../../src/credit_risk/data/home_credit.py): a side experiment on a second
   dataset, outside the main pipeline. The repository carries no outputs from it: the earlier outputs came
   from the `--synthetic` smoke test (not real credit data) and were removed. Real results need the Kaggle
-  extract (see [`docs/DATASET.md`](../DATASET.md)).
+  extract (see [`docs/reference/DATASET.md`](../reference/DATASET.md)).
 
 Tests: `tests/test_readme_tables.py` re-renders every block and fails on any difference.
 

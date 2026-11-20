@@ -116,8 +116,8 @@ outcome. A second, labelled sensitivity run adds 0.5x and 1.5x exposure actions;
 non-observed exposures use a model coupling and are not measurements. Learners train on the
 validation pool for 400 (Q-learning) or 120 (bandit) episodes and are frozen during evaluation.
 Costs: 3% annual cost of funds over a 1.55-year weighted-average life (the amortisation schedule gives about 1.6 years), $150 fixed plus 1%
-variable operating cost. The full assumption catalogue is in [ASSUMPTIONS.md](../ASSUMPTIONS.md) and
-the formulation in [RL_FORMULATION.md](../RL_FORMULATION.md).
+variable operating cost. The full assumption catalogue is in [ASSUMPTIONS.md](../reference/ASSUMPTIONS.md) and
+the formulation in [RL_FORMULATION.md](../reference/RL_FORMULATION.md).
 
 ## 8. Reproducibility contract
 
