@@ -21,31 +21,14 @@ README_PATH = PROJECT_ROOT / "README.md"
 
 
 def render_data_table() -> str:
-    """Generate Markdown data split table from loans.parquet or historical metadata."""
-    loans_path = PROJECT_ROOT / "data" / "processed" / "loans.parquet"
-    if loans_path.exists():
-        df = pd.read_parquet(loans_path, columns=["split", "default", "issue_period"])
-        counts = df["split"].value_counts()
-        defaults = df.groupby("split")["default"].mean()
-
-        hist_n = int(counts.get("history", 8277))
-        tr_n = int(counts.get("train", 239104))
-        va_n = int(counts.get("valid", 90615))
-        te_n = int(counts.get("test", 283026))
-        mo_n = int(counts.get("monitor", 988585))
-
-        tr_d = float(defaults.get("train", 0.126702) * 100)
-        va_d = float(defaults.get("valid", 0.141257) * 100)
-        te_d = float(defaults.get("test", 0.148863) * 100)
-        test = df[df["split"] == "test"]
-        win = test_window_masks(test["issue_period"])
-        h1_n, h2_n = int(win["dev"].sum()), int(win["holdout"].sum())
-        h1_d = float(test.loc[win["dev"], "default"].astype(float).mean() * 100)
-        h2_d = float(test.loc[win["holdout"], "default"].astype(float).mean() * 100)
-    else:
-        hist_n, tr_n, va_n, te_n, mo_n = 8277, 239104, 90615, 283026, 988585
-        tr_d, va_d, te_d = 12.67, 14.13, 14.89
-        h1_n, h2_n, h1_d, h2_d = 120790, 162236, 15.12, 14.71
+    """Split table, read only from the tracked data profile (no raw or processed data needed)."""
+    d = json.loads((TABLES_DIR / "data_profile.json").read_text(encoding="utf-8"))
+    counts, rates, windows = d["split_counts"], d["default_rate_by_split"], d["test_window_counts"]
+    hist_n, tr_n, va_n = int(counts["history"]), int(counts["train"]), int(counts["valid"])
+    te_n, mo_n = int(counts["test"]), int(counts["monitor"])
+    tr_d, va_d, te_d = (100 * float(rates[k]) for k in ("train", "valid", "test"))
+    h1_n, h2_n = int(windows["test_h1"]["rows"]), int(windows["test_h2"]["rows"])
+    h1_d, h2_d = (100 * float(windows[k]["default_rate"]) for k in ("test_h1", "test_h2"))
 
     lines = [
         "| Split | Window | Loans | Default rate |",
@@ -84,6 +67,16 @@ def render_results_table() -> str:
     cf = pd.read_csv(TABLES_DIR / "boosting_exp02_calibration.csv").set_index("method")
     d_auc = abs(float(c2.loc[prod, "roc_auc"]) - float(c2.loc["identity", "roc_auc"]))
     auc_text = "AUC **unchanged to 5 d.p.**" if d_auc < 5e-6 else f"AUC moves {d_auc:.4f}"
+    others = [m for m in c2.index if m != "identity"]
+    best_gain = float(c2.loc["identity", "ece"]) - min(float(c2.loc[m, "ece"]) for m in others)
+    if "intercept_only" in c2.index and best_gain > 0:
+        shift_share = (float(c2.loc["identity", "ece"]) - float(c2.loc["intercept_only", "ece"])) / best_gain
+        exp02_verdict = (
+            f"Ranking is unchanged and ECE falls, but this is mostly a base-rate shift: a one-parameter "
+            f"intercept shift recovers {shift_share:.0%} of the best calibrator's ECE gain"
+        )
+    else:
+        exp02_verdict = "Ranking is unchanged and ECE falls; no intercept-only baseline was run"
     res_exp02 = (
         f"{auc_text}; ECE **{float(c2.loc['identity', 'ece']):.4f} → {float(c2.loc[prod, 'ece']):.4f}** "
         f"({prod}, chosen on 2015-01..06) on {H2} ({FULL}: {float(cf.loc['identity', 'ece']):.4f} → "
@@ -131,7 +124,7 @@ def render_results_table() -> str:
     n_seeds = len(ss["seeds"])
     a_s, b_s = seeds_tbl.loc["A_tabular"], seeds_tbl.loc["B_tabular_plus_graph"]
     res_exp04 = (
-        f"AUC **{auc_b - auc_a:+.4f}**. Mean over {n_seeds} LightGBM seeds on {H2}: ECE **{a_s['ece_mean']:.4f} ± {a_s['ece_std']:.4f} "
+        f"AUC **{b_s['roc_auc_mean'] - a_s['roc_auc_mean']:+.4f}** (mean over {n_seeds} LightGBM seeds). On {H2}: ECE **{a_s['ece_mean']:.4f} ± {a_s['ece_std']:.4f} "
         f"→ {b_s['ece_mean']:.4f} ± {b_s['ece_std']:.4f}**, O/E **{a_s['observed_expected_ratio_mean']:.3f} → "
         f"{b_s['observed_expected_ratio_mean']:.3f}** (EXP04/05 single-fit run: ECE {ece_a:.4f} → {ece_b:.4f}, O/E {oe_a:.3f} → {oe_b:.3f}) `OBSERVED`"
     )
@@ -176,10 +169,37 @@ def render_results_table() -> str:
     row_2010 = df_exp07[df_exp07["vintage"] == 2010].iloc[0]
     row_2015 = df_exp07[df_exp07["vintage"] == 2015].iloc[0]
     row_h2 = df_exp07_h2[df_exp07_h2["vintage"] == 2015].iloc[0]
+    quarterly = pd.read_csv(TABLES_DIR / "boosting_exp07_calibration_drift_quarterly.csv")
+    in_sample = quarterly[quarterly["split"] == "train"]["roc_auc"]
+    out_sample = quarterly[quarterly["split"].isin(["valid", "test"])]["roc_auc"]
     res_exp07 = (
-        f"O/E **{float(row_2010['observed_expected']):.3f} (2010) → {float(row_h2['observed_expected']):.3f} (2015-07..12)** "
-        f"(full 2015: {float(row_2015['observed_expected']):.3f}) while AUC moves "
-        f"{float(row_2010['roc_auc']):.4f} → {float(row_h2['roc_auc']):.4f} `OBSERVED`"
+        f"O/E **{float(row_2010['observed_expected']):.3f} (2010, a training vintage) → {float(row_h2['observed_expected']):.3f} (2015-07..12)** "
+        f"(full 2015: {float(row_2015['observed_expected']):.3f}). AUC by quarter: in-sample training vintages "
+        f"{in_sample.min():.3f}–{in_sample.max():.3f}, out-of-sample (validation and test) "
+        f"{out_sample.min():.3f}–{out_sample.max():.3f} `OBSERVED`"
+    )
+    oos_flat = float(out_sample.max() - out_sample.min()) < 0.02
+    exp07_verdict = (
+        "Calibration drifts across vintages (O/E rises from below 1 to above 1). Out-of-sample ranking is "
+        "flat, so most of the fall in AUC across vintages is in-sample optimism, not drift"
+        if oos_flat and float(in_sample.mean() - out_sample.mean()) > 0.02
+        else "Calibration and ranking both move across vintages; see the quarterly table"
+    )
+
+    # CR-12: deployment realism (labels that were not yet knowable at the deployment date)
+    dr = pd.read_csv(TABLES_DIR / "deployment_realism_p1_5.csv")
+    std, real = dr.iloc[0], dr.iloc[1]
+    res_dr = (
+        f"Trained only on outcomes knowable by 2014-12, on {H2}: AUC **{std['h2_test_auc']:.4f} → {real['h2_test_auc']:.4f}**, "
+        f"ECE **{std['h2_test_ece']:.4f} → {real['h2_test_ece']:.4f}**, O/E **{std['h2_observed_expected_ratio']:.3f} → "
+        f"{real['h2_observed_expected_ratio']:.3f}** ({FULL}: AUC {std['test_auc']:.4f} → {real['test_auc']:.4f}, "
+        f"O/E {std['observed_expected_ratio']:.3f} → {real['observed_expected_ratio']:.3f}) `OBSERVED`"
+    )
+    worse = real["h2_test_auc"] < std["h2_test_auc"] and real["h2_test_ece"] > std["h2_test_ece"]
+    dr_verdict = (
+        "**The standard out-of-time benchmark overstates day-one performance:** most training labels were not "
+        "yet knowable at the deployment date, and using only those that were makes ranking and calibration worse"
+        if worse else "Using only labels knowable at the deployment date does not make the model worse"
     )
 
     # EXP08 / EXP09 / EXP10: decision on 2015-01..06, evidence on the 2015-07..12 holdout
@@ -208,26 +228,36 @@ def render_results_table() -> str:
     pj = json.loads((TABLES_DIR / "exp11_swaps.json").read_text(encoding="utf-8"))["placebo_controls"]
     def_a = float(df_exp11[df_exp11["policy"] == "A_pd_ranked"]["default_rate"].iloc[0]) * 100
     def_b = float(df_exp11[df_exp11["policy"] == "B_blindspot_aware"]["default_rate"].iloc[0]) * 100
-    lo = min(pj["random_default_ci"][0], pj["apr_matched_default_ci"][0]) * 100
-    hi = max(pj["random_default_ci"][1], pj["apr_matched_default_ci"][1]) * 100
+    rnd_lo, rnd_hi = (x * 100 for x in pj["random_default_ci"])
+    apr_lo, apr_hi = (x * 100 for x in pj["apr_matched_default_ci"])
+    apr_mean = pj["apr_matched_default_mean"] * 100
     res_exp11 = (
-        f"Default rate **{def_a:.2f}% → {def_b:.2f}%** on {H2}, placebo controls show **{lo:.2f}%–{hi:.2f}%** `OBSERVED`"
+        f"Default rate **{def_a:.2f}% → {def_b:.2f}%** on {H2}. Placebo exclusion (200 draws, 95% intervals): "
+        f"random {rnd_lo:.2f}%–{rnd_hi:.2f}%, APR-matched {apr_lo:.2f}%–{apr_hi:.2f}% `OBSERVED`"
     )
+    below_mean = apr_mean - def_b
+    share = below_mean / (def_a - def_b) if def_a > def_b else float("nan")
     if pj["signal_beats_random"] and pj["signal_beats_apr_matched"]:
         exp11_verdict = "**Signal beats both placebos.** See report"
     elif pj["signal_beats_random"]:
-        exp11_verdict = "**Beats random exclusion but not the APR-matched placebo:** the risk reduction is the APR-mix shift, not blind-spot selectivity"
+        exp11_verdict = (
+            "**Beats random exclusion but not the APR-matched placebo.** The signal book is "
+            f"{below_mean:.2f} points below the APR-matched placebo mean, {share:.0%} of its {def_a - def_b:.2f}-point "
+            f"reduction, and {def_b - apr_lo:+.3f} points from that interval's lower edge, so most of the "
+            "reduction is the lower-APR refill; the margin is borderline"
+        )
     else:
         exp11_verdict = "**Null result.** Risk reduction is driven by refilling budget with safer loans, not blind-spot selectivity"
 
     rows = [
         ("EXP01", "Does non-linear modelling beat logistic regression?", res_exp01, exp01_verdict),
-        ("EXP02", "Does calibration improve PD reliability?", res_exp02, "The point of the project in one row: ranking metrics are blind to calibration"),
+        ("EXP02", "Does calibration improve PD reliability?", res_exp02, exp02_verdict),
         ("EXP03", "Does expected-profit optimisation beat a fixed PD threshold?", res_exp03, exp03_verdict),
         ("EXP04", "Do graph cohort features add signal?", res_exp04, exp04_verdict),
         ("EXP05", "Does GraphSAGE beat the aggregates?", res_exp05, exp05_verdict),
         ("EXP06", "Can a budget-aware learned policy beat static policies?", res_exp06, exp06_verdict),
-        ("EXP07", "How does the model degrade under vintage drift?", res_exp07, "Calibration drifts before ranking does"),
+        ("EXP07", "How does the model degrade under vintage drift?", res_exp07, exp07_verdict),
+        ("Deployment realism", "What if the model only knows the labels available at the deployment date?", res_dr, dr_verdict),
         ("EXP08", "Does autoencoder anomaly flag untrustworthy PDs?", res_exp08, exp08_verdict),
         ("EXP09", "Does VGAE relational uncertainty flag them?", res_exp09, exp09_verdict),
         ("EXP10", "Does model disagreement flag them?", res_exp10, exp10_verdict),
@@ -288,6 +318,19 @@ def _exp06_verdict(cond: dict[str, pd.DataFrame], thr: dict[str, pd.DataFrame]) 
     )
     if losses:
         parts.append(f"significantly worse than the threshold: {losses}")
+    sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")
+    collapsed = [
+        f"{r['policy']} ({r['condition']})" for _, r in sweep.iterrows()
+        if any(m in r["policy"] for m in LEARNER_MARKERS) and r["approval_rate"] < 0.01
+    ]
+    if collapsed:
+        parts.append("learners that stopped lending (approval below 1%): " + "; ".join(collapsed))
+    lam_loss = [
+        c for c in cond
+        if any(p.startswith("expected_profit(lambda=") and cond[c].loc[p, "ci_high"] < 0 for p in cond[c].index)
+    ]
+    if lam_loss:
+        parts.append("the validation-fitted shadow-price policy is significantly worse than the myopic rule at " + ", ".join(lam_loss))
     del constrained
     return "; ".join(parts)
 
@@ -520,45 +563,172 @@ def render_profit_paragraph() -> str:
     return "\n".join(lines)
 
 
+PD_SOURCE_LABELS = {
+    "primary_pd": "Production PD (primary features)",
+    "with_lc_grade_pd": "+ LendingClub grade and APR (ablation)",
+    "cohort_features_pd": "+ cohort features (EXP04 arm B)",
+}
+
+
+def _rule_phrase(row: pd.Series) -> str:
+    if row["same_ci_high"] < 0:
+        return "still loses to"
+    if row["same_ci_low"] > 0:
+        return "beats"
+    return "is statistically indistinguishable from"
+
+
 def render_apr_ablation_paragraph() -> str:
-    """CR-10: the profit audit repeated with a PD that sees LendingClub's own pricing."""
+    """CR-10 and CR-11: the profit audit repeated with three PDs, in one table."""
     m = pd.read_csv(TABLES_DIR / "apr_in_pd_metrics.csv").set_index("pd_source")
     by_apr = pd.read_csv(TABLES_DIR / "apr_in_pd_by_apr.csv")
     rules = pd.read_csv(TABLES_DIR / "apr_in_pd_rules.csv")
-    prim, grade = m.loc["primary_pd"], m.loc["with_lc_grade_pd"]
+    sources = [k for k in PD_SOURCE_LABELS if k in m.index]
 
-    def oe_range(pool: str) -> tuple[float, float]:
-        sub = by_apr[by_apr["pool"] == pool].sort_values("apr_quintile")
+    def gradient(source: str) -> tuple[float, float]:
+        sub = by_apr[by_apr["pool"] == source].sort_values("apr_quintile")
         return float(sub.iloc[0]["observed_over_expected"]), float(sub.iloc[-1]["observed_over_expected"])
 
-    p_lo, p_hi = oe_range("primary_pd")
-    g_lo, g_hi = oe_range("with_lc_grade_pd")
-    row = rules[(rules["pd_source"] == "with_lc_grade_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
-    row_p = rules[(rules["pd_source"] == "primary_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
-    if row["same_ci_high"] < 0:
-        outcome = "still loses to the 15% PD threshold under that PD"
-    elif row["same_ci_low"] > 0:
-        outcome = "beats the 15% PD threshold under that PD"
-    else:
-        outcome = "is statistically indistinguishable from the 15% PD threshold under that PD"
+    def rule_row(source: str) -> pd.Series:
+        return rules[(rules["pd_source"] == source) & (rules["rule"] == "expected_profit>0")].iloc[0]
+
     lines = [
-        "**Ablation: a PD that sees LendingClub's own pricing.** The production PD excludes `int_rate`, "
-        "`grade` and `sub_grade` by design, because they are LendingClub's own risk score. This ablation "
-        "refits the PD with them (calibrator chosen on 2015-01..06; every number on 2015-07..12). It "
-        "is not a replacement: a PD that consumes the incumbent's pricing does not underwrite from "
-        "primary evidence.",
+        "**PD ablations: LendingClub's pricing and the cohort features.** The production PD excludes "
+        "`int_rate`, `grade` and `sub_grade` by design (they are LendingClub's own risk score). Two "
+        "refits are audited on the same real book (calibrator chosen on 2015-01..06, every number on "
+        "2015-07..12). Neither is a replacement for the production PD: the first consumes the "
+        "incumbent's pricing, and the second is the EXP04 comparison arm.",
         "",
-        f"- ROC-AUC {prim['roc_auc']:.4f} → {grade['roc_auc']:.4f}; ECE {prim['ece']:.4f} → {grade['ece']:.4f}; "
-        f"O/E {prim['observed_expected_ratio']:.3f} → {grade['observed_expected_ratio']:.3f}.",
-        f"- Observed/expected defaults from the lowest to the highest APR quintile: production PD "
-        f"{p_lo:.2f} → {p_hi:.2f}; PD with LendingClub's pricing {g_lo:.2f} → {g_hi:.2f}.",
-        f"- With that PD, accepting every loan with predicted profit above zero earns "
-        f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan vs the 15% threshold under the same PD "
-        f"(95% CI [{row['same_ci_low']:+.1f}, {row['same_ci_high']:+.1f}]), so the rule {outcome}. Against the "
-        f"production-PD threshold the figure is {row['diff_vs_primary_pd_threshold_per_loan']:+.1f} "
-        f"[{row['ref_ci_low']:+.1f}, {row['ref_ci_high']:+.1f}] (production-PD expected-profit rule: "
-        f"{row_p['diff_vs_primary_pd_threshold_per_loan']:+.1f}).",
+        "| PD | ROC-AUC | ECE | O/E | O/E, lowest → highest APR quintile | Expected-profit rule vs 15% threshold, same PD (per loan, 95% CI) | vs production-PD threshold |",
+        "|---|---|---|---|---|---|---|",
     ]
+    for source in sources:
+        lo, hi = gradient(source)
+        r = rule_row(source)
+        lines.append(
+            f"| {PD_SOURCE_LABELS[source]} | {m.loc[source, 'roc_auc']:.4f} | {m.loc[source, 'ece']:.4f} | "
+            f"{m.loc[source, 'observed_expected_ratio']:.3f} | {lo:.2f} → {hi:.2f} | "
+            f"{r['diff_vs_same_pd_threshold_per_loan']:+.1f} [{r['same_ci_low']:+.1f}, {r['same_ci_high']:+.1f}] | "
+            f"{r['diff_vs_primary_pd_threshold_per_loan']:+.1f} [{r['ref_ci_low']:+.1f}, {r['ref_ci_high']:+.1f}] |"
+        )
+    lines.append("")
+    base = rule_row("primary_pd")
+    if "with_lc_grade_pd" in sources:
+        g = rule_row("with_lc_grade_pd")
+        glo, ghi = gradient("with_lc_grade_pd")
+        lines.append(
+            f"- With LendingClub's grade and APR in the PD, the observed/expected gradient across APR quintiles "
+            f"flattens to {glo:.2f}–{ghi:.2f} and the expected-profit rule {_rule_phrase(g)} the 15% threshold under "
+            f"that PD ({g['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan, against "
+            f"{base['diff_vs_same_pd_threshold_per_loan']:+.1f} with the production PD)."
+        )
+    if "cohort_features_pd" in sources:
+        c = rule_row("cohort_features_pd")
+        clo, chi = gradient("cohort_features_pd")
+        level = float(m.loc["cohort_features_pd", "observed_expected_ratio"])
+        level_fixed = abs(level - 1.0) < 0.05
+        gradient_left = (chi - clo) > 0.2
+        lines.append(
+            f"- With the cohort features, overall observed/expected is {level:.3f} "
+            f"({'level fixed' if level_fixed else 'level not fixed'}), the gradient across APR quintiles is "
+            f"{clo:.2f}–{chi:.2f}, and the expected-profit rule {_rule_phrase(c)} the 15% threshold under that PD "
+            f"({c['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan)."
+        )
+        if level_fixed and gradient_left and c["same_ci_high"] < 0:
+            sentence = (
+                "- Fixing the level of the PD did not fix the decision: the rule still loses while an APR gradient "
+                "in the PD's errors remains."
+            )
+            if "with_lc_grade_pd" in sources and rule_row("with_lc_grade_pd")["diff_vs_same_pd_threshold_per_loan"] > c["diff_vs_same_pd_threshold_per_loan"]:
+                sentence += (
+                    " The refit that flattens that gradient (LendingClub's pricing) narrows the shortfall more, "
+                    "though it does not close it, so pricing information along APR matters more here than "
+                    "calibration in the large."
+                )
+            lines.append(sentence)
+        elif level_fixed and not (c["same_ci_high"] < 0):
+            lines.append("- Fixing the level of the PD was enough to remove the rule's shortfall on this book.")
+    return "\n".join(lines)
+
+
+def render_how_built() -> str:
+    """CR-14: the experiments as one logical chain. Figures come from artifacts, none from the author."""
+    decomp = pd.read_csv(TABLES_DIR / "profit_calibration_decomposition.csv")
+    d = decomp[(decomp["pool"] == "test_h2") & (decomp["cashflow_source"] == "train_fit")].iloc[0]
+    pd_share = abs(float(d["pd_effect"])) / abs(float(d["gap_total"]))
+    by_apr = pd.read_csv(TABLES_DIR / "apr_in_pd_by_apr.csv")
+    prim = by_apr[by_apr["pool"] == "primary_pd"].sort_values("apr_quintile")
+    lo, hi = float(prim.iloc[0]["observed_over_expected"]), float(prim.iloc[-1]["observed_over_expected"])
+    lines = [
+        "Each step answers a question the previous result made necessary. The experiment ids refer to the "
+        "table below, which keeps them as references.",
+        "",
+        "1. **Predict (EXP01).** Can a model rank borrowers out of time? Yes, modestly: gradient boosting beats "
+        "a logistic baseline on a window no selection touched.",
+        "2. **Trust the probability (EXP02, EXP07, deployment realism).** A decision multiplies the probability "
+        "by dollars, so ranking is not enough. Calibration gains are mostly a base-rate correction, the PD's "
+        "level drifts across vintages while out-of-sample ranking does not, and training only on labels that "
+        "were knowable at the deployment date is worse than the usual benchmark suggests.",
+        "3. **Add relational information (EXP04, EXP05).** Do cohorts help? Not ranking. They fix the *level* of "
+        "the PD in every training seed tested, though shuffled cohort keys reproduce part of that gain; GraphSAGE is "
+        "the weakest arm.",
+        "4. **Decide (EXP03, EXP06).** Does a profit rule built on the PD beat a plain PD threshold, and does "
+        "learning or capital pricing help? No: the profit rule loses to the threshold on the real book, and "
+        "neither a learned policy nor the shadow-price policy recovers it.",
+        "5. **Diagnose the failure.** Where does predicted profit go wrong? A dollar decomposition of predicted "
+        "versus realised profit, a PD refit with LendingClub's pricing, and a PD refit with the cohort features "
+        "(correct level, remaining APR gradient). The PD's default-count error is the largest single source, it "
+        "varies systematically with APR, and correcting the PD's level alone does not fix the decision.",
+        "6. **Find where the PD is unreliable (EXP08, EXP09, EXP10).** Blind-spot signals, judged conditional on "
+        "the PD level and decided on a selection window; only one passes.",
+        "7. **Act on it (EXP11).** Excluding borrowers flagged by the kept signal, judged against random and "
+        "APR-matched placebos.",
+        "",
+        f"**Root cause, measured.** The decision layers inherit the PD's errors. The production PD under-predicts "
+        f"defaults where APR is high (observed/expected {lo:.2f} in the lowest APR quintile to {hi:.2f} in the "
+        f"highest), so a rule that rewards APR selects understated risk: the PD's default-count error is "
+        f"{pd_share:.0%} of the gap between predicted and realised profit (EXP03; the rest is drift in the cashflow "
+        "curves), refitting the PD for level alone does not fix the decision, and the risk reduction in EXP11 is "
+        "matched by excluding loans of the same APR mix.",
+    ]
+    return "\n".join(lines)
+
+
+def render_label_gate_paragraph() -> str:
+    """G4: the same-month rule for neighbour labels versus a strictly-before rule."""
+    g = pd.read_csv(TABLES_DIR / "label_gate_sensitivity.csv").set_index("arm")
+    labels = {
+        "A_tabular": "Tabular only",
+        "B_cohort_current_rule": "+ cohort features, current rule (`resolved <= issue` month)",
+        "B_cohort_strict_rule": "+ cohort features, strict rule (`resolved < issue` month)",
+    }
+    lines = [
+        "**Same-month label rule.** Cohort label aggregates admit a neighbour when its resolution month is on or "
+        "before the applicant's issue month, so a neighbour resolved in the same month is admitted. A strictly-before "
+        "rule is more conservative. Rebuilding the cohort features under the strict rule and refitting (three LightGBM "
+        "seeds, 2015-07..12, mean ± sd):",
+        "",
+        "| Arm | ROC-AUC | ECE | O/E |",
+        "|---|---|---|---|",
+    ]
+    for arm, label in labels.items():
+        r = g.loc[arm]
+        lines.append(
+            f"| {label} | {r['roc_auc_mean']:.4f} ± {r['roc_auc_std']:.4f} | {r['ece_mean']:.4f} ± {r['ece_std']:.4f} | "
+            f"{r['observed_expected_ratio_mean']:.3f} ± {r['observed_expected_ratio_std']:.3f} |"
+        )
+    cur, strict, base = g.loc["B_cohort_current_rule"], g.loc["B_cohort_strict_rule"], g.loc["A_tabular"]
+    shift = float(strict["ece_mean"] - cur["ece_mean"])
+    noise = max(float(cur["ece_std"]), float(strict["ece_std"]), 1e-4)
+    still_helps = float(strict["ece_mean"]) < float(base["ece_mean"]) - 2 * float(base["ece_std"])
+    lines.append("")
+    lines.append(
+        f"Under the strict rule ECE moves by {shift:+.4f} against the current rule "
+        + ("(within seed noise), " if abs(shift) <= 2 * noise else "(larger than seed noise), ")
+        + ("and the cohort features still lower ECE below the tabular arm. " if still_helps
+           else "and the cohort features no longer lower ECE below the tabular arm. ")
+        + "The headline cohort results use the current rule; this table states what the stricter rule would change."
+    )
     return "\n".join(lines)
 
 
@@ -596,6 +766,8 @@ def _blocks() -> dict:
     """
     return {
         "data-table": render_data_table,
+        "how-built": render_how_built,
+        "label-gate": render_label_gate_paragraph,
         "data-profile": render_data_profile,
         "results-table": render_results_table,
         "rl-section": render_rl_paragraph,

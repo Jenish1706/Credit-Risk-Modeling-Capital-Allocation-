@@ -1,0 +1,4 @@
+arm,roc_auc_mean,roc_auc_std,ece_mean,ece_std,observed_expected_ratio_mean,observed_expected_ratio_std
+A_tabular,0.671544,0.000507761,0.0108792,3.83355e-05,1.07987,0.000303889
+B_cohort_current_rule,0.67024,0.000828889,0.00477917,0.000551927,0.992722,0.0121319
+B_cohort_strict_rule,0.670676,0.000476961,0.00482477,0.000785192,1.00924,0.015748

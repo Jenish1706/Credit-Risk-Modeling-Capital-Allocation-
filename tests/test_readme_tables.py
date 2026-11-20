@@ -111,11 +111,32 @@ def test_superseded_banners_and_stale_claims_are_handled():
 
 
 def test_apr_ablation_is_rendered_from_its_artifacts():
-    """CR-10: the with-LendingClub-pricing ablation is reported, labelled, and matches its CSVs."""
+    """CR-10 and CR-11: the PD ablations (LendingClub pricing, cohort features) match their CSVs."""
     text = _read(RESULTS_PAGE)
-    assert "**Ablation: a PD that sees LendingClub's own pricing.**" in text
+    assert "**PD ablations: LendingClub's pricing and the cohort features.**" in text
     rules = pd.read_csv(TABLES_DIR / "apr_in_pd_rules.csv")
-    row = rules[(rules["pd_source"] == "with_lc_grade_pd") & (rules["rule"] == "expected_profit>0")].iloc[0]
-    assert f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} per loan vs the 15% threshold under the same PD" in text
     metrics = pd.read_csv(TABLES_DIR / "apr_in_pd_metrics.csv").set_index("pd_source")
-    assert f"{metrics.loc['with_lc_grade_pd', 'roc_auc']:.4f}" in text
+    assert {"primary_pd", "with_lc_grade_pd", "cohort_features_pd"} <= set(metrics.index)
+    for source in ("primary_pd", "with_lc_grade_pd", "cohort_features_pd"):
+        row = rules[(rules["pd_source"] == source) & (rules["rule"] == "expected_profit>0")].iloc[0]
+        cell = (
+            f"{row['diff_vs_same_pd_threshold_per_loan']:+.1f} "
+            f"[{row['same_ci_low']:+.1f}, {row['same_ci_high']:+.1f}]"
+        )
+        assert cell in text, f"{source}: rule-vs-threshold cell missing from the results page"
+        assert f"{metrics.loc[source, 'roc_auc']:.4f}" in text
+        assert f"{metrics.loc[source, 'observed_expected_ratio']:.3f}" in text
+
+
+
+def test_readme_prose_states_no_result_numbers():
+    """G4: outside the rendered blocks and code fences, the README carries no result figures."""
+    import re
+
+    text = _read(README_PATH)
+    text = re.sub(r"<!-- BEGIN:([a-z0-9-]+) -->.*?<!-- END:\1 -->", "", text, flags=re.S)
+    text = re.sub(r"```.*?```", "", text, flags=re.S)
+    protocol_parameters = {"15%"}  # the fixed PD-threshold parameter, not a result
+    found = re.findall(r"\d+\.\d+|\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?%", text)
+    unexpected = [t for t in found if t not in protocol_parameters]
+    assert not unexpected, f"README prose contains figures that are not rendered from artifacts: {unexpected}"

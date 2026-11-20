@@ -14,16 +14,17 @@ Each row gives its interval or seed spread. The artifact behind each row is list
 | # | Question | Result | Verdict |
 |---|---|---|---|
 | **EXP01** | Does non-linear modelling beat logistic regression? | AUC **0.6606 → 0.6732** (+0.0126) on 2015-07..12 (full 2015: 0.6581 → 0.6705) `OBSERVED` | Material. Boosting justified |
-| **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0198 → 0.0117** (intercept_only, chosen on 2015-01..06) on 2015-07..12 (full 2015: 0.0193 → 0.0110); slope 1.003 → 1.004 `OBSERVED` | The point of the project in one row: ranking metrics are blind to calibration |
+| **EXP02** | Does calibration improve PD reliability? | AUC **unchanged to 5 d.p.**; ECE **0.0198 → 0.0117** (intercept_only, chosen on 2015-01..06) on 2015-07..12 (full 2015: 0.0193 → 0.0110); slope 1.003 → 1.004 `OBSERVED` | Ranking is unchanged and ECE falls, but this is mostly a base-rate shift: a one-parameter intercept shift recovers 94% of the best calibrator's ECE gain |
 | **EXP03** | Does expected-profit optimisation beat a fixed PD threshold? | Simulated diff vs 15% threshold: **-28,262**/episode (95% CI [-54,837, -2,616]) `SIMULATED` on 2015-07..12. Real book at observed exposure: **-36.9**/loan (95% CI [-47.1, -26.9]) `OBSERVED` on 2015-07..12 | **Expected-profit rule loses to a PD threshold on the real book.** Simulation CI excludes zero. Mechanism is measured below, not assumed |
-| **EXP04** | Do graph cohort features add signal? | AUC **-0.0009**. Mean over 5 LightGBM seeds on 2015-07..12: ECE **0.0110 ± 0.0001 → 0.0048 ± 0.0005**, O/E **1.081 → 0.998** (EXP04/05 single-fit run: ECE 0.0109 → 0.0043, O/E 1.080 → 0.989) `OBSERVED` | No discrimination gain; **calibration gain survives both controls in every one of 5 seeds** (ΔECE B−tabular -0.0062 ± 0.0005, B−macro -0.0066 ± 0.0002, B−shuffled -0.0038 ± 0.0006; mean ± sd over seeds, per-seed paired bootstrap, 2015-07..12) |
+| **EXP04** | Do graph cohort features add signal? | AUC **-0.0012** (mean over 5 LightGBM seeds). On 2015-07..12: ECE **0.0110 ± 0.0001 → 0.0048 ± 0.0005**, O/E **1.081 → 0.998** (EXP04/05 single-fit run: ECE 0.0109 → 0.0043, O/E 1.080 → 0.989) `OBSERVED` | No discrimination gain; **calibration gain survives both controls in every one of 5 seeds** (ΔECE B−tabular -0.0062 ± 0.0005, B−macro -0.0066 ± 0.0002, B−shuffled -0.0038 ± 0.0006; mean ± sd over seeds, per-seed paired bootstrap, 2015-07..12) |
 | **EXP05** | Does GraphSAGE beat the aggregates? | AUC **0.6637** vs 0.6704 (aggregates) vs 0.6712 (tabular) on 2015-07..12 `OBSERVED` | **No.** The GNN loses to both |
-| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners, accept/reject at observed exposure (2015-07..12). Unconstrained: best learner thompson +17,398 vs myopic expected-profit (95% CI [-2,574, +37,136]). 60% budget: thompson -160 vs the 15% threshold (95% CI [-15,333, +14,180]) `SIMULATED` | Control holds: no learner significantly beats the myopic rule with unconstrained capital; **no learner significantly beats the fixed 15% threshold in any condition**; significantly worse than the threshold: budget_aware_q(greedy) (unconstrained, budget=0.60); linucb@alpha=1 (budget=0.35, budget=0.20); thompson (budget=0.20) |
-| **EXP07** | How does the model degrade under vintage drift? | O/E **0.861 (2010) → 1.082 (2015-07..12)** (full 2015: 1.077) while AUC moves 0.7475 → 0.6732 `OBSERVED` | Calibration drifts before ranking does |
+| **EXP06** | Can a budget-aware learned policy beat static policies? | Frozen-at-test learners, accept/reject at observed exposure (2015-07..12). Unconstrained: best learner thompson +17,398 vs myopic expected-profit (95% CI [-2,574, +37,136]). 60% budget: thompson -160 vs the 15% threshold (95% CI [-15,333, +14,180]) `SIMULATED` | Control holds: no learner significantly beats the myopic rule with unconstrained capital; **no learner significantly beats the fixed 15% threshold in any condition**; significantly worse than the threshold: budget_aware_q(greedy) (unconstrained, budget=0.60); linucb@alpha=1 (budget=0.35, budget=0.20); thompson (budget=0.20); learners that stopped lending (approval below 1%): linucb@alpha=1 (budget=0.35); thompson (budget=0.20); the validation-fitted shadow-price policy is significantly worse than the myopic rule at budget=0.35 |
+| **EXP07** | How does the model degrade under vintage drift? | O/E **0.861 (2010, a training vintage) → 1.082 (2015-07..12)** (full 2015: 1.077). AUC by quarter: in-sample training vintages 0.700–0.761, out-of-sample (validation and test) 0.665–0.675 `OBSERVED` | Calibration drifts across vintages (O/E rises from below 1 to above 1). Out-of-sample ranking is flat, so most of the fall in AUC across vintages is in-sample optimism, not drift |
+| **Deployment realism** | What if the model only knows the labels available at the deployment date? | Trained only on outcomes knowable by 2014-12, on 2015-07..12: AUC **0.6712 → 0.6503**, ECE **0.0109 → 0.0367**, O/E **1.080 → 1.294** (full 2015: AUC 0.6690 → 0.6478, O/E 1.076 → 1.286) `OBSERVED` | **The standard out-of-time benchmark overstates day-one performance:** most training labels were not yet knowable at the deployment date, and using only those that were makes ranking and calibration worse |
 | **EXP08** | Does autoencoder anomaly flag untrustworthy PDs? | H1 decision **KEEP**. On 2015-07..12: survives PD control in **10/10** PD strata, two-sided sign test p=0.0020, odds ratio 1.033/SD [1.021, 1.046] (full 2015: 10/10, OR 1.032) `OBSERVED` | **KEEP**, confirmed on holdout |
 | **EXP09** | Does VGAE relational uncertainty flag them? | H1 decision **REJECT**. On 2015-07..12: survives PD control in **3/10** PD strata, two-sided sign test p=0.3438, odds ratio 1.002/SD [0.988, 1.017] (full 2015: 5/10, OR 1.002) `OBSERVED` | **REJECT** |
 | **EXP10** | Does model disagreement flag them? | H1 decision **REJECT**. On 2015-07..12: survives PD control in **7/10** PD strata, two-sided sign test p=0.3438, odds ratio 1.050/SD [1.033, 1.068] (full 2015: 9/10, OR 1.045) `OBSERVED` | **REJECT** |
-| **EXP11** | Does acting on those signals improve the book? | Default rate **16.62% → 15.88%** on 2015-07..12, placebo controls show **15.87%–16.26%** `OBSERVED` | **Beats random exclusion but not the APR-matched placebo:** the risk reduction is the APR-mix shift, not blind-spot selectivity |
+| **EXP11** | Does acting on those signals improve the book? | Default rate **16.62% → 15.88%** on 2015-07..12. Placebo exclusion (200 draws, 95% intervals): random 16.08%–16.26%, APR-matched 15.87%–16.05% `OBSERVED` | **Beats random exclusion but not the APR-matched placebo.** The signal book is 0.09 points below the APR-matched placebo mean, 12% of its 0.74-point reduction, and +0.008 points from that interval's lower edge, so most of the reduction is the lower-APR refill; the margin is borderline |
 <!-- END:results-table -->
 
 ## Decision layer and reinforcement learning in detail
@@ -123,11 +124,17 @@ Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M d
 | 9 | 0.116 | 0.169 | +541 | +21 |
 | 10 | 0.114 | 0.182 | +1,426 | +132 |
 
-**Ablation: a PD that sees LendingClub's own pricing.** The production PD excludes `int_rate`, `grade` and `sub_grade` by design, because they are LendingClub's own risk score. This ablation refits the PD with them (calibrator chosen on 2015-01..06; every number on 2015-07..12). It is not a replacement: a PD that consumes the incumbent's pricing does not underwrite from primary evidence.
+**PD ablations: LendingClub's pricing and the cohort features.** The production PD excludes `int_rate`, `grade` and `sub_grade` by design (they are LendingClub's own risk score). Two refits are audited on the same real book (calibrator chosen on 2015-01..06, every number on 2015-07..12). Neither is a replacement for the production PD: the first consumes the incumbent's pricing, and the second is the EXP04 comparison arm.
 
-- ROC-AUC 0.6732 → 0.6934; ECE 0.0117 → 0.0178; O/E 1.082 → 1.134.
-- Observed/expected defaults from the lowest to the highest APR quintile: production PD 0.67 → 1.38; PD with LendingClub's pricing 0.97 → 1.18.
-- With that PD, accepting every loan with predicted profit above zero earns -23.6 per loan vs the 15% threshold under the same PD (95% CI [-33.9, -13.4]), so the rule still loses to the 15% PD threshold under that PD. Against the production-PD threshold the figure is -25.8 [-35.8, -16.2] (production-PD expected-profit rule: -36.9).
+| PD | ROC-AUC | ECE | O/E | O/E, lowest → highest APR quintile | Expected-profit rule vs 15% threshold, same PD (per loan, 95% CI) | vs production-PD threshold |
+|---|---|---|---|---|---|---|
+| Production PD (primary features) | 0.6732 | 0.0117 | 1.082 | 0.67 → 1.38 | -36.9 [-47.1, -26.9] | -36.9 [-47.1, -26.9] |
+| + LendingClub grade and APR (ablation) | 0.6934 | 0.0178 | 1.134 | 0.97 → 1.18 | -23.6 [-33.9, -13.4] | -25.8 [-35.8, -16.2] |
+| + cohort features (EXP04 arm B) | 0.6704 | 0.0043 | 0.989 | 0.61 → 1.30 | -34.3 [-45.0, -23.8] | -27.7 [-38.1, -17.8] |
+
+- With LendingClub's grade and APR in the PD, the observed/expected gradient across APR quintiles flattens to 0.97–1.18 and the expected-profit rule still loses to the 15% threshold under that PD (-23.6 per loan, against -36.9 with the production PD).
+- With the cohort features, overall observed/expected is 0.989 (level fixed), the gradient across APR quintiles is 0.61–1.30, and the expected-profit rule still loses to the 15% threshold under that PD (-34.3 per loan).
+- Fixing the level of the PD did not fix the decision: the rule still loses while an APR gradient in the PD's errors remains. The refit that flattens that gradient (LendingClub's pricing) narrows the shortfall more, though it does not close it, so pricing information along APR matters more here than calibration in the large.
 <!-- END:rl-section -->
 
 ## Null and negative results
@@ -195,6 +202,24 @@ calibration ratios quoted under the wrong label, and unsupported causal explanat
   principled but low-stakes.
 - **Observed-exposure restriction.** The headline cannot speak to lending more or less than
   requested; that part rests on a model coupling and is a labelled sensitivity.
+
+**Month granularity of the label gate**
+
+Resolution and issue dates are both months, so the rule `resolved[j] <= issue[i]` admits a neighbour whose
+outcome was booked in the same month as the applicant's issue. Whether that matters is measured, not assumed
+(`scripts/analyze_label_gate_sensitivity.py`):
+
+<!-- BEGIN:label-gate -->
+**Same-month label rule.** Cohort label aggregates admit a neighbour when its resolution month is on or before the applicant's issue month, so a neighbour resolved in the same month is admitted. A strictly-before rule is more conservative. Rebuilding the cohort features under the strict rule and refitting (three LightGBM seeds, 2015-07..12, mean ± sd):
+
+| Arm | ROC-AUC | ECE | O/E |
+|---|---|---|---|
+| Tabular only | 0.6715 ± 0.0005 | 0.0109 ± 0.0000 | 1.080 ± 0.000 |
+| + cohort features, current rule (`resolved <= issue` month) | 0.6702 ± 0.0008 | 0.0048 ± 0.0006 | 0.993 ± 0.012 |
+| + cohort features, strict rule (`resolved < issue` month) | 0.6707 ± 0.0005 | 0.0048 ± 0.0008 | 1.009 ± 0.016 |
+
+Under the strict rule ECE moves by +0.0000 against the current rule (within seed noise), and the cohort features still lower ECE below the tabular arm. The headline cohort results use the current rule; this table states what the stricter rule would change.
+<!-- END:label-gate -->
 
 ## What I would do next
 

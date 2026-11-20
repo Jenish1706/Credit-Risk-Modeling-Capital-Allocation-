@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""CR-10: does the profit-rule failure go away if the PD model sees LendingClub's own pricing?
+"""CR-10 and CR-11: does the profit-rule failure go away with a better PD?
 
     python scripts/analyze_apr_in_pd.py --config configs/experiments/exp06_rl.yaml
 
@@ -13,7 +13,11 @@ It is an ablation, **not** a replacement: a PD that consumes LendingClub's prici
 underwrite from primary evidence. Selection (the calibrator) uses 2015-01..06 only; every reported
 number is on 2015-07..12.
 
-Writes ``results/tables/apr_in_pd_{metrics,by_apr,rules}.csv``.
+CR-11 adds a third PD: the tabular + cohort-feature arm of EXP04 (seed 42, same features and
+configuration), with its calibrator chosen on 2015-01..06. EXP04 shows the cohort features fix the
+*level* of the PD; this audit asks whether fixing the level fixes the *decision*.
+
+Writes ``results/tables/apr_in_pd_{metrics,by_apr,rules}.csv`` with one row per PD source.
 """
 
 from __future__ import annotations
@@ -45,7 +49,7 @@ from credit_risk.decision.profit_audit import (  # noqa: E402
 from credit_risk.evaluation.metrics import compute_metrics  # noqa: E402
 from credit_risk.features.build import FeatureBuilder, FeatureSpec  # noqa: E402
 from credit_risk.models.boosting import BoostingConfig, BoostingModel  # noqa: E402
-from credit_risk.models.calibration import ProbabilityCalibrator  # noqa: E402
+from credit_risk.models.calibration import select_calibrator_on_window  # noqa: E402
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
     load_prepared,
@@ -58,9 +62,8 @@ from scripts.analyze_profit_calibration import THRESHOLD, _arrays, pd_by_apr_tab
 LOG = get_logger("scripts.apr_in_pd")
 
 
-def fit_grade_pd(train, valid, test, dev_mask, seed):
-    """PD with LendingClub's grade and APR as features; calibrator chosen on 2015-01..06 Brier."""
-    spec = FeatureSpec(feature_set="with_lc_grade")
+def fit_pd(spec, train, valid, test, seed, label):
+    """Fit LightGBM on ``spec``'s features; calibrator chosen on 2015-01..06 Brier (library helper)."""
     builder = FeatureBuilder(spec).fit(train, valid)
     X_tr, X_va, X_te = (builder.transform(d) for d in (train, valid, test))
     y_tr = train["default"].astype(int).to_numpy()
@@ -71,14 +74,23 @@ def fit_grade_pd(train, valid, test, dev_mask, seed):
     ).fit(X_tr, y_tr, X_va, y_va, seed=seed)
     raw_va, raw_te = model.predict_proba(X_va), model.predict_proba(X_te)
 
-    best, best_brier, best_pred = None, np.inf, None
-    for method in ("intercept_only", "platt", "isotonic"):
-        pred = ProbabilityCalibrator(method).fit(y_va, raw_va).transform(raw_te)
-        brier = float(np.mean((pred[dev_mask] - y_te[dev_mask]) ** 2))
-        LOG.info("grade PD | %-14s | H1 Brier %.6f", method, brier)
-        if brier < best_brier:
-            best, best_brier, best_pred = method, brier, pred
-    return best, best_pred
+    best, briers, calibrated = select_calibrator_on_window(
+        y_va, raw_va, y_te, raw_te, test["issue_period"]
+    )
+    for method, brier in briers.items():
+        LOG.info("%s | %-14s | H1 Brier %.6f", label, method, brier)
+    return best, calibrated[best]
+
+
+def fit_grade_pd(train, valid, test, seed):
+    """PD with LendingClub's grade and APR as features."""
+    return fit_pd(FeatureSpec(feature_set="with_lc_grade"), train, valid, test, seed, "grade PD")
+
+
+def fit_cohort_pd(train, valid, test, cohort_columns, seed):
+    """PD with the cohort features of EXP04 arm B (the frames already carry the cohort columns)."""
+    spec = FeatureSpec(feature_set="primary", extra_numeric=tuple(cohort_columns))
+    return fit_pd(spec, train, valid, test, seed, "cohort PD")
 
 
 def main() -> int:
@@ -103,9 +115,22 @@ def main() -> int:
     cashflow = fit_cashflow_model(train, economics)
 
     pd_primary = np.load(paths.artifacts / "boosting_pd_test.npy")
-    method, pd_grade = fit_grade_pd(train, valid, test, masks["dev"], seed)
+    method, pd_grade = fit_grade_pd(train, valid, test, seed)
     LOG.info("grade PD calibrator chosen on 2015-01..06: %s", method)
-    sources = {"primary_pd": pd_primary, "with_lc_grade_pd": pd_grade}
+
+    # CR-11: the EXP04 arm B features. Cohort rows are aligned positionally with the table.
+    cohort = pd.read_parquet(paths.data_processed / "cohort_features.parquet")
+    split_values = df["split"].to_numpy()
+
+    def with_cohort(frame, split_name):
+        return pd.concat([frame, cohort.loc[split_values == split_name].set_index(frame.index)], axis=1)
+
+    method_c, pd_cohort = fit_cohort_pd(
+        with_cohort(train, "train"), with_cohort(valid, "valid"), with_cohort(test, "test"),
+        list(cohort.columns), seed,
+    )
+    LOG.info("cohort PD calibrator chosen on 2015-01..06: %s", method_c)
+    sources = {"primary_pd": pd_primary, "with_lc_grade_pd": pd_grade, "cohort_features_pd": pd_cohort}
 
     holdout = test[h2]
     y = holdout["default"].astype(int).to_numpy()
