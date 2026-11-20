@@ -1,7 +1,8 @@
-pd_source,rule,n_accepted,realised_profit_total,diff_vs_same_pd_threshold_per_loan,same_ci_low,same_ci_high,diff_vs_primary_pd_threshold_per_loan,ref_ci_low,ref_ci_high
-primary_pd,fixed_threshold@0.15,102545,7.03034e+06,0,0,0,0,0,0
-primary_pd,expected_profit>0,79924,1.04289e+06,-36.9058,-47.0559,-26.9011,-36.9058,-47.0559,-26.9011
-with_lc_grade_pd,fixed_threshold@0.15,107930,6.67234e+06,0,0,0,-2.20667,-9.06918,4.70594
-with_lc_grade_pd,expected_profit>0,92426,2.847e+06,-23.5789,-33.8509,-13.3537,-25.7855,-35.807,-16.1509
-cohort_features_pd,fixed_threshold@0.15,81211,8.10498e+06,0,0,0,6.62394,0.66997,12.6929
-cohort_features_pd,expected_profit>0,69344,2.5357e+06,-34.3283,-45.0178,-23.8015,-27.7043,-38.0946,-17.8177
+pd_source,rule,n_accepted,pd_cutoff,realised_profit_total,diff_vs_same_pd_threshold_per_loan,same_ci_low,same_ci_high,diff_vs_primary_pd_threshold_per_loan,ref_ci_low,ref_ci_high,diff_vs_volume_matched_per_loan,vm_ci_low,vm_ci_high
+primary_pd,fixed_threshold@0.15,102545,0.15,7.03034e+06,0,0,0,0,0,0,-6.8298,-12.9298,-0.629113
+primary_pd,expected_profit>0,79924,,1.04289e+06,-36.9058,-47.0559,-26.9011,-36.9058,-47.0559,-26.9011,-43.7356,-55.0524,-32.5028
+with_lc_grade_pd,fixed_threshold@0.15,107930,0.15,6.67234e+06,0,0,0,-2.20667,-9.06918,4.70594,-9.03647,-16.4125,-1.50826
+with_lc_grade_pd,expected_profit>0,92426,,2.847e+06,-23.5789,-33.8509,-13.3537,-25.7855,-35.807,-16.1509,-32.6153,-43.8337,-21.6577
+cohort_features_pd,fixed_threshold@0.15,81211,0.15,8.10498e+06,0,0,0,6.62394,0.66997,12.6929,-0.205859,-5.13803,4.67042
+cohort_features_pd,expected_profit>0,69344,,2.5357e+06,-34.3283,-45.0178,-23.8015,-27.7043,-38.0946,-17.8177,-34.5341,-45.7352,-23.6616
+primary_pd,volume_matched_to_cohort_15,81211,0.123275,8.13838e+06,6.8298,0.629113,12.9298,6.8298,0.629113,12.9298,0,0,0

@@ -140,3 +140,36 @@ def test_readme_prose_states_no_result_numbers():
     found = re.findall(r"\d+\.\d+|\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?%", text)
     unexpected = [t for t in found if t not in protocol_parameters]
     assert not unexpected, f"README prose contains figures that are not rendered from artifacts: {unexpected}"
+
+
+def test_cutoff_comparison_and_volume_matched_control_are_rendered_from_the_rules_csv():
+    """The 15% cut-off on each PD vs the production PD's, and the volume-matched control, match their artifact."""
+    text = _read(RESULTS_PAGE)
+    rules = pd.read_csv(TABLES_DIR / "apr_in_pd_rules.csv")
+    cut = rules[rules["rule"] == "fixed_threshold@0.15"].set_index("pd_source")
+    vm = rules[rules["rule"] == "volume_matched_to_cohort_15"].iloc[0]
+    assert "**Is the cohort PD's gain a better PD or a stricter cut?**" in text
+
+    # the control accepts exactly as many loans as the cohort-feature PD at 15%, with a cut-off tighter than 15%
+    assert int(vm["n_accepted"]) == int(cut.loc["cohort_features_pd", "n_accepted"])
+    assert vm["pd_cutoff"] < 0.15
+
+    for source, row in cut.iterrows():
+        assert f"| {int(row['n_accepted']):,} | {row['pd_cutoff']:.3f} |" in text, source
+        if source != "primary_pd":
+            cell = (
+                f"{row['diff_vs_primary_pd_threshold_per_loan']:+.1f} "
+                f"[{row['ref_ci_low']:+.1f}, {row['ref_ci_high']:+.1f}]"
+            )
+            assert cell in text, f"{source}: cut-off comparison cell missing"
+    control = (
+        f"{vm['diff_vs_primary_pd_threshold_per_loan']:+.1f} [{vm['ref_ci_low']:+.1f}, {vm['ref_ci_high']:+.1f}]"
+    )
+    assert f"| {int(vm['n_accepted']):,} | {vm['pd_cutoff']:.3f} | {control} | reference |" in text
+
+    # the stated reading follows the interval of cohort-PD-vs-control, not the other way round
+    lo, hi = cut.loc["cohort_features_pd", "vm_ci_low"], cut.loc["cohort_features_pd", "vm_ci_high"]
+    if cut.loc["cohort_features_pd", "ref_ci_low"] > 0 and lo <= 0 <= hi:
+        assert "The gain is matched by a stricter cut on the production PD" in text
+    elif lo > 0:
+        assert "The gain is not matched by a stricter cut on the production PD" in text

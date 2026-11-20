@@ -139,6 +139,17 @@ Collapsed learners: linucb@alpha=1 at budget=0.35 (approval rate 0.10%, 0.010M d
 - With LendingClub's grade and APR in the PD, the observed/expected gradient across APR quintiles flattens to 0.97–1.18 and the expected-profit rule still loses to the 15% threshold under that PD (-23.6 per pool applicant, against -36.9 with the production PD).
 - With the cohort features, overall observed/expected is 0.989 (level fixed), the gradient across APR quintiles is 0.61–1.30, and the expected-profit rule still loses to the 15% threshold under that PD (-34.3 per pool applicant).
 - Fixing the level of the PD did not fix the decision: the rule still loses while an APR gradient in the PD's errors remains. The refit that flattens that gradient (LendingClub's pricing) narrows the shortfall more, though it does not close it, so pricing information along APR matters more here than calibration in the large.
+
+**Is the cohort PD's gain a better PD or a stricter cut?** At a 15% cut-off the cohort-feature PD accepts a different number of loans than the production PD because its predictions sit at a different level (observed/expected 0.989 against 1.082). The control tightens the production PD's own cut-off until it accepts the same number of loans as the cohort PD at 15% (chosen from predicted PDs and a loan count only; no outcome is read). Realised profit on 2015-07..12, per pool applicant, paired bootstrap 95% CI:
+
+| PD and rule | Loans accepted | PD cut-off | vs production PD at 15% | vs the volume-matched control |
+|---|---|---|---|---|
+| Production PD, 15% cut-off | 102,545 | 0.150 | reference | -6.8 [-12.9, -0.6] |
+| + LendingClub grade and APR, 15% cut-off | 107,930 | 0.150 | -2.2 [-9.1, +4.7] | -9.0 [-16.4, -1.5] |
+| + cohort features, 15% cut-off | 81,211 | 0.150 | +6.6 [+0.7, +12.7] | -0.2 [-5.1, +4.7] |
+| Production PD, cut-off tightened to match the cohort PD's volume (control) | 81,211 | 0.123 | +6.8 [+0.6, +12.9] | reference |
+
+The 15% cut-off on the cohort-feature PD accepts 81,211 loans against 102,545 and earns +6.6 [+0.7, +12.7] per pool applicant relative to the production PD's cut-off. The production PD tightened to the same volume earns +6.8 [+0.6, +12.9], and the cohort PD against that control earns -0.2 [-5.1, +4.7]. The gain is matched by a stricter cut on the production PD: at equal volume the two PDs are not distinguishable (the interval includes zero), and the cohort PD's ROC-AUC is 0.6704 against 0.6732. On this book the cohort features buy a better-levelled cut-off, with no detectable ranking advantage.
 <!-- END:rl-section -->
 
 ## Null and negative results

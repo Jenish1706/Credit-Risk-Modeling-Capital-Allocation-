@@ -714,7 +714,84 @@ def render_apr_ablation_paragraph() -> str:
             lines.append(sentence)
         elif level_fixed and not (c["same_ci_high"] < 0):
             lines.append("- Fixing the level of the PD was enough to remove the rule's shortfall on this book.")
+    lines += _cutoff_comparison(rules, m, sources)
     return "\n".join(lines)
+
+
+def _signed_ci(mean: float, lo: float, hi: float) -> str:
+    return f"{mean:+.1f} [{lo:+.1f}, {hi:+.1f}]"
+
+
+def _cutoff_comparison(rules: pd.DataFrame, metrics: pd.DataFrame, sources: list[str]) -> list[str]:
+    """Is the cohort PD's gain at a 15% cut-off a better PD, or just a stricter cut? (volume-matched control)"""
+    vm_rows = rules[rules["rule"] == "volume_matched_to_cohort_15"]
+    cut = rules[rules["rule"] == "fixed_threshold@0.15"].set_index("pd_source")
+    if vm_rows.empty or "cohort_features_pd" not in cut.index:
+        return []
+    vm = vm_rows.iloc[0]
+    c = cut.loc["cohort_features_pd"]
+    prod = cut.loc["primary_pd"]
+    labels = {
+        "primary_pd": "Production PD, 15% cut-off",
+        "with_lc_grade_pd": "+ LendingClub grade and APR, 15% cut-off",
+        "cohort_features_pd": "+ cohort features, 15% cut-off",
+    }
+    lines = [
+        "",
+        "**Is the cohort PD's gain a better PD or a stricter cut?** At a 15% cut-off the cohort-feature PD accepts "
+        "a different number of loans than the production PD because its predictions sit at a different level "
+        f"(observed/expected {metrics.loc['cohort_features_pd', 'observed_expected_ratio']:.3f} against "
+        f"{metrics.loc['primary_pd', 'observed_expected_ratio']:.3f}). "
+        "The control tightens the production PD's own cut-off until it accepts the same number of loans as the "
+        "cohort PD at 15% (chosen from predicted PDs and a loan count only; no outcome is read). "
+        "Realised profit on 2015-07..12, per pool applicant, paired bootstrap 95% CI:",
+        "",
+        "| PD and rule | Loans accepted | PD cut-off | vs production PD at 15% | vs the volume-matched control |",
+        "|---|---|---|---|---|",
+    ]
+    for source in sources:
+        if source not in cut.index:
+            continue
+        r = cut.loc[source]
+        ref = "reference" if source == "primary_pd" else _signed_ci(
+            r["diff_vs_primary_pd_threshold_per_loan"], r["ref_ci_low"], r["ref_ci_high"]
+        )
+        lines.append(
+            f"| {labels[source]} | {int(r['n_accepted']):,} | {r['pd_cutoff']:.3f} | {ref} | "
+            f"{_signed_ci(r['diff_vs_volume_matched_per_loan'], r['vm_ci_low'], r['vm_ci_high'])} |"
+        )
+    lines.append(
+        f"| Production PD, cut-off tightened to match the cohort PD's volume (control) | {int(vm['n_accepted']):,} | "
+        f"{vm['pd_cutoff']:.3f} | {_signed_ci(vm['diff_vs_primary_pd_threshold_per_loan'], vm['ref_ci_low'], vm['ref_ci_high'])} | reference |"
+    )
+    lines.append("")
+    gain_real = c["ref_ci_low"] > 0
+    d_lo, d_hi = c["vm_ci_low"], c["vm_ci_high"]
+    auc_c, auc_p = metrics.loc["cohort_features_pd", "roc_auc"], metrics.loc["primary_pd", "roc_auc"]
+    if not gain_real:
+        reading = "The cohort PD's 15% cut-off is not significantly better than the production PD's."
+    elif d_lo <= 0 <= d_hi:
+        reading = (
+            "The gain is matched by a stricter cut on the production PD: at equal volume the two PDs are not "
+            f"distinguishable (the interval includes zero), and the cohort PD's ROC-AUC is {auc_c:.4f} against "
+            f"{auc_p:.4f}. On this book the cohort features buy a better-levelled cut-off, with no detectable "
+            "ranking advantage."
+        )
+    elif d_lo > 0:
+        reading = (
+            "The gain is not matched by a stricter cut on the production PD: at equal volume the cohort-feature PD "
+            "still earns more."
+        )
+    else:
+        reading = "At equal volume the production PD earns more than the cohort-feature PD."
+    lines.append(
+        f"The 15% cut-off on the cohort-feature PD accepts {int(c['n_accepted']):,} loans against "
+        f"{int(prod['n_accepted']):,} and earns {_signed_ci(c['diff_vs_primary_pd_threshold_per_loan'], c['ref_ci_low'], c['ref_ci_high'])} "
+        f"per pool applicant relative to the production PD's cut-off. The production PD tightened to the same volume "
+        f"earns {_signed_ci(vm['diff_vs_primary_pd_threshold_per_loan'], vm['ref_ci_low'], vm['ref_ci_high'])}, and the "
+        f"cohort PD against that control earns {_signed_ci(c['diff_vs_volume_matched_per_loan'], d_lo, d_hi)}. {reading}"
+    )
+    return lines
 
 
 def render_how_built() -> str:

@@ -17,7 +17,11 @@ CR-11 adds a third PD: the tabular + cohort-feature arm of EXP04 (seed 42, same 
 configuration), with its calibrator chosen on 2015-01..06. EXP04 shows the cohort features fix the
 *level* of the PD; this audit asks whether fixing the level fixes the *decision*.
 
-Writes ``results/tables/apr_in_pd_{metrics,by_apr,rules}.csv`` with one row per PD source.
+A volume-matched control separates "better PD" from "stricter cut": the production PD with its cut-off
+set so that it accepts as many loans as the cohort-feature PD does at 15%. The cut-off is chosen from
+predicted PDs and a loan count only; no outcome is read to choose it.
+
+Writes ``results/tables/apr_in_pd_{metrics,by_apr,rules}.csv`` with one row per PD source and rule.
 """
 
 from __future__ import annotations
@@ -59,6 +63,8 @@ from credit_risk.utils.runtime import get_logger  # noqa: E402
 from scripts.analyze_profit_calibration import THRESHOLD, _arrays, pd_by_apr_table  # noqa: E402
 
 LOG = get_logger("scripts.apr_in_pd")
+
+VOLUME_MATCHED = "volume_matched_to_cohort_15"
 
 
 def fit_pd(spec, train, valid, test, seed, label):
@@ -149,30 +155,51 @@ def main() -> int:
 
     # -- real-book rules at the observed exposure ----------------------------------------
     n_boot = int(config.get_path("evaluation.n_bootstrap", 2000))
-    per_loan, accepted = {}, {}
+    per_loan, accepted, cutoff, arrays = {}, {}, {}, {}
     for name, p in sources.items():
         a = _arrays(holdout, p[h2])
         ok = np.isfinite(a["realised_return"]) & np.isfinite(a["exposure"]) & np.isfinite(a["apr"])
         a = {k: v[ok] for k, v in a.items()}
+        arrays[name] = a
         ep = expected_profit(a["pd_hat"], a["exposure"], a["apr"], cashflow, economics)
         for rule, accept in (("fixed_threshold@0.15", a["pd_hat"] < THRESHOLD), ("expected_profit>0", ep > 0)):
             per_loan[(name, rule)] = rule_realised_profit(
                 accept, a["exposure"], a["apr"], a["realised_return"], economics
             )
             accepted[(name, rule)] = int(accept.sum())
+            cutoff[(name, rule)] = THRESHOLD if rule.startswith("fixed") else float("nan")
+
+    # Volume-matched control: production PD, accept the n lowest-PD loans, n = what the cohort-feature PD
+    # accepts at 15%. Chosen from PDs and a count only (no outcome is read).
+    n_match = accepted[("cohort_features_pd", "fixed_threshold@0.15")]
+    a_prod = arrays["primary_pd"]
+    order = np.argsort(a_prod["pd_hat"], kind="stable")
+    accept_vm = np.zeros(len(order), dtype=bool)
+    accept_vm[order[:n_match]] = True
+    key_vm = ("primary_pd", VOLUME_MATCHED)
+    per_loan[key_vm] = rule_realised_profit(
+        accept_vm, a_prod["exposure"], a_prod["apr"], a_prod["realised_return"], economics
+    )
+    accepted[key_vm] = int(accept_vm.sum())
+    cutoff[key_vm] = float(a_prod["pd_hat"][order[n_match - 1]])
+    LOG.info("volume-matched production-PD cut-off %.4f accepts %d loans", cutoff[key_vm], accepted[key_vm])
 
     reference = per_loan[("primary_pd", "fixed_threshold@0.15")]
+    matched = per_loan[key_vm]
     rows = []
     for (name, rule), profit in per_loan.items():
         same_base = per_loan[(name, "fixed_threshold@0.15")]
         m_same, lo_s, hi_s = paired_bootstrap_ci(profit - same_base, n_bootstrap=n_boot, seed=seed)
         m_ref, lo_r, hi_r = paired_bootstrap_ci(profit - reference, n_bootstrap=n_boot, seed=seed)
+        m_vm, lo_v, hi_v = paired_bootstrap_ci(profit - matched, n_bootstrap=n_boot, seed=seed)
         rows.append(
             {
                 "pd_source": name, "rule": rule, "n_accepted": accepted[(name, rule)],
+                "pd_cutoff": cutoff[(name, rule)],
                 "realised_profit_total": float(profit.sum()),
                 "diff_vs_same_pd_threshold_per_loan": m_same, "same_ci_low": lo_s, "same_ci_high": hi_s,
                 "diff_vs_primary_pd_threshold_per_loan": m_ref, "ref_ci_low": lo_r, "ref_ci_high": hi_r,
+                "diff_vs_volume_matched_per_loan": m_vm, "vm_ci_low": lo_v, "vm_ci_high": hi_v,
             }
         )
     save_table(pd.DataFrame(rows), paths, "apr_in_pd_rules", index=False)
