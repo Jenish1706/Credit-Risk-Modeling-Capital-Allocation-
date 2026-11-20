@@ -113,7 +113,7 @@ def main() -> int:
         "",
         "## EXP01",
         "",
-        compare_models(metrics).round(5).to_markdown(),
+        compare_models(metrics).drop(columns=["predicted_observed_ratio"], errors="ignore").round(5).to_markdown(),
         "",
         "## EXP02",
         "",

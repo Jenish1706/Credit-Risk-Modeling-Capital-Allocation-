@@ -29,8 +29,9 @@
       "mce": 0.04869888556576568,
       "calibration_slope": 0.9657512584375394,
       "calibration_intercept": -0.05213043172488013,
-      "observed_expected_ratio": 0.9887910772839235,
-      "extras": {}
+      "predicted_observed_ratio": 0.9887910772839235,
+      "extras": {},
+      "observed_expected_ratio": 1.0113359869173435
     },
     "lightgbm": {
       "n": 5009,
@@ -46,8 +47,9 @@
       "mce": 0.10207479705472533,
       "calibration_slope": 1.7802140053186977,
       "calibration_intercept": 1.5852574078081354,
-      "observed_expected_ratio": 0.9908902456237322,
-      "extras": {}
+      "predicted_observed_ratio": 0.9908902456237322,
+      "extras": {},
+      "observed_expected_ratio": 1.009193504948203
     }
   },
   "calibration": {
@@ -65,8 +67,27 @@
       "mce": 0.10207479705472533,
       "calibration_slope": 1.7802140053186977,
       "calibration_intercept": 1.5852574078081354,
-      "observed_expected_ratio": 0.9908902456237322,
-      "extras": {}
+      "predicted_observed_ratio": 0.9908902456237322,
+      "extras": {},
+      "observed_expected_ratio": 1.009193504948203
+    },
+    "intercept_only": {
+      "n": 5009,
+      "positive_rate": 0.10840487123178279,
+      "mean_prediction": 0.11313115899625588,
+      "roc_auc": 0.6976783456589135,
+      "pr_auc": 0.22567104980848002,
+      "gini": 0.395356691317827,
+      "ks": 0.3083056842820607,
+      "brier": 0.09248060105765052,
+      "log_loss": 0.3240219186299313,
+      "ece": 0.03288680644171632,
+      "mce": 0.09188789455744428,
+      "calibration_slope": 1.7810096386315577,
+      "calibration_intercept": 1.4813255712899227,
+      "predicted_observed_ratio": 1.0435984814221837,
+      "extras": {},
+      "observed_expected_ratio": 0.9582229351629862
     },
     "platt": {
       "n": 5009,
@@ -82,8 +103,9 @@
       "mce": 0.05243727633852677,
       "calibration_slope": 1.070836668913403,
       "calibration_intercept": 0.08375272878168113,
-      "observed_expected_ratio": 1.0436146800597,
-      "extras": {}
+      "predicted_observed_ratio": 1.0436146800597,
+      "extras": {},
+      "observed_expected_ratio": 0.9582080619475332
     },
     "isotonic": {
       "n": 5009,
@@ -99,8 +121,9 @@
       "mce": 0.05296141733393822,
       "calibration_slope": 0.9656214180285985,
       "calibration_intercept": -0.11960772321031113,
-      "observed_expected_ratio": 1.0477894471833753,
-      "extras": {}
+      "predicted_observed_ratio": 1.0477894471833753,
+      "extras": {},
+      "observed_expected_ratio": 0.9543902190350925
     }
   }
 }
