@@ -43,6 +43,7 @@ from credit_risk.data.splits import (  # noqa: E402
     test_window_masks,
 )
 from credit_risk.decision.blindspot import (  # noqa: E402
+    flag_cutpoints,
     build_portfolio,
     compare_capital_constrained,
     evaluate_placebo_controls,
@@ -148,13 +149,13 @@ def main() -> int:
         "anomaly": (anomaly, "exp08_blindspots"),
         "disagreement": (disagreement, "exp10_disagreement"),
     }
-    used, cuts = [], {}
+    used = []
     for name, (values, run) in candidate.items():
         record = json.loads((paths.results_tables / f"{run}.json").read_text(encoding="utf-8"))
         LOG.info("signal %-12s | H1 decision %s", name, record["decision"])
         if record["decision"] == "KEEP":
             used.append(name)
-            cuts[name] = float(np.quantile(values[masks["dev"]], q))
+    cuts = flag_cutpoints({n: candidate[n][0] for n in used}, used, test["issue_period"], q)
     if not used:
         raise SystemExit("no signal survived the H1 selection; EXP11 has nothing to act on")
     flagged_all = np.zeros(len(test), dtype=bool)

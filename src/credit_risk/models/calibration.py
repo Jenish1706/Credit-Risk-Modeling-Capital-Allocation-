@@ -175,7 +175,7 @@ class CalibrationComparison:
         order = [
             "n", "positive_rate", "mean_prediction", "roc_auc", "pr_auc", "ks",
             "brier", "log_loss", "ece", "mce", "calibration_slope",
-            "calibration_intercept", "predicted_observed_ratio",
+            "calibration_intercept", "observed_expected_ratio",
         ]
         return frame[[c for c in order if c in frame.columns]]
 
@@ -230,3 +230,34 @@ def compare_calibrations(
         LOG.info("[%s] %s", method, per_method[method].summary_line())
 
     return CalibrationComparison(per_method, fitted, calibrated)
+
+
+def select_calibrator_on_window(
+    y_valid,
+    p_valid,
+    y_test,
+    p_test,
+    issue_period,
+    methods: tuple[Method, ...] = ("intercept_only", "platt", "isotonic"),
+) -> tuple[str, dict[str, float], dict[str, np.ndarray]]:
+    """Choose the production calibrator by Brier score on the selection window only.
+
+    Every calibrator is fitted on the validation window, applied to the whole test book, and
+    *scored* on the 2015-01..06 rows only (``test_window_masks`` on ``issue_period``). Nothing from
+    2015-07..12 enters the score, so the holdout cannot influence the choice. Returns the chosen
+    method, the per-method selection-window Brier and the calibrated predictions for the whole book.
+    """
+    from credit_risk.data.splits import test_window_masks
+
+    dev = test_window_masks(issue_period)["dev"]
+    y_dev = np.asarray(y_test, dtype=float)[dev]
+    p_test = np.asarray(p_test, dtype=float)
+    briers: dict[str, float] = {}
+    calibrated: dict[str, np.ndarray] = {}
+    for method in methods:
+        calibrator = ProbabilityCalibrator(method)
+        calibrator.fit(y_valid, p_valid)
+        calibrated[method] = calibrator.transform(p_test)
+        briers[method] = float(np.mean((calibrated[method][dev] - y_dev) ** 2))
+    best = min(briers, key=briers.__getitem__)
+    return best, briers, calibrated

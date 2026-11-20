@@ -3,7 +3,6 @@
   "selected_on": "2015-01..06 (H1, selection)",
   "criterion": "brier",
   "h1_brier": {
-    "identity": 0.12300128813656462,
     "intercept_only": 0.12272473907889864,
     "platt": 0.122725024682652,
     "isotonic": 0.12274015409278931

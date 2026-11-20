@@ -626,3 +626,19 @@ def evaluate_placebo_controls(
         signal_beats_random=beats_rand,
         signal_beats_apr_matched=beats_apr,
     )
+
+
+def flag_cutpoints(
+    signals: dict[str, np.ndarray],
+    keep: "list[str]",
+    issue_period: pd.Series,
+    quantile: float,
+) -> dict[str, float]:
+    """Flag cut-points: the ``quantile`` of each kept signal on the selection window (2015-01..06).
+
+    Signal values from 2015-07..12 are never read, so the holdout cannot move a cut-point.
+    """
+    from credit_risk.data.splits import test_window_masks
+
+    dev = test_window_masks(issue_period)["dev"]
+    return {name: float(np.quantile(np.asarray(signals[name])[dev], quantile)) for name in keep}

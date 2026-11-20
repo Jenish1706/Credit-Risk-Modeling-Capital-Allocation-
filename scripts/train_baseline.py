@@ -38,7 +38,10 @@ from credit_risk.evaluation.metrics import (  # noqa: E402
 from credit_risk.features.build import FeatureBuilder, FeatureSpec  # noqa: E402
 from credit_risk.models.baseline import LogisticBaseline, LogisticConfig  # noqa: E402
 from credit_risk.models.boosting import BoostingConfig, BoostingModel, SearchSpace  # noqa: E402
-from credit_risk.models.calibration import compare_calibrations  # noqa: E402
+from credit_risk.models.calibration import (  # noqa: E402
+    compare_calibrations,
+    select_calibrator_on_window,
+)
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
     detect_source,
@@ -167,15 +170,15 @@ def main() -> int:
 
     # The production calibrator is chosen on 2015-01..06 Brier only. It used to be chosen on the
     # full test book, which is a selection made on the data the result was then reported on.
-    best_method = min(
-        (m for m in calibration_h1.per_method if m != "identity"),
-        key=lambda m: calibration_h1.per_method[m].brier,
+    best_method, selection_brier, _ = select_calibrator_on_window(
+        y_valid, p_valid, y_test, scores["lightgbm"], test["issue_period"],
+        methods=tuple(m for m in methods if m != "identity"),
     )
     LOG.info("production calibrator: %s (lowest Brier on 2015-01..06)", best_method)
     save_json(
         {"method": best_method, "selected_on": WINDOW_LABELS["dev"],
          "criterion": "brier",
-         "h1_brier": {m: v.brier for m, v in calibration_h1.per_method.items()}},
+         "h1_brier": {m: selection_brier[m] for m in selection_brier}},
         paths, f"{run_name}_calibration_choice",
     )
     np.save(paths.artifacts / f"{run_name}_pd_test.npy", calibration.calibrated_test[best_method])
@@ -218,11 +221,11 @@ def main() -> int:
         "",
         "2015-07..12 (headline):",
         "",
-        compare_models(metrics_h2).round(5).to_markdown(),
+        compare_models(metrics_h2).drop(columns=["predicted_observed_ratio"], errors="ignore").round(5).to_markdown(),
         "",
         "Full 2015 (continuity):",
         "",
-        compare_models(metrics).round(5).to_markdown(),
+        compare_models(metrics).drop(columns=["predicted_observed_ratio"], errors="ignore").round(5).to_markdown(),
         "",
     ]
     if "logistic" in metrics:
