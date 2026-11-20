@@ -13,8 +13,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from credit_risk.data.splits import test_window_masks
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TABLES_DIR = PROJECT_ROOT / "results" / "tables"
 README_PATH = PROJECT_ROOT / "README.md"
@@ -110,9 +108,7 @@ def render_results_table() -> str:
 
     # EXP04 & EXP05
     ctrl = json.loads((TABLES_DIR / "cohort_controls_exp04.json").read_text(encoding="utf-8"))
-    h2 = ctrl["holdout_h2"]
     df_exp04 = pd.read_csv(TABLES_DIR / "cohort_graph_exp04_exp05_h2.csv", index_col=0)
-    df_exp04_full = pd.read_csv(TABLES_DIR / "cohort_graph_exp04_exp05.csv", index_col=0)
     auc_a = float(df_exp04.loc["A_tabular", "roc_auc"])
     auc_b = float(df_exp04.loc["B_tabular_plus_graph", "roc_auc"])
     ece_a = float(df_exp04.loc["A_tabular", "ece"])
@@ -776,7 +772,7 @@ def _blocks() -> dict:
     }
 
 
-def _block_pattern(name: str) -> "re.Pattern[str]":
+def _block_pattern(name: str) -> re.Pattern[str]:
     return re.compile(
         r"(<!-- BEGIN:" + re.escape(name) + r" -->\n)[\s\S]*?(<!-- END:" + re.escape(name) + r" -->)"
     )
@@ -788,7 +784,7 @@ def render_guide_page(text: str) -> str:
         pattern = _block_pattern(name)
         if pattern.search(text):
             body = fn()
-            text = pattern.sub(lambda m: m.group(1) + body + "\n" + m.group(2), text)
+            text = pattern.sub(lambda m, body=body: m.group(1) + body + "\n" + m.group(2), text)
     unknown = set(re.findall(r"<!-- BEGIN:([a-z0-9-]+) -->", text)) - set(_blocks())
     if unknown:
         raise RuntimeError(f"unknown guide block(s): {sorted(unknown)}")

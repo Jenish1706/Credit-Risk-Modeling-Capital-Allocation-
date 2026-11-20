@@ -630,7 +630,7 @@ def evaluate_placebo_controls(
 
 def flag_cutpoints(
     signals: dict[str, np.ndarray],
-    keep: "list[str]",
+    keep: list[str],
     issue_period: pd.Series,
     quantile: float,
 ) -> dict[str, float]:

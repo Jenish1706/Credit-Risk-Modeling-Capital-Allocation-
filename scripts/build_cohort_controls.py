@@ -24,7 +24,6 @@ import pandas as pd
 
 from credit_risk.data.splits import test_window_masks
 from credit_risk.evaluation.metrics import (
-    RiskMetrics,
     compare_models,
     compute_metrics,
     expected_calibration_error,
@@ -40,7 +39,6 @@ from credit_risk.graph.features import (
 )
 from credit_risk.models.boosting import BoostingConfig, BoostingModel
 from credit_risk.models.calibration import ProbabilityCalibrator
-from credit_risk.utils.cli import load_prepared, resolve, save_json, save_table, write_report
 from credit_risk.utils.runtime import get_logger
 
 LOG = get_logger("scripts.cohort_controls")

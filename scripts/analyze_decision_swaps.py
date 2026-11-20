@@ -43,11 +43,11 @@ from credit_risk.data.splits import (  # noqa: E402
     test_window_masks,
 )
 from credit_risk.decision.blindspot import (  # noqa: E402
-    flag_cutpoints,
     build_portfolio,
     compare_capital_constrained,
     evaluate_placebo_controls,
     exposure_capped_policy,
+    flag_cutpoints,
 )
 from credit_risk.decision.expected_loss import (  # noqa: E402
     EconomicsConfig,
@@ -150,7 +150,7 @@ def main() -> int:
         "disagreement": (disagreement, "exp10_disagreement"),
     }
     used = []
-    for name, (values, run) in candidate.items():
+    for name, (_values, run) in candidate.items():
         record = json.loads((paths.results_tables / f"{run}.json").read_text(encoding="utf-8"))
         LOG.info("signal %-12s | H1 decision %s", name, record["decision"])
         if record["decision"] == "KEEP":

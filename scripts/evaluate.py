@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.evaluation.fairness import fairness_report  # noqa: E402
 from credit_risk.explainability.reasons import risk_band  # noqa: E402
 from credit_risk.explainability.shap_explain import (  # noqa: E402
@@ -41,7 +42,6 @@ from credit_risk.monitoring.drift import (  # noqa: E402
     monitoring_summary,
     prediction_drift,
 )
-from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
     detect_source,

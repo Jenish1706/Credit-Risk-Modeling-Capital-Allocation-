@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.evaluation.metrics import (  # noqa: E402
     compare_models,
     compute_metrics,
@@ -40,7 +41,6 @@ from credit_risk.features.financial import add_derived_features  # noqa: E402
 from credit_risk.graph.construction import TimeRespectingGraph  # noqa: E402
 from credit_risk.graph.features import compute_macro_default_rate  # noqa: E402
 from credit_risk.models.boosting import BoostingConfig, BoostingModel  # noqa: E402
-from credit_risk.data.splits import test_window_masks  # noqa: E402
 from credit_risk.models.calibration import ProbabilityCalibrator  # noqa: E402
 from credit_risk.utils.cli import (  # noqa: E402
     base_parser,
@@ -164,6 +164,7 @@ def main() -> int:
     if should_run_gnn:
         try:
             import torch
+
             from credit_risk.models.gnn import GNNConfig, GraphSAGE, GraphSAGETrainer
         except ImportError as exc:
             LOG.warning("skipping EXP05: %s", exc)

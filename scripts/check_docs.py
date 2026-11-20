@@ -56,9 +56,9 @@ def missing_paths() -> list[str]:
     problems = []
     for token in BACKTICK.findall(page.read_text(encoding="utf-8")):
         token = token.strip()
-        if token.startswith(PATH_ROOTS) and re.fullmatch(r"[\w./\-*]+", token) and "*" not in token:
-            if not (ROOT / token).exists():
-                problems.append(f"05_CODE_WALKTHROUGH.md: path does not exist -> {token}")
+        is_path = token.startswith(PATH_ROOTS) and re.fullmatch(r"[\w./\-*]+", token) and "*" not in token
+        if is_path and not (ROOT / token).exists():
+            problems.append(f"05_CODE_WALKTHROUGH.md: path does not exist -> {token}")
     return problems
 
 
