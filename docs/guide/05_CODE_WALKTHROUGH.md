@@ -5,6 +5,29 @@ and out, the key functions with their signatures, and the lines a reader is most
 Paths are relative to the repository root. The library is `src/credit_risk/`; the scripts in
 `scripts/` are thin drivers that read a config, call the library and write artifacts.
 
+**Repository layout**
+
+```text
+README.md  LICENSE  pyproject.toml
+configs/        YAML: data, models, graph, simulation, experiments (one file per experiment)
+src/credit_risk/  the library: data, features, models, graph, decision, simulation, rl,
+                  evaluation, explainability, monitoring, utils
+scripts/
+  pipeline/     download_data, prepare_data, build_graph          (raw data -> tables and graph)
+  experiments/  train_baseline, train_gnn, train_vgae, train_policy, evaluate,
+                build_cohort_controls, run_home_credit            (fit and evaluate models)
+  analysis/     analyze_* (audits and sensitivity runs on the fitted models)
+  tools/        render_readme, check_docs, validate_repository    (documentation and repository checks)
+tests/          pytest suite
+docs/
+  guide/        the reading path, 00 to 09 plus the glossary
+  reference/    appendices: data dictionary, leakage rules, dataset, graph design, assumptions, RL formulation
+results/        tables/ and reports/ (tracked), figures/ (generated, untracked)
+data/  artifacts/   raw and processed data, trained models (untracked)
+```
+
+Run every script from the repository root, for example `python scripts/experiments/train_baseline.py`.
+
 **Conventions shared by every script** ([`utils/cli.py`](../../src/credit_risk/utils/cli.py),
 [`utils/config.py`](../../src/credit_risk/utils/config.py)):
 
@@ -21,7 +44,7 @@ Paths are relative to the repository root. The library is `src/credit_risk/`; th
 
 | | |
 |---|---|
-| Scripts | [`scripts/download_data.py`](../../scripts/download_data.py), [`scripts/prepare_data.py`](../../scripts/prepare_data.py) |
+| Scripts | [`scripts/pipeline/download_data.py`](../../scripts/pipeline/download_data.py), [`scripts/pipeline/prepare_data.py`](../../scripts/pipeline/prepare_data.py) |
 | Config | [`configs/data/lending_club.yaml`](../../configs/data/lending_club.yaml) |
 | In | raw `accepted_2007_to_2018Q4.csv.gz` (or `--synthetic`) |
 | Out | `data/processed/loans.parquet`, `results/reports/data_profile.md`, `results/tables/data_profile.json` |
@@ -90,7 +113,7 @@ Tests: `tests/test_leakage.py` (`test_built_matrix_contains_no_forbidden_column`
 
 | | |
 |---|---|
-| Scripts | [`scripts/build_graph.py`](../../scripts/build_graph.py) |
+| Scripts | [`scripts/pipeline/build_graph.py`](../../scripts/pipeline/build_graph.py) |
 | Config | [`configs/graph/cohort_graph.yaml`](../../configs/graph/cohort_graph.yaml) |
 | Out | `data/processed/graph.npz`, `data/processed/cohort_features.parquet` |
 
@@ -109,7 +132,7 @@ Non-obvious lines:
   `n_resolved <= n_prior` does **not** hold in general (see the module docstring in `features.py`).
 - The only fitted quantity is the portfolio prior default rate, learned on the training window.
 - Both aggregates use prefix sums and `searchsorted` instead of a pairwise join.
-- `scripts/build_cohort_controls.py` imports both control helpers from `graph/features.py` (an earlier
+- `scripts/experiments/build_cohort_controls.py` imports both control helpers from `graph/features.py` (an earlier
   duplicate copy in the script was removed).
 
 Tests: `tests/test_graph_leakage.py` (including a planted-violation test and a test that
@@ -121,7 +144,7 @@ an ungated cohort rate leaks measurably).
 
 | | |
 |---|---|
-| Script | [`scripts/train_baseline.py`](../../scripts/train_baseline.py) (`--skip-logistic`, `--skip-search`, `--no-figures`), then [`scripts/analyze_exp01_ci.py`](../../scripts/analyze_exp01_ci.py) (paired-bootstrap interval on the EXP01 AUC difference) |
+| Script | [`scripts/experiments/train_baseline.py`](../../scripts/experiments/train_baseline.py) (`--skip-logistic`, `--skip-search`, `--no-figures`), then [`scripts/analysis/analyze_exp01_ci.py`](../../scripts/analysis/analyze_exp01_ci.py) (paired-bootstrap interval on the EXP01 AUC difference) |
 | Config | [`configs/models/boosting.yaml`](../../configs/models/boosting.yaml), [`configs/models/logistic.yaml`](../../configs/models/logistic.yaml) |
 | Out | `artifacts/boosting_{features,logistic,boosting}.pkl`, `artifacts/boosting_calibrator_*.pkl`, `artifacts/boosting_pd_test.npy`, `results/tables/boosting_exp01_*`, `boosting_exp02_*`, `boosting_calibration_choice.json` |
 
@@ -156,7 +179,7 @@ Tests: `tests/test_models.py`, `tests/test_leakage.py`.
 
 | | |
 |---|---|
-| Scripts | [`scripts/train_gnn.py`](../../scripts/train_gnn.py) (`--skip-gnn`), [`scripts/build_cohort_controls.py`](../../scripts/build_cohort_controls.py) |
+| Scripts | [`scripts/experiments/train_gnn.py`](../../scripts/experiments/train_gnn.py) (`--skip-gnn`), [`scripts/experiments/build_cohort_controls.py`](../../scripts/experiments/build_cohort_controls.py) |
 | Out | `artifacts/cohort_graph_graphsage.pt`, `results/tables/cohort_graph_exp04_exp05*.csv`, `cohort_controls_exp04*.csv/json` |
 
 - `GraphSAGETrainer(config).fit(features, neighbour_index, neighbour_mask, train_nodes, train_labels, valid_nodes, ...)`,
@@ -182,7 +205,7 @@ torch).
 
 | | |
 |---|---|
-| Scripts | [`scripts/analyze_blind_spots.py`](../../scripts/analyze_blind_spots.py), [`scripts/train_vgae.py`](../../scripts/train_vgae.py), [`scripts/analyze_disagreement.py`](../../scripts/analyze_disagreement.py), [`scripts/analyze_decision_swaps.py`](../../scripts/analyze_decision_swaps.py) |
+| Scripts | [`scripts/analysis/analyze_blind_spots.py`](../../scripts/analysis/analyze_blind_spots.py), [`scripts/experiments/train_vgae.py`](../../scripts/experiments/train_vgae.py), [`scripts/analysis/analyze_disagreement.py`](../../scripts/analysis/analyze_disagreement.py), [`scripts/analysis/analyze_decision_swaps.py`](../../scripts/analysis/analyze_decision_swaps.py) |
 | Configs | `configs/experiments/exp08_blindspots.yaml`, `exp09_vgae.yaml`, `exp10_disagreement.yaml`, `exp11_swaps.yaml` |
 | Out | `artifacts/{anomaly,vgae_sigma,disagreement}_test.npy`, `results/tables/exp08_*`, `exp09_*`, `exp10_*`, `exp11_swaps*` |
 
@@ -217,7 +240,7 @@ passes, greedy allocation respects the budget, observed-cashflow profit).
 
 | | |
 |---|---|
-| Script | [`scripts/train_policy.py`](../../scripts/train_policy.py) (`--pd-run`, `--skip-rl`, `--multi-exposure`) |
+| Script | [`scripts/experiments/train_policy.py`](../../scripts/experiments/train_policy.py) (`--pd-run`, `--skip-rl`, `--multi-exposure`) |
 | Configs | `configs/simulation/base.yaml`, `configs/experiments/exp06_rl.yaml` |
 | Out | `results/tables/exp06_rl_*` (headline) and `exp06_rl_sens_*` (sensitivity), `results/reports/exp06_rl_exp03_exp06.md` |
 
@@ -268,7 +291,7 @@ Tests: `tests/test_decision.py`, `tests/test_simulation.py`.
 
 | | |
 |---|---|
-| Scripts | [`scripts/analyze_profit_calibration.py`](../../scripts/analyze_profit_calibration.py), [`scripts/analyze_apr_in_pd.py`](../../scripts/analyze_apr_in_pd.py), [`scripts/analyze_deployment_realism.py`](../../scripts/analyze_deployment_realism.py) |
+| Scripts | [`scripts/analysis/analyze_profit_calibration.py`](../../scripts/analysis/analyze_profit_calibration.py), [`scripts/analysis/analyze_apr_in_pd.py`](../../scripts/analysis/analyze_apr_in_pd.py), [`scripts/analysis/analyze_deployment_realism.py`](../../scripts/analysis/analyze_deployment_realism.py) |
 | Library | [`decision/profit_audit.py`](../../src/credit_risk/decision/profit_audit.py) |
 | Out | `results/tables/profit_calibration_*.csv`, `apr_in_pd_*.csv`, `deployment_realism_p1_5.csv`, `deployment_realism_selection.csv` |
 
@@ -296,7 +319,7 @@ Tests: `tests/test_profit_audit.py` (decomposition sums exactly; each error sour
 
 | | |
 |---|---|
-| Script | [`scripts/evaluate.py`](../../scripts/evaluate.py) |
+| Script | [`scripts/experiments/evaluate.py`](../../scripts/experiments/evaluate.py) |
 | Library | [`monitoring/drift.py`](../../src/credit_risk/monitoring/drift.py), [`explainability/`](../../src/credit_risk/explainability/), [`evaluation/fairness.py`](../../src/credit_risk/evaluation/fairness.py) |
 | Out | `results/tables/boosting_exp07_*`, `boosting_fairness_*`, `boosting_shap_importance.csv` |
 
@@ -313,14 +336,14 @@ statistic on the holdout half only; it re-scores with the calibrator named in
 
 ## Stage 10 · Rendering and repository validation
 
-- [`scripts/render_readme.py`](../../scripts/render_readme.py): `render_results_table()`,
+- [`scripts/tools/render_readme.py`](../../scripts/tools/render_readme.py): `render_results_table()`,
   `render_rl_paragraph()`, `render_profit_paragraph()`, `render_apr_ablation_paragraph()`,
   `render_data_table()`, `render_data_profile()`, `render_guide_page(text)`, `update_readme()`,
   `update_guide()`. It fills README regions and named BEGIN/END marker blocks from `results/tables/`.
-- [`scripts/validate_repository.py`](../../scripts/validate_repository.py): a standalone check, separate from
+- [`scripts/tools/validate_repository.py`](../../scripts/tools/validate_repository.py): a standalone check, separate from
   pytest, that the results on disk trace to the current code, the pipeline chain is intact and the
   leakage controls hold on the real processed data (it needs `data/processed/loans.parquet`).
-- [`scripts/run_home_credit.py`](../../scripts/run_home_credit.py) with
+- [`scripts/experiments/run_home_credit.py`](../../scripts/experiments/run_home_credit.py) with
   [`data/home_credit.py`](../../src/credit_risk/data/home_credit.py): a side experiment on a second
   dataset, outside the main pipeline. The repository carries no outputs from it: the earlier outputs came
   from the `--synthetic` smoke test (not real credit data) and were removed. Real results need the Kaggle

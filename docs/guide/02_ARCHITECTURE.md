@@ -3,7 +3,7 @@
 The system is a pipeline of scripts. Each script reads files written by an earlier one and writes
 tables to `results/tables/`, reports to `results/reports/` and (for models and arrays) to
 `artifacts/`. The README renders its tables from those files, never from memory
-(`scripts/render_readme.py`).
+(`scripts/tools/render_readme.py`).
 
 ## Components and data flow
 
@@ -67,7 +67,7 @@ The four conceptual layers map onto this picture:
 | Blind-spot analysis | Conditional signal test, swap portfolios, placebo controls | PDs, signals, outcomes | KEEP/REJECT decisions, portfolios | [`decision/blindspot.py`](../../src/credit_risk/decision/blindspot.py) |
 | Simulator and RL | Replay applicants against a policy at observed exposure; bandits and Q-learning | applicant pool, policy | episode rewards, paired differences | [`simulation/environment.py`](../../src/credit_risk/simulation/environment.py), [`simulation/evaluation.py`](../../src/credit_risk/simulation/evaluation.py), [`rl/`](../../src/credit_risk/rl/) |
 | Monitoring and explainability | PSI, prediction and calibration drift, SHAP reason codes | features, scores | drift tables, explanations | [`monitoring/drift.py`](../../src/credit_risk/monitoring/drift.py), [`explainability/`](../../src/credit_risk/explainability/) |
-| Rendering | Fill README and guide blocks from artifacts | `results/tables/*` | `README.md`, guide pages | [`scripts/render_readme.py`](../../scripts/render_readme.py) |
+| Rendering | Fill README and guide blocks from artifacts | `results/tables/*` | `README.md`, guide pages | [`scripts/tools/render_readme.py`](../../scripts/tools/render_readme.py) |
 
 ## Life of one record
 

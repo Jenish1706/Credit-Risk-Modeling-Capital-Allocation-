@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """EXP09: does relational uncertainty from a VGAE identify where the PD model fails?
 
-    python scripts/train_vgae.py --config configs/experiments/exp09_vgae.yaml
+    python scripts/experiments/train_vgae.py --config configs/experiments/exp09_vgae.yaml
 
 A variational graph autoencoder reconstructs the time-respecting cohort graph and carries a
 per-node posterior variance. The hypothesis is that a borrower whose neighbourhood the model
@@ -22,7 +22,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402

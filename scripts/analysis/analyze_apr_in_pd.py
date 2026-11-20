@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """CR-10 and CR-11: does the profit-rule failure go away with a better PD?
 
-    python scripts/analyze_apr_in_pd.py --config configs/experiments/exp06_rl.yaml
+    python scripts/analysis/analyze_apr_in_pd.py --config configs/experiments/exp06_rl.yaml
 
 The production PD excludes ``int_rate`` / ``grade`` / ``sub_grade`` by design (they are
 LendingClub's own risk score). The expected-profit rule, however, uses APR as its revenue lever, and
@@ -29,7 +29,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
@@ -60,7 +60,11 @@ from credit_risk.utils.cli import (  # noqa: E402
     save_table,
 )
 from credit_risk.utils.runtime import get_logger  # noqa: E402
-from scripts.analyze_profit_calibration import THRESHOLD, _arrays, pd_by_apr_table  # noqa: E402
+from scripts.analysis.analyze_profit_calibration import (  # noqa: E402
+    THRESHOLD,
+    _arrays,
+    pd_by_apr_table,
+)
 
 LOG = get_logger("scripts.apr_in_pd")
 

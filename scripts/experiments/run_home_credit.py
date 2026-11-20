@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Reproduce EXP01-EXP02 on Home Credit, to show the pipeline generalises across schemas.
 
-    python scripts/run_home_credit.py --application data/raw/home_credit/application_train.csv
-    python scripts/run_home_credit.py --synthetic            # smoke test, no download needed
+    python scripts/experiments/run_home_credit.py --application data/raw/home_credit/application_train.csv
+    python scripts/experiments/run_home_credit.py --synthetic            # smoke test, no download needed
 
 Layers B and C are **not** available on this dataset and the loader refuses rather than
 improvising -- Home Credit has no borrower-to-borrower links, no interest rate and no recovery
@@ -18,7 +18,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 
 from credit_risk.data.home_credit import (  # noqa: E402

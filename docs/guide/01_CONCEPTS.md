@@ -70,7 +70,7 @@ deployment-realistic training set contains only outcomes observable on or before
 **Code.** [`data/splits.py`](../../src/credit_risk/data/splits.py) (`SplitWindows`, `assign_split`,
 `assert_temporal_ordering`, `test_window_masks`, `assert_selection_window`);
 `outcome_observed_period` in [`data/prepare.py`](../../src/credit_risk/data/prepare.py);
-[`scripts/analyze_deployment_realism.py`](../../scripts/analyze_deployment_realism.py) quantifies
+[`scripts/analysis/analyze_deployment_realism.py`](../../scripts/analysis/analyze_deployment_realism.py) quantifies
 the cost of the look-ahead.
 
 ---
@@ -131,7 +131,7 @@ O/E = 1.25.
 [`evaluation/metrics.py`](../../src/credit_risk/evaluation/metrics.py);
 `ProbabilityCalibrator`, `compare_calibrations` in
 [`models/calibration.py`](../../src/credit_risk/models/calibration.py). The production calibrator is
-chosen on 2015-01…06 Brier score (`scripts/train_baseline.py`).
+chosen on 2015-01…06 Brier score (`scripts/experiments/train_baseline.py`).
 
 ---
 
@@ -363,4 +363,4 @@ matured. The monitoring window (2016-2018) is deliberately unlabelled for this r
 
 **Code.** `population_stability_index`, `feature_drift`, `prediction_drift`, `calibration_drift` in
 [`monitoring/drift.py`](../../src/credit_risk/monitoring/drift.py); run by
-[`scripts/evaluate.py`](../../scripts/evaluate.py).
+[`scripts/experiments/evaluate.py`](../../scripts/experiments/evaluate.py).

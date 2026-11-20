@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """CR-02: does predicted expected profit match realised profit? (explains the EXP03/EXP06 control)
 
-    python scripts/analyze_profit_calibration.py --config configs/experiments/exp06_rl.yaml
+    python scripts/analysis/analyze_profit_calibration.py --config configs/experiments/exp06_rl.yaml
 
 Writes, under ``results/tables/``:
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
@@ -58,7 +58,7 @@ from credit_risk.utils.cli import (  # noqa: E402
     save_table,
 )
 from credit_risk.utils.runtime import get_logger  # noqa: E402
-from scripts.train_policy import _load_pd, _score_split  # noqa: E402
+from scripts.experiments.train_policy import _load_pd, _score_split  # noqa: E402
 
 LOG = get_logger("scripts.profit_calibration")
 THRESHOLD = 0.15
@@ -174,7 +174,7 @@ def main() -> int:
     pd_test = _load_pd(paths, args.pd_run, test, train, valid, seed)
     pd_valid = _score_split(paths, args.pd_run, valid)
     if pd_valid is None:
-        raise SystemExit("validation PDs unavailable: run scripts/train_baseline.py first")
+        raise SystemExit("validation PDs unavailable: run scripts/experiments/train_baseline.py first")
     # CR-03: nothing below selects anything on the test book (rules are fixed a priori, the
     # valid-fit curves use validation only), so 2015-07..12 is the headline window and the
     # other test windows are reported alongside. The "oracle" refit is fitted on the pool it

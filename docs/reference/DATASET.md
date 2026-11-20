@@ -1,7 +1,7 @@
 # Dataset
 
 Evaluated and selected 2026-08-26. Figures marked *(verify)* are populated by
-`scripts/prepare_data.py`, which writes the measured values to
+`scripts/pipeline/prepare_data.py`, which writes the measured values to
 `results/reports/data_profile.md`. Nothing in this file is taken on trust from a blog post.
 
 ---
@@ -67,7 +67,7 @@ under CC0 — the download is one command).
 ### Download
 
 ```bash
-python scripts/download_data.py --config configs/data/lending_club.yaml
+python scripts/pipeline/download_data.py --config configs/data/lending_club.yaml
 ```
 
 The script verifies credentials, downloads into `data/raw/`, records the SHA-256 of each file in
@@ -78,7 +78,7 @@ The script verifies credentials, downloads into `data/raw/`, records the SHA-256
 The full pipeline runs without the real data:
 
 ```bash
-python scripts/download_data.py --synthetic --n-loans 60000
+python scripts/pipeline/download_data.py --synthetic --n-loans 60000
 ```
 
 This writes a **schema-faithful synthetic LendingClub extract** to `data/raw/` — same column names,
@@ -194,7 +194,7 @@ kept configurable, ablated separately, and never presented as a clean occupation
 
 ## 8. Missingness
 
-Measured by `scripts/prepare_data.py` into `results/reports/data_profile.md`. Known structural
+Measured by `scripts/pipeline/prepare_data.py` into `results/reports/data_profile.md`. Known structural
 patterns to expect *(verify)*:
 
 - `mths_since_last_delinq`, `mths_since_last_record`, `mths_since_recent_bc_dlq` — missing means

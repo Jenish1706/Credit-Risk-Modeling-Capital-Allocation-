@@ -124,6 +124,6 @@ the formulation in [RL_FORMULATION.md](../reference/RL_FORMULATION.md).
 - Every script takes `--config` and a seed (default 42); outputs record the data source (real or
   synthetic), and synthetic results are refused as findings.
 - Every number in the README and in embedded guide blocks is rendered from `results/tables/` by
-  `scripts/render_readme.py`; a test fails if a hand edit drifts from the artifacts.
+  `scripts/tools/render_readme.py`; a test fails if a hand edit drifts from the artifacts.
 - Selection windows are enforced by selection functions that read only the selection rows, and tested by
   poisoning the holdout.

@@ -4,10 +4,10 @@
 
 **LendingClub accepted-loans file, 2007 to 2018Q4**, obtained from the Kaggle mirror
 `wordsforthewise/lending-club` under licence **CC0**. LendingClub no longer publishes the original
-files, so the mirror is a third party; `scripts/download_data.py` records a SHA-256 for each file in
+files, so the mirror is a third party; `scripts/pipeline/download_data.py` records a SHA-256 for each file in
 `data/raw/checksums.json` so results stay reproducible against a fixed copy.
 
-Raw data is not committed. Without a Kaggle token, `python scripts/download_data.py --synthetic`
+Raw data is not committed. Without a Kaggle token, `python scripts/pipeline/download_data.py --synthetic`
 writes a schema-faithful synthetic extract; every artifact built from it is stamped
 `data_source: synthetic` and is not reported as a finding. The optional rejected-applications file
 (`--with-rejected`) is downloadable but **no analysis in this repository uses it**.
@@ -65,8 +65,8 @@ split again in time for selection versus reporting (H1 and H2, see
 
 | Table | Written by | Rows | Contents |
 |---|---|---|---|
-| `data/processed/loans.parquet` | [`prepare_data.py`](../../scripts/prepare_data.py) | see above | one row per loan: raw application fields, cashflow fields (for realised outcomes only), `issue_period`, `outcome_observed_period`, `split`, target `default` |
-| `data/processed/cohort_features.parquet` | [`build_graph.py`](../../scripts/build_graph.py) | one per loan | smoothed cohort default rates, counts, evidence weights, cohort means for the ZIP3 and employer relations |
+| `data/processed/loans.parquet` | [`prepare_data.py`](../../scripts/pipeline/prepare_data.py) | see above | one row per loan: raw application fields, cashflow fields (for realised outcomes only), `issue_period`, `outcome_observed_period`, `split`, target `default` |
+| `data/processed/cohort_features.parquet` | [`build_graph.py`](../../scripts/pipeline/build_graph.py) | one per loan | smoothed cohort default rates, counts, evidence weights, cohort means for the ZIP3 and employer relations |
 | `data/processed/graph.npz` | `build_graph.py` | one per loan | time-respecting neighbour indices and masks |
 
 Target. `default = 1` for `Charged Off`, `Default` and the "does not meet the credit policy"

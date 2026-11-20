@@ -141,7 +141,7 @@ def load_prepared(paths: Paths, filename: str = "loans.parquet") -> pd.DataFrame
     if not path.exists():
         raise SystemExit(
             f"{path} not found. Run:\n"
-            f"  python scripts/prepare_data.py --config configs/data/lending_club.yaml"
+            f"  python scripts/pipeline/prepare_data.py --config configs/data/lending_club.yaml"
         )
     return read_processed(path)
 

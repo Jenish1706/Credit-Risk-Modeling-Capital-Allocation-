@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Repository validation: every reported number must trace to a current artefact.
 
-    python scripts/validate_repository.py
+    python scripts/tools/validate_repository.py
 
 Run this before submitting or after any pipeline change. It is deliberately separate from the
 pytest suite: the tests check that the code is correct, this checks that the *results on disk*
@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from credit_risk.data import schema  # noqa: E402

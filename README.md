@@ -67,7 +67,7 @@ Every **selection** (the production calibrator, KEEP/REJECT verdicts, flag cut-p
 **2015-01…06 (H1)** only. Headline numbers are measured on **2015-07…12 (H2)**, which no selection
 touched; the full-2015 figure is in brackets for continuity. `OBSERVED` is measured from data,
 `SIMULATED` is produced inside the lending simulator. The tables are rendered from
-`results/tables/` by `scripts/render_readme.py`; the prose around them states no result numbers, only
+`results/tables/` by `scripts/tools/render_readme.py`; the prose around them states no result numbers, only
 fixed protocol parameters (a test enforces this).
 
 <!-- BEGIN:results-table -->
@@ -118,7 +118,7 @@ conda create -n credit-risk python=3.13 numpy pandas scipy scikit-learn pyarrow 
 conda activate credit-risk
 pip install -e . --no-deps
 python -m pytest -q
-python scripts/render_readme.py
+python scripts/tools/render_readme.py
 ```
 
 Without a Kaggle token the pipeline can run on a synthetic extract (stamped `synthetic` and never
@@ -143,7 +143,7 @@ Start at [`docs/guide/00_START_HERE.md`](docs/guide/00_START_HERE.md).
 | [`09_RESULTS_AND_LIMITATIONS`](docs/guide/09_RESULTS_AND_LIMITATIONS.md) | results with uncertainty, null results, threats to validity |
 | [`GLOSSARY`](docs/guide/GLOSSARY.md) | every term and acronym |
 
-Appendices: [`docs/reference/DATA_DICTIONARY.md`](docs/reference/DATA_DICTIONARY.md),
+The repository layout is described in [`05_CODE_WALKTHROUGH`](docs/guide/05_CODE_WALKTHROUGH.md). Appendices: [`docs/reference/DATA_DICTIONARY.md`](docs/reference/DATA_DICTIONARY.md),
 [`docs/reference/LEAKAGE.md`](docs/reference/LEAKAGE.md). Earlier design documents
 ([`ASSUMPTIONS`](docs/reference/ASSUMPTIONS.md),
 [`GRAPH_DESIGN`](docs/reference/GRAPH_DESIGN.md), [`RL_FORMULATION`](docs/reference/RL_FORMULATION.md),

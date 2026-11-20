@@ -1,6 +1,6 @@
 # 09 · Results and limitations
 
-Every result below is rendered from `results/tables/` by `scripts/render_readme.py`; nothing here is
+Every result below is rendered from `results/tables/` by `scripts/tools/render_readme.py`; nothing here is
 typed by hand. Headlines are on **2015-07…12** (a window no selection touched), with full 2015 in
 brackets where both are shown. Selections used 2015-01…06 only. The protocol and what would falsify
 each claim are in [04_METHODOLOGY.md](04_METHODOLOGY.md).
@@ -224,7 +224,7 @@ calibration ratios quoted under the wrong label, and unsupported causal explanat
 
 Resolution and issue dates are both months, so the rule `resolved[j] <= issue[i]` admits a neighbour whose
 outcome was booked in the same month as the applicant's issue. Whether that matters is measured, not assumed
-(`scripts/analyze_label_gate_sensitivity.py`):
+(`scripts/analysis/analyze_label_gate_sensitivity.py`):
 
 <!-- BEGIN:label-gate -->
 **Same-month label rule.** Cohort label aggregates admit a neighbour when its resolution month is on or before the applicant's issue month, so a neighbour resolved in the same month is admitted. A strictly-before rule is more conservative. Rebuilding the cohort features under the strict rule and refitting (three LightGBM seeds, 2015-07..12, mean ± sd):

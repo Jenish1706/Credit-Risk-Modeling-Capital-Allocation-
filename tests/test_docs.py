@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from scripts import check_docs
+from scripts.tools import check_docs
 
 
 def test_every_relative_link_resolves():

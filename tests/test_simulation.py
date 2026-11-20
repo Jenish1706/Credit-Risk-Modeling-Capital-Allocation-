@@ -426,7 +426,7 @@ def test_run_can_still_learn_when_asked(pool, cashflow, space):
 # ---------------------------------------------------------------------------
 
 def test_headline_action_space_has_no_multipliers_other_than_one():
-    from scripts.train_policy import build_action_space
+    from scripts.experiments.train_policy import build_action_space
 
     headline = build_action_space(40_000.0, include_review=False, multi_exposure=False)
     assert set(headline.multipliers.tolist()) == {0.0, 1.0}

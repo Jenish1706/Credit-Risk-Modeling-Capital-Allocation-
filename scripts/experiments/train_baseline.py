@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """EXP01 + EXP02: logistic regression vs LightGBM, then calibration.
 
-    python scripts/train_baseline.py --config configs/models/boosting.yaml
-    python scripts/train_baseline.py --config configs/models/boosting.yaml --set features.feature_set=with_lc_grade
+    python scripts/experiments/train_baseline.py --config configs/models/boosting.yaml
+    python scripts/experiments/train_baseline.py --config configs/models/boosting.yaml --set features.feature_set=with_lc_grade
 
 Trains both models on the same features, scores them on the out-of-time window, and then compares
 calibration methods. The out-of-time window is touched exactly once, at the end.
@@ -19,7 +19,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """EXP11: does acting on blind-spot signals improve the book?
 
-    python scripts/analyze_decision_swaps.py --config configs/experiments/exp11_swaps.yaml
+    python scripts/analysis/analyze_decision_swaps.py --config configs/experiments/exp11_swaps.yaml
 
 Two capital-constrained books are built from the same applicant pool and the same budget:
 
@@ -32,7 +32,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -114,9 +114,9 @@ def main() -> int:
     if missing:
         raise SystemExit(
             "Missing signal files: " + ", ".join(missing) + "\nRun, in order:\n"
-            "  python scripts/train_baseline.py --config configs/models/boosting.yaml\n"
-            "  python scripts/analyze_blind_spots.py\n"
-            "  python scripts/analyze_disagreement.py"
+            "  python scripts/experiments/train_baseline.py --config configs/models/boosting.yaml\n"
+            "  python scripts/analysis/analyze_blind_spots.py\n"
+            "  python scripts/analysis/analyze_disagreement.py"
         )
     signals = {k: np.load(v) for k, v in required.items()}
     for name, values in signals.items():

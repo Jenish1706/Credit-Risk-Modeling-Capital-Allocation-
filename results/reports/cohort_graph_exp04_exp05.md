@@ -29,7 +29,7 @@ Two placebo arms rule out trivial non-graph explanations:
 - **Arm B vs Macro Default:** Delta ECE -0.00707 (95% CI: [-0.00786, -0.00462], p=0.0000); Delta |O/E - 1|: -0.07317 (95% CI: [-0.07408, -0.05792], p=0.0000).
 - **Arm B vs Shuffled Keys:** Delta ECE -0.00442 (95% CI: [-0.00526, -0.00220], p=0.0000); Delta |O/E - 1|: -0.05149 (95% CI: [-0.05225, -0.03675], p=0.0000).
 
-**Control Verdict (single fitted run):** the paired-bootstrap interval on the ECE difference excludes zero against both controls. The shuffled-key control itself moves ECE from 0.0105 to 0.0077, so part of the gain is not specific to real cohort membership. The multi-seed comparison is `scripts/build_cohort_controls.py`.
+**Control Verdict (single fitted run):** the paired-bootstrap interval on the ECE difference excludes zero against both controls. The shuffled-key control itself moves ECE from 0.0105 to 0.0077, so part of the gain is not specific to real cohort membership. The multi-seed comparison is `scripts/experiments/build_cohort_controls.py`.
 
 ## EXP05 - does GraphSAGE add value beyond the aggregates?
 

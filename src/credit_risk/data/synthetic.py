@@ -13,7 +13,7 @@ What it is not
 It is **not** a source of findings. The risk structure here was written by hand; any AUC, lift or
 policy gain measured on it is a statement about this generator, not about consumer credit. Every
 artefact built from it carries ``data_source: synthetic`` in its manifest, and
-``scripts/evaluate.py`` refuses to promote synthetic results into ``results/reports/``.
+``scripts/experiments/evaluate.py`` refuses to promote synthetic results into ``results/reports/``.
 
 The cohort effects (a per-ZIP3 and per-employer random effect on default odds) are deliberately
 *modest and configurable*. They exist so the graph code has structure to find and can be tested

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """G4: how much does the same-month rule for neighbour labels matter?
 
-    python scripts/analyze_label_gate_sensitivity.py
+    python scripts/analysis/analyze_label_gate_sensitivity.py
 
 Cohort label aggregates admit a neighbour ``j`` of loan ``i`` when ``resolved[j] <= issue[i]``. Both
 are *months*, so a neighbour that resolved in the same month the applicant was issued is admitted
@@ -21,7 +21,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
@@ -37,7 +37,7 @@ from credit_risk.models.calibration import ProbabilityCalibrator  # noqa: E402
 from credit_risk.utils.cli import save_table  # noqa: E402
 from credit_risk.utils.config import Paths, load_config  # noqa: E402
 from credit_risk.utils.runtime import get_logger  # noqa: E402
-from scripts.build_graph import _relations  # noqa: E402
+from scripts.pipeline.build_graph import _relations  # noqa: E402
 
 LOG = get_logger("scripts.label_gate")
 SEEDS = (42, 43, 44)

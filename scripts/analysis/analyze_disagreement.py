@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """EXP10: does disagreement between a tabular and a graph-augmented model flag unreliable PDs?
 
-    python scripts/analyze_disagreement.py --config configs/experiments/exp10_disagreement.yaml
+    python scripts/analysis/analyze_disagreement.py --config configs/experiments/exp10_disagreement.yaml
 
 Two corrections relative to the first version of this experiment, both of which changed what the
 number means:
@@ -25,7 +25,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -73,7 +73,7 @@ def main() -> int:
     if not cohort_path.exists():
         raise SystemExit(
             "cohort_features.parquet not found. Run:\n"
-            "  python scripts/build_graph.py --config configs/graph/cohort_graph.yaml"
+            "  python scripts/pipeline/build_graph.py --config configs/graph/cohort_graph.yaml"
         )
     cohort = pd.read_parquet(cohort_path)
     if len(cohort) != len(df):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Documentation checks (gate G3).
 
-    python scripts/check_docs.py
+    python scripts/tools/check_docs.py
 
 1. Every relative link in README.md and docs/ resolves to a file or directory.
 2. Every repository path named in backticks in docs/guide/05_CODE_WALKTHROUGH.md exists.
@@ -25,7 +25,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 LINK = re.compile(r"\]\(([^)\s]+)\)")
 BACKTICK = re.compile(r"`([^`\n]+)`")
 PATH_ROOTS = ("scripts/", "src/", "configs/", "tests/", "docs/")
@@ -106,7 +106,7 @@ def _test_function_names() -> set[str]:
 
 def defined_names() -> set[str]:
     names: set[str] = set()
-    for path in [*(ROOT / "src").rglob("*.py"), *(ROOT / "scripts").glob("*.py"), *(ROOT / "tests").glob("*.py")]:
+    for path in [*(ROOT / "src").rglob("*.py"), *(ROOT / "scripts").rglob("*.py"), *(ROOT / "tests").glob("*.py")]:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):

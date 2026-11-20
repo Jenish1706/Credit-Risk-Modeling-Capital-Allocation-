@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """EXP04 + EXP05: does relational information help, and does a GNN beat plain aggregates?
 
-    python scripts/build_graph.py --config configs/graph/cohort_graph.yaml
-    python scripts/train_gnn.py   --config configs/graph/cohort_graph.yaml
+    python scripts/pipeline/build_graph.py --config configs/graph/cohort_graph.yaml
+    python scripts/experiments/train_gnn.py   --config configs/graph/cohort_graph.yaml
 
 Three arms, all scored on the same out-of-time window:
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -70,7 +70,7 @@ def _control_verdict(metrics, comp_macro, comp_shuffled) -> str:
         text += (
             f" The shuffled-key control itself moves ECE from {metrics['A_tabular'].ece:.4f} to "
             f"{metrics['Control_shuffled_cohort'].ece:.4f}, so part of the gain is not specific to real "
-            "cohort membership. The multi-seed comparison is `scripts/build_cohort_controls.py`."
+            "cohort membership. The multi-seed comparison is `scripts/experiments/build_cohort_controls.py`."
         )
     return text
 
@@ -88,7 +88,7 @@ def main() -> int:
     if not cohort_path.exists() or not graph_path.exists():
         raise SystemExit(
             "Graph artefacts missing. Run:\n"
-            "  python scripts/build_graph.py --config configs/graph/cohort_graph.yaml"
+            "  python scripts/pipeline/build_graph.py --config configs/graph/cohort_graph.yaml"
         )
     cohort = pd.read_parquet(cohort_path)
     df = pd.concat([df, cohort.set_index(df.index)], axis=1)

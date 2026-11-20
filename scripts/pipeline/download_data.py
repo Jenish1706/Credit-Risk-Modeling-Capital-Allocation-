@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Fetch the LendingClub extract from Kaggle, or generate a synthetic stand-in.
 
-    python scripts/download_data.py --config configs/data/lending_club.yaml
-    python scripts/download_data.py --synthetic --n-loans 200000
+    python scripts/pipeline/download_data.py --config configs/data/lending_club.yaml
+    python scripts/pipeline/download_data.py --synthetic --n-loans 200000
 
 Credentials come from ``~/.kaggle/kaggle.json`` or ``KAGGLE_USERNAME``/``KAGGLE_KEY``. See
 docs/reference/DATASET.md section 2 for how to create the token.
@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from credit_risk.data.download import (  # noqa: E402
     ACCEPTED_FILE,

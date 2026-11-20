@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Build the time-respecting cohort graph and its aggregate features.
 
-    python scripts/build_graph.py --config configs/graph/cohort_graph.yaml
+    python scripts/pipeline/build_graph.py --config configs/graph/cohort_graph.yaml
 
 Writes ``data/processed/graph.npz`` and ``data/processed/cohort_features.parquet``, and runs the
 leakage assertions. Those assertions are the point of this script as much as the artefacts are:
@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402

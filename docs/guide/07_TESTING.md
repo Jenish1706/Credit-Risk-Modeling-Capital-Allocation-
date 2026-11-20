@@ -33,7 +33,7 @@ synthetic generator at a size (12,000 loans) that keeps the whole suite fast; th
 | [`tests/test_profit_audit.py`](../../tests/test_profit_audit.py) | the predicted-vs-realised decomposition sums exactly and isolates each error source, decile table shape, cost symmetry |
 | [`tests/test_pipeline.py`](../../tests/test_pipeline.py) | synthetic generator faithfulness, month parsing, employment normalisation, split mapping, target mapping, report counts, config loading and inheritance, PSI, prediction and calibration drift, reason-code phrasing, the deployment-realism audit, GraphSAGE (torch) |
 | [`tests/test_readme_tables.py`](../../tests/test_readme_tables.py) | README tables and prose equal their rendering, one calibration-ratio convention, EXP04 over at least three seeds, EXP06 lambda rows, approval rates and collapsed learners present, superseded banners, the APR ablation, guide blocks |
-| [`tests/test_docs.py`](../../tests/test_docs.py) | every relative link in README and docs resolves, every repository path named in the code walkthrough exists, every function named in the code pages is defined (`scripts/check_docs.py`) |
+| [`tests/test_docs.py`](../../tests/test_docs.py) | every relative link in README and docs resolves, every repository path named in the code walkthrough exists, every function named in the code pages is defined (`scripts/tools/check_docs.py`) |
 
 Fixtures live in [`tests/conftest.py`](../../tests/conftest.py): a session-scoped synthetic raw file,
 the prepared frame, `split_frames` (train, valid, test) and an `enriched` frame with derived
@@ -43,7 +43,7 @@ features.
 
 - **End-to-end `main()` of each script on real data.** Scripts are drivers; their logic lives in
   tested library functions. Running them is the runbook's job ([06_RUNBOOK.md](06_RUNBOOK.md)), and
-  `scripts/validate_repository.py` checks the artifacts on disk against the processed data.
+  `scripts/tools/validate_repository.py` checks the artifacts on disk against the processed data.
 - **Model quality on real data.** The suite does not assert an AUC or an ECE; those are results,
   reported with uncertainty.
 - **Training quality of the neural models.** The autoencoder and VGAE have no tests; GraphSAGE has
@@ -69,6 +69,6 @@ features.
    number copied from a result.
 4. For a leakage rule, plant a violation and assert it is caught, as in
    `test_assert_no_future_edges_catches_a_planted_violation`.
-5. If the change alters a result, regenerate the artifacts, run `python scripts/render_readme.py`, and
+5. If the change alters a result, regenerate the artifacts, run `python scripts/tools/render_readme.py`, and
    let `tests/test_readme_tables.py` confirm the rendering.
 6. Run the targeted test while iterating and the full suite before committing.

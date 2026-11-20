@@ -23,7 +23,7 @@ Estimated from training-window cashflows: good-loan yield -0.001+1.351*APR, defa
 
 **Verdict.** No policy beat fixed_threshold@0.150. Even the best, expected_profit, was significantly worse at -28,262 per episode, 95% CI [-54,837, -2,616].
 
-Why the expected-profit rule loses to a PD threshold is analysed on the real book, at the observed exposure, in `scripts/analyze_profit_calibration.py` (`results/tables/profit_calibration_*.csv`). Nothing is asserted about the mechanism here: a simulated difference with a CI that straddles zero is a null result.
+Why the expected-profit rule loses to a PD threshold is analysed on the real book, at the observed exposure, in `scripts/analysis/analyze_profit_calibration.py` (`results/tables/profit_calibration_*.csv`). Nothing is asserted about the mechanism here: a simulated difference with a CI that straddles zero is a null result.
 
 ## EXP06 - can a learned policy beat static policies?
 

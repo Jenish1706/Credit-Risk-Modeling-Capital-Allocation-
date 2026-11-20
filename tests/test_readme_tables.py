@@ -1,6 +1,6 @@
 """README and guide pages are rendered from artifacts; a hand-edited number cannot survive.
 
-``scripts/render_readme.py`` fills named BEGIN/END blocks from ``results/tables/``. These tests
+``scripts/tools/render_readme.py`` fills named BEGIN/END blocks from ``results/tables/``. These tests
 re-render every block and fail on any difference, and check the specific results the README and the
 results page must not drop.
 """
@@ -11,7 +11,7 @@ import json
 
 import pandas as pd
 
-from scripts.render_readme import (
+from scripts.tools.render_readme import (
     GUIDE_DIR,
     PROJECT_ROOT,
     README_PATH,
@@ -30,7 +30,7 @@ def test_readme_blocks_match_rendered_artifacts():
     text = _read(README_PATH)
     assert "<!-- BEGIN:results-table -->" in text and "<!-- BEGIN:data-table -->" in text
     assert render_guide_page(text) == text, (
-        "README.md has a stale embedded block; run `python scripts/render_readme.py`"
+        "README.md has a stale embedded block; run `python scripts/tools/render_readme.py`"
     )
 
 
@@ -40,7 +40,7 @@ def test_guide_blocks_match_rendered_artifacts():
     for page in pages:
         text = _read(page)
         assert render_guide_page(text) == text, (
-            f"{page.name} has a stale embedded block; run `python scripts/render_readme.py`"
+            f"{page.name} has a stale embedded block; run `python scripts/tools/render_readme.py`"
         )
 
 
@@ -81,7 +81,7 @@ def test_exp04_is_reported_over_at_least_three_seeds():
 
 def test_exp06_table_reports_lambda_rows_approval_rates_and_collapsed_learners():
     """CR-08: nothing the EXP06 artifacts contain may be dropped from the results page."""
-    from scripts.render_readme import LEARNER_MARKERS
+    from scripts.tools.render_readme import LEARNER_MARKERS
 
     text = _read(RESULTS_PAGE)
     sweep = pd.read_csv(TABLES_DIR / "exp06_rl_exp06_sweep.csv")

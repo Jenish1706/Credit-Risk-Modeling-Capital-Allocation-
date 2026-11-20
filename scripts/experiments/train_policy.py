@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """EXP03 + EXP06: decision policies, and whether a learned policy beats them.
 
-    python scripts/train_baseline.py --config configs/models/boosting.yaml
-    python scripts/train_policy.py   --config configs/experiments/exp06_rl.yaml
+    python scripts/experiments/train_baseline.py --config configs/models/boosting.yaml
+    python scripts/experiments/train_policy.py   --config configs/experiments/exp06_rl.yaml
 
 EXP03 runs the static policy ladder under an **unconstrained** balance sheet. EXP06 repeats it
 across a sweep of capital budgets and adds the learning policies.
@@ -24,7 +24,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -444,7 +444,7 @@ def main() -> int:
         f"**Verdict.** {verdict(exp03_diff, 'fixed_threshold@0.150')}",
         "",
         "Why the expected-profit rule loses to a PD threshold is analysed on the real book, at "
-        "the observed exposure, in `scripts/analyze_profit_calibration.py` "
+        "the observed exposure, in `scripts/analysis/analyze_profit_calibration.py` "
         "(`results/tables/profit_calibration_*.csv`). Nothing is asserted about the mechanism "
         "here: a simulated difference with a CI that straddles zero is a null result.",
     ]

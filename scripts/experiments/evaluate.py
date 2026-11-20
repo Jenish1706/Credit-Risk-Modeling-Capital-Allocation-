@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """EXP07 plus the trust layer: drift, explainability and a fairness slice.
 
-    python scripts/evaluate.py --config configs/models/boosting.yaml
+    python scripts/experiments/evaluate.py --config configs/models/boosting.yaml
 
 Consumes the artefacts written by ``train_baseline.py`` and reports:
 
@@ -20,7 +20,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -76,7 +76,7 @@ def main() -> int:
     if missing:
         raise SystemExit(
             "Missing artefacts: " + ", ".join(p.name for p in missing) + "\nRun:\n"
-            "  python scripts/train_baseline.py --config configs/models/boosting.yaml"
+            "  python scripts/experiments/train_baseline.py --config configs/models/boosting.yaml"
         )
 
     builder = FeatureBuilder.load(needed[0])

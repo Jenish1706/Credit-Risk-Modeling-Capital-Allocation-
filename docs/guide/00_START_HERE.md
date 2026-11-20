@@ -39,7 +39,7 @@ Each step answers a question the previous result made necessary. The experiment 
 
 ## Headline results
 
-Every row is rendered from `results/tables/` by `scripts/render_readme.py`, so this table cannot
+Every row is rendered from `results/tables/` by `scripts/tools/render_readme.py`, so this table cannot
 drift from the artifacts. Headlines are measured on **2015-07…12**, a window no selection touched;
 selections used 2015-01…06 only. `OBSERVED` means measured from data, `SIMULATED` means produced in
 the lending simulator. How to read each row, with its uncertainty, is in
@@ -118,7 +118,7 @@ artifacts.
 3. Re-render the README and guide tables from `results/tables/` (changes nothing if nothing drifted):
 
    ```powershell
-   python scripts/render_readme.py
+   python scripts/tools/render_readme.py
    ```
 
 4. Look at one artifact behind a headline row, for example the paired differences for the

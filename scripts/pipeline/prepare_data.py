@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Raw CSV -> the split-assigned modelling table, plus a measured data profile.
 
-    python scripts/prepare_data.py --config configs/data/lending_club.yaml
+    python scripts/pipeline/prepare_data.py --config configs/data/lending_club.yaml
 
 Writes ``data/processed/loans.parquet`` and ``results/reports/data_profile.md``. The profile is
 measured from the data rather than copied from documentation, which is the point -- several
@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import pandas as pd  # noqa: E402
 
@@ -100,8 +100,8 @@ def main() -> int:
     if source == "absent":
         raise SystemExit(
             "No raw data found in data/raw/. Run one of:\n"
-            "  python scripts/download_data.py --config configs/data/lending_club.yaml\n"
-            "  python scripts/download_data.py --synthetic"
+            "  python scripts/pipeline/download_data.py --config configs/data/lending_club.yaml\n"
+            "  python scripts/pipeline/download_data.py --synthetic"
         )
 
     dataset = config.get("dataset", {})

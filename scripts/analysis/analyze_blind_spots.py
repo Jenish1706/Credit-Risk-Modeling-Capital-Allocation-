@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """EXP08: does autoencoder reconstruction error identify borrowers whose PD is untrustworthy?
 
-    python scripts/analyze_blind_spots.py --config configs/experiments/exp08_blindspots.yaml
+    python scripts/analysis/analyze_blind_spots.py --config configs/experiments/exp08_blindspots.yaml
 
 An autoencoder is fitted on the **training** feature distribution and never sees the target. A
 borrower it reconstructs badly is one the training population does not describe well, which is a
@@ -21,7 +21,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import numpy as np  # noqa: E402
 
@@ -68,7 +68,7 @@ def main() -> int:
         if not path.exists():
             raise SystemExit(
                 f"{path.name} not found. Run:\n"
-                "  python scripts/train_baseline.py --config configs/models/boosting.yaml"
+                "  python scripts/experiments/train_baseline.py --config configs/models/boosting.yaml"
             )
 
     # The autoencoder must see exactly the features the PD model saw, or "anomalous" would

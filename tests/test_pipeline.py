@@ -366,7 +366,7 @@ def test_sage_layer_ignores_masked_neighbours():
 
 def test_deployment_realism_evaluates_on_synthetic_frame(enriched):
     """P1-5: Test that deployment realism evaluation splits strictly on observable outcomes."""
-    from scripts.analyze_deployment_realism import evaluate_deployment_realism
+    from scripts.analysis.analyze_deployment_realism import evaluate_deployment_realism
 
     table, details = evaluate_deployment_realism(enriched, seed=42)
     assert len(table) == 3
