@@ -187,8 +187,7 @@ for removed in ("cohort_graph_exp09_uncertainty.md", "boosting_exp11_swaps.md",
 manifests = list((ROOT / "results/reports").glob("*_manifest.json"))
 sources = {m.stem: json.loads(m.read_text())["data_source"] for m in manifests}
 synthetic = [k for k, v in sources.items() if v == "synthetic"]
-check("only the Home Credit adapter is synthetic",
-      set(synthetic) <= {"home_credit_manifest"}, str(synthetic))
+check("no committed run manifest is synthetic", not synthetic, str(synthetic))
 
 print()
 print("=" * 78)

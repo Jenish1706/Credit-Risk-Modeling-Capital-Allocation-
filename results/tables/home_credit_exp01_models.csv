@@ -1,3 +1,0 @@
-,n,positive_rate,mean_prediction,roc_auc,pr_auc,gini,ks,brier,log_loss,ece,mce,calibration_slope,calibration_intercept,predicted_observed_ratio,observed_expected_ratio
-logistic,5009,0.108405,0.10719,0.699662,0.232649,0.399324,0.312185,0.0910661,0.317248,0.0161065,0.0486989,0.965751,-0.0521304,0.988791,1.01134
-lightgbm,5009,0.108405,0.107417,0.697678,0.225671,0.395357,0.308306,0.092568,0.323912,0.0325765,0.102075,1.78021,1.58526,0.99089,1.00919
