@@ -199,6 +199,13 @@ def verdict(differences: pd.DataFrame, baseline: str) -> str:
             f"[{best['ci_low']:+,.0f}, {best['ci_high']:+,.0f}] -- the interval includes zero, "
             f"so this is a null result."
         )
+    if float(best["mean_difference"]) <= 0:
+        # Significant, but in the wrong direction: the best candidate is *worse* than the baseline.
+        return (
+            f"No policy beat {baseline}. Even the best, {name}, was significantly worse at "
+            f"{best['mean_difference']:+,.0f} per episode, 95% CI "
+            f"[{best['ci_low']:+,.0f}, {best['ci_high']:+,.0f}]."
+        )
     return (
         f"{name} beat {baseline} by {best['mean_difference']:+,.0f} per episode "
         f"({100 * best['relative_improvement']:+.1f}%), 95% CI "

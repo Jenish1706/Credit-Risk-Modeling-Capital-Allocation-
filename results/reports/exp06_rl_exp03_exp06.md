@@ -21,7 +21,7 @@ Estimated from training-window cashflows: good-loan yield -0.001+1.351*APR, defa
 | risk_band       | fixed_threshold@0.150 |        30 |         -107862   | -133989   |  -82728.1 |        0.1 | True          |                   -1.7 |
 | approve_all     | fixed_threshold@0.150 |        30 |         -157732   | -190223   | -126730   |        0   | True          |                   -2.6 |
 
-**Verdict.** expected_profit beat fixed_threshold@0.150 by -28,262 per episode (-45.8%), 95% CI [-54,837, -2,616], winning on 33% of seeds.
+**Verdict.** No policy beat fixed_threshold@0.150. Even the best, expected_profit, was significantly worse at -28,262 per episode, 95% CI [-54,837, -2,616].
 
 Why the expected-profit rule loses to a PD threshold is analysed on the real book, at the observed exposure, in `scripts/analyze_profit_calibration.py` (`results/tables/profit_calibration_*.csv`). Nothing is asserted about the mechanism here: a simulated difference with a CI that straddles zero is a null result.
 

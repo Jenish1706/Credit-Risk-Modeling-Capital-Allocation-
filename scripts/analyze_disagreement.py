@@ -89,7 +89,6 @@ def main() -> int:
     y_train, y_valid, y_test = (y[masks[s]] for s in ("train", "valid", "test"))
 
     cohort_columns = tuple(c for c in cohort.columns if c in df.columns)
-    match_calibrator = bool(config.get_path("disagreement.match_baseline_calibrator", True))
     scale = str(config.get_path("disagreement.scale", "logodds"))
 
     # Identical configuration for both arms; only `extra_numeric` differs.
@@ -203,7 +202,7 @@ def main() -> int:
     save_json(
         {
             "scale": scale,
-            "match_baseline_calibrator": match_calibrator,
+            "ablation_calibrator": "isotonic, applied to both arms (not the production calibrator)",
             "n_cohort_features": len(cohort_columns),
             "spearman_with_pd_logodds": conditional.spearman_with_pd,
             "spearman_with_pd_probability": prob_corr,

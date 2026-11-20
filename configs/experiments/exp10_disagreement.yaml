@@ -10,7 +10,6 @@ disagreement:
   # Measured on the log-odds scale. An absolute probability difference is mechanically
   # larger in the middle of the PD range, so it partly restates the PD level.
   scale: logodds        # logodds | probability
-  match_baseline_calibrator: true
 
 analysis:
   n_bins: 5

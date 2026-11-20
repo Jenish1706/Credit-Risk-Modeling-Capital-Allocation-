@@ -46,8 +46,7 @@
       "question": "Does disagreement between a tabular and a graph-augmented model flag unreliable PDs?"
     },
     "disagreement": {
-      "scale": "logodds",
-      "match_baseline_calibrator": true
+      "scale": "logodds"
     },
     "analysis": {
       "n_bins": 5,
@@ -58,10 +57,10 @@
   "data_source": "real",
   "device": "cpu",
   "notes": {},
-  "created_at": "2026-11-18T18:45:21.456227+00:00",
+  "created_at": "2026-11-20T15:58:08.583333+00:00",
   "python": "3.13.15",
   "platform_": "Windows-11-10.0.26200-SP0",
-  "git_commit": "4562c53",
+  "git_commit": "66e2127",
   "packages": {
     "numpy": "2.4.6",
     "pandas": "3.0.5",

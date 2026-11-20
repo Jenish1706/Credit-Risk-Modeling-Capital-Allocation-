@@ -1,6 +1,6 @@
 {
   "scale": "logodds",
-  "match_baseline_calibrator": true,
+  "ablation_calibrator": "isotonic, applied to both arms (not the production calibrator)",
   "n_cohort_features": 18,
   "spearman_with_pd_logodds": -0.15020076497130092,
   "spearman_with_pd_probability": 0.25805758110210714,

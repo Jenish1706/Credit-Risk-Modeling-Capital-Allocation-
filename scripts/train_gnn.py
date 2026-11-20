@@ -57,6 +57,24 @@ from credit_risk.utils.runtime import get_logger  # noqa: E402
 LOG = get_logger("scripts.gnn")
 
 
+def _control_verdict(metrics, comp_macro, comp_shuffled) -> str:
+    """The control verdict, derived from the intervals rather than asserted."""
+    comps = [c for c in (comp_macro, comp_shuffled) if c is not None]
+    survives = bool(comps) and all(c["delta_ece_ci"][1] < 0 for c in comps)
+    text = (
+        "**Control Verdict (single fitted run):** the paired-bootstrap interval on the ECE difference "
+        + ("excludes zero against both controls." if survives
+           else "does not exclude zero against every control.")
+    )
+    if "Control_shuffled_cohort" in metrics and "A_tabular" in metrics:
+        text += (
+            f" The shuffled-key control itself moves ECE from {metrics['A_tabular'].ece:.4f} to "
+            f"{metrics['Control_shuffled_cohort'].ece:.4f}, so part of the gain is not specific to real "
+            "cohort membership. The multi-seed comparison is `scripts/build_cohort_controls.py`."
+        )
+    return text
+
+
 def main() -> int:
     parser = base_parser(__doc__ or "", default_config="configs/graph/cohort_graph.yaml")
     parser.add_argument("--skip-gnn", action="store_true", help="Run EXP04 only (no torch needed).")
@@ -223,8 +241,8 @@ def main() -> int:
             LOG.info("%-24s | %s", "C_graphsage", metrics["C_graphsage"].summary_line())
             gnn_summary = {
                 "device": trainer.device,
-                "best_epoch": getattr(trainer.result, "best_epoch", 3),
-                "best_valid_auc": getattr(trainer.result, "best_valid_auc", 0.66445),
+                "best_epoch": getattr(trainer.result, "best_epoch", None),
+                "best_valid_auc": getattr(trainer.result, "best_valid_auc", None),
                 "n_node_features": int(node_features.shape[1]),
                 "history": getattr(trainer.result, "history", []),
             }
@@ -314,8 +332,7 @@ def main() -> int:
             )
         lines += [
             "",
-            "**Control Verdict:** The calibration gain survives both controls with non-overlapping bootstrap intervals (p < 0.0001). "
-            "The improvement is genuinely relational, attributable to local cohort shocks rather than aggregate macro drift.",
+            _control_verdict(metrics, comp_macro, comp_shuffled),
         ]
 
 

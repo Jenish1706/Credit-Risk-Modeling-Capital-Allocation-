@@ -9,6 +9,7 @@ does not, every policy comparison is being run against invented outcomes.
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from credit_risk.decision.expected_loss import CashflowModel, EconomicsConfig, fit_cashflow_model
@@ -454,3 +455,20 @@ def test_accept_reject_episodes_earn_only_realised_outcomes(pool, cashflow, spac
         # every approval is at the observed exposure and reproduces the observed outcome
         assert np.allclose(approved["exposure"].to_numpy(), pool.observed_exposure[idx])
         assert (approved["defaulted"].to_numpy() == (pool.observed_default[idx] > 0.5)).all()
+
+
+def test_verdict_is_not_sign_blind():
+    """G4: a significantly *negative* best difference must not be reported as a win."""
+    from credit_risk.simulation.evaluation import verdict
+
+    diff = pd.DataFrame(
+        {"mean_difference": [-28_262.0], "ci_low": [-54_837.0], "ci_high": [-2_616.0],
+         "significant": [True], "relative_improvement": [-0.4], "win_rate": [0.2]},
+        index=["expected_profit"],
+    )
+    text = verdict(diff, "fixed_threshold@0.150")
+    assert "beat fixed_threshold" not in text.replace("No policy beat fixed_threshold", "")
+    assert "significantly worse" in text
+
+    diff["mean_difference"], diff["ci_low"], diff["ci_high"] = 5_000.0, 1_000.0, 9_000.0
+    assert "beat fixed_threshold@0.150 by +5,000" in verdict(diff, "fixed_threshold@0.150")
