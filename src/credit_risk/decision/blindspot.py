@@ -282,21 +282,28 @@ def conditional_by_window(
 ) -> WindowedConditional:
     """Run :func:`conditional_signal_table` on 2015-H1, 2015-H2 and the full test book.
 
-    The selection window is asserted to end at the dev cutoff before it is read.
+    ``selection`` (which alone decides KEEP/REJECT) is built by ``select``, which asserts that the
+    exact rows it reads end at the dev cutoff; ``holdout`` and ``full`` are built by ``report``, which
+    is for reporting only. ``tests/test_selection_windows.py`` poisons the holdout and shows the
+    decision does not move.
     """
     from credit_risk.data.splits import assert_selection_window, test_window_masks
 
+    periods = pd.Series(issue_period).to_numpy()
     masks = test_window_masks(issue_period)
-    assert_selection_window(pd.Series(issue_period).to_numpy()[masks["dev"]])
     y, p, s = (np.asarray(a) for a in (y_true, pd_estimate, signal))
 
-    def run(mask: np.ndarray) -> ConditionalResult:
+    def report(mask: np.ndarray) -> ConditionalResult:
         return conditional_signal_table(
             y[mask], p[mask], s[mask], n_strata=n_strata, min_per_half=min_per_half
         )
 
+    def select(mask: np.ndarray) -> ConditionalResult:
+        assert_selection_window(periods[mask])  # the rows actually read, not a mask rebuilt for the check
+        return report(mask)
+
     return WindowedConditional(
-        selection=run(masks["dev"]), holdout=run(masks["holdout"]), full=run(masks["full"])
+        selection=select(masks["dev"]), holdout=report(masks["holdout"]), full=report(masks["full"])
     )
 
 
@@ -638,7 +645,8 @@ def flag_cutpoints(
 
     Signal values from 2015-07..12 are never read, so the holdout cannot move a cut-point.
     """
-    from credit_risk.data.splits import test_window_masks
+    from credit_risk.data.splits import assert_selection_window, test_window_masks
 
     dev = test_window_masks(issue_period)["dev"]
+    assert_selection_window(pd.Series(issue_period).to_numpy()[dev])  # the rows read below
     return {name: float(np.quantile(np.asarray(signals[name])[dev], quantile)) for name in keep}

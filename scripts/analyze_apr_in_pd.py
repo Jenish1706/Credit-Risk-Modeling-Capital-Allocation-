@@ -34,7 +34,6 @@ import pandas as pd  # noqa: E402
 
 from credit_risk.data.splits import (  # noqa: E402
     WINDOW_LABELS,
-    assert_selection_window,
     test_window_masks,
 )
 from credit_risk.decision.expected_loss import (  # noqa: E402
@@ -101,7 +100,6 @@ def main() -> int:
     df = load_prepared(paths)
     train, valid, test = (df[df["split"] == s] for s in ("train", "valid", "test"))
     masks = test_window_masks(test["issue_period"])
-    assert_selection_window(test.loc[masks["dev"], "issue_period"])
     h2 = masks["holdout"]
 
     ecfg = config.get("economics", {})

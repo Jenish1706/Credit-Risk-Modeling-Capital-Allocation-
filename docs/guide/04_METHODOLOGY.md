@@ -22,8 +22,10 @@ read only the 2015-01…06 rows: `select_calibrator_on_window`
 `conditional_by_window` ([`decision/blindspot.py`](../../src/credit_risk/decision/blindspot.py)), built on
 `test_window_masks` and `assert_selection_window` in
 [`data/splits.py`](../../src/credit_risk/data/splits.py). `tests/test_selection_windows.py` poisons the
-holdout (every label and prediction replaced) and checks no selection moves; the scripts' own assertions
-only confirm the frame they build ends at 2015-06.
+holdout and checks that none of the three selections moves: the calibrator choice and the flag cut-points
+(every holdout label and prediction replaced), and the KEEP/REJECT decision (the holdout made to point
+the other way, with the reported holdout column shown to change). Each selection function also asserts
+that the rows it reads end at 2015-06, but that assertion is a tripwire, not the proof; the poisoning is.
 
 **Why two halves of 2015.** An earlier version chose the production calibrator, the KEEP/REJECT
 verdicts and the flag cut-points on the same book the headlines were reported on, so those

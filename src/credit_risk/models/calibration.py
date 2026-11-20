@@ -247,9 +247,10 @@ def select_calibrator_on_window(
     2015-07..12 enters the score, so the holdout cannot influence the choice. Returns the chosen
     method, the per-method selection-window Brier and the calibrated predictions for the whole book.
     """
-    from credit_risk.data.splits import test_window_masks
+    from credit_risk.data.splits import assert_selection_window, test_window_masks
 
     dev = test_window_masks(issue_period)["dev"]
+    assert_selection_window(pd.Series(issue_period).to_numpy()[dev])  # the rows scored below
     y_dev = np.asarray(y_test, dtype=float)[dev]
     p_test = np.asarray(p_test, dtype=float)
     briers: dict[str, float] = {}

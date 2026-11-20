@@ -26,7 +26,6 @@ import pandas as pd  # noqa: E402
 
 from credit_risk.data.splits import (
     WINDOW_LABELS,
-    assert_selection_window,
     test_window_masks,
 )  # noqa: E402
 from credit_risk.evaluation.metrics import (  # noqa: E402
@@ -72,7 +71,6 @@ def main() -> int:
     )
     # CR-03: every selection below uses 2015-01..06 (dev); headline numbers use 2015-07..12.
     masks = test_window_masks(test["issue_period"])
-    assert_selection_window(test.loc[masks["dev"], "issue_period"])
     dev, holdout = masks["dev"], masks["holdout"]
     LOG.info(
         "train %s | valid %s | test %s | default rates %.4f / %.4f / %.4f",

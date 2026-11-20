@@ -39,7 +39,6 @@ import pandas as pd  # noqa: E402
 
 from credit_risk.data.splits import (  # noqa: E402
     WINDOW_LABELS,
-    assert_selection_window,
     test_window_masks,
 )
 from credit_risk.decision.blindspot import (  # noqa: E402
@@ -143,7 +142,6 @@ def main() -> int:
 
     # --- selection (2015-01..06 only) ----------------------------------------
     masks = test_window_masks(test["issue_period"])
-    assert_selection_window(test.loc[masks["dev"], "issue_period"])
     q = float(args.flag_quantile)
     candidate = {
         "anomaly": (anomaly, "exp08_blindspots"),
