@@ -128,6 +128,6 @@ the idea is explained or implemented.
 | **VGAE** | Variational graph autoencoder; its per-node posterior sigma is a relational-uncertainty signal (EXP09). |
 | **Vintage** | The origination period of a loan; default rates differ by vintage. |
 | **Wald interval** | Confidence interval from a coefficient and its standard error (here from the Fisher information). |
-| **WAL** | Weighted-average life of a 36-month amortising loan (1.55 years, derived). |
+| **WAL** | Weighted-average life of a 36-month amortising loan (configured as 1.55 years; the schedule gives about 1.6). |
 | **Yield (good-loan)** | Realised return per dollar on loans that repaid. |
 | **ZIP3** | The first three characters of the ZIP code; one cohort key. |

@@ -57,8 +57,8 @@ class EconomicsConfig:
     opex_variable_rate: float = 0.010
     #: Cost of routing an application to a human underwriter.
     manual_review_cost: float = 75.0
-    #: Weighted-average life of a 36-month fully amortising loan, in years. Derived from the
-    #: amortisation schedule (see :func:`weighted_average_life`), not guessed.
+    #: Weighted-average life of a 36-month fully amortising loan, in years. Close to, but a little
+    #: below, the schedule value (:func:`weighted_average_life` gives about 1.64 at 13% APR).
     weighted_average_life_years: float = 1.55
     #: Fallback values used only when the APR-conditional fit is unavailable.
     fallback_good_yield: float = 0.16
@@ -72,7 +72,7 @@ def weighted_average_life(apr: float = 0.13, term_months: int = 36) -> float:
     """Weighted-average life of a fully amortising loan, in years.
 
     Principal is repaid gradually, so the average dollar is outstanding for far less than the full
-    term -- about 1.55 years on a 36-month loan. Using the full 3 years would overstate funding
+    term -- about 1.6 years on a 36-month loan. Using the full 3 years would overstate funding
     cost by roughly a factor of two.
     """
     r = apr / 12.0

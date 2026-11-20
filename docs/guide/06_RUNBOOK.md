@@ -93,12 +93,12 @@ Commands, in dependency order, with measured run time and what each produces:
 | 15 | `python scripts/analyze_apr_in_pd.py --config configs/experiments/exp06_rl.yaml` | 5 min | `apr_in_pd_*.csv` |
 | 16 | `python scripts/render_readme.py` | seconds | README and guide blocks |
 
-Total for steps 1 to 16: about 3.5 hours, of which the VGAE is about 90 minutes. Steps 6 to 9 need steps 2 and 3
+Total for steps 1 to 16: about 3.2 hours, of which the VGAE is about 90 minutes. Steps 6 to 9 need steps 2 and 3
 first (graph artifacts and `boosting_pd_test.npy`); steps 10, 11, 14 and 15 need step 3. Step 9 reads the KEEP/REJECT
 decision files written by steps 6 and 8, so run it after them. `--max-threads N` stops a long run
 monopolising the machine.
 
-Every script that selects something asserts that its selection frame ends at 2015-06, and writes a
+Every selection reads only 2015-01…06 rows (see [04_METHODOLOGY.md](04_METHODOLOGY.md)), and each script writes a
 manifest (`results/reports/*_manifest.json`) recording config, seed and data source.
 
 Steps 1 and 2 were re-run from the raw file in a fresh clone and reproduced `loans.parquet` (1,609,607

@@ -69,8 +69,10 @@ marginally better score from a DQN.
 > **Superseded by the v3 audit (2026-11-19).** The reasoning below is the design intent. Measured on the real book the validation-fitted lambda policy
 > does not beat the myopic rule or a plain 15% PD threshold, and leaves part of the budget undeployed; see the
 > README EXP06 section and `results/tables/exp06_rl_exp06_*.csv`. The sanity check at the end of this
-> section (a learner far above the analytical policy signals a simulator bug) has not fired, but the analytical
-> policy is also not an upper bound on the real book.
+> section (a learner far above the analytical policy signals a simulator bug) did fire: learners and the
+> plain 15% threshold beat the validation-priced analytical policy by wide margins. That is not a simulator
+> bug: the analytical policy is optimal only for the predicted profit it is given, and the real-book audit shows
+> that profit is mis-ordered, so it is not an upper bound on the real book.
 
 The constrained problem has known structure, which is what makes the RL result *checkable* rather
 than mysterious. Maximising total profit subject to `sum(exposure) <= B` has the Lagrangian:

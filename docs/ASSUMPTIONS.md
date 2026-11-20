@@ -68,7 +68,7 @@ attempt is made to pass them off as measured.
 | `annual_cost_of_funds` | 0.03 | Mid-cycle unsecured funding placeholder | **High** — enters every break-even |
 | `opex_fixed` | $150/loan | Order-of-magnitude origination + servicing cost | Medium — matters most on small loans |
 | `opex_variable_rate` | 1.0% of exposure | Servicing over the life of the loan | Medium |
-| `weighted_average_life_years` | 1.55 | **Derived**, not guessed — from the amortisation schedule of a 36-month loan | Low |
+| `weighted_average_life_years` | 1.55 | **Set near the schedule value**: `weighted_average_life()` gives 1.58 to 1.69 years across 5% to 20% APR (1.64 at 13%), so 1.55 slightly understates funding cost (about 6%) | Low |
 | `manual_review_cost` | $75 | Cost of a human underwriter's time | Low (review excluded from headline runs) |
 | `review_information_gain` | 0.15 | **Pure assumption** | **High for any policy using review** |
 | `review_signal_noise` | 0.45 | **Pure assumption** | High, as above |
@@ -76,13 +76,14 @@ attempt is made to pass them off as measured.
 | `smoothing_alpha` (cohort) | 25 | Pseudo-count for empirical-Bayes shrinkage | Low |
 | Capital budget | swept | The independent variable of EXP06 | By design |
 
-### Weighted-average life is derived, not assumed
+### Weighted-average life is close to the schedule value, not exactly it
 
 Principal on an amortising loan is repaid gradually, so the average dollar is outstanding for far
-less than the full term — about **1.55 years on a 36-month loan**. Using the full 3 years would
+less than the full term — about **1.6 years on a 36-month loan**. Using the full 3 years would
 overstate funding cost by roughly a factor of two, and that error would flow straight into every
-break-even PD. `weighted_average_life()` computes it from the schedule; a test asserts it lands
-between 1.3 and 1.8 years.
+break-even PD. `weighted_average_life()` computes it from the schedule (1.64 at 13% APR); the
+configured value is 1.55, a small understatement that was not re-estimated, and a test asserts the
+function lands between 1.3 and 1.8 years.
 
 ### The manual-review assumption is the weakest link, and it is fenced off
 

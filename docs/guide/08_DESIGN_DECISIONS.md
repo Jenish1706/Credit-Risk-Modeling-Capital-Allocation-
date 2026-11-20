@@ -123,7 +123,7 @@ not beat the aggregates, so the extra complexity buys nothing here.
 **Context.** A decision needs revenue, not only risk. Realised cashflows are available per loan.
 
 **Decision.** Fit good-loan yield and defaulted-loan loss rate as straight lines in APR on matured
-training loans; subtract funding cost (3% over a derived 1.55-year weighted-average life) and
+training loans; subtract funding cost (3% over a 1.55-year weighted-average life, slightly below the schedule's 1.6) and
 operating cost ($150 plus 1%). "LGD" is the net lifetime loss on funded principal, not Basel LGD.
 
 **Alternatives.** A full amortisation and prepayment model (more parameters, more places to be

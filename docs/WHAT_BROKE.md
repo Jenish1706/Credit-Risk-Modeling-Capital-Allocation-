@@ -6,13 +6,17 @@ Every defect here was reproduced with an isolated script, quantified on the full
 
 ---
 
+> Dollar and rate figures in the sections below are as measured when each defect was fixed. Later
+> changes (frozen learners, accept/reject headline, the 2015-H1/H2 protocol) moved several of them; the
+> current numbers are in the README and `docs/guide/09_RESULTS_AND_LIMITATIONS.md`.
+
 ## Executive Summary of Findings
 
 | ID | Severity | Component | Defect Summary | Status | Key Metric Impact |
 |---|---|---|---|---|---|
 | **P0-1** | Critical | `decision/expected_loss.py` | Cash recoveries double-counted in realised profit & return formulas | **Fixed** | 2015 Test Book Profit: \$270.4M $\to$ \$230.3M (-\$40.1M, -14.8%); RoC: 7.46% $\to$ 6.35% (-111 bp) |
 | **P0-2** | High | `scripts/train_policy.py` | Analytical shadow price ($\lambda$) used test-window oracle | **Fixed** | Deployable validation-tuned policy: \$138.8M vs.\ clairvoyant oracle \$153.8M at 60% budget |
-| **P0-3** | High | `scripts/run_swaps.py` | EXP11 risk reduction was an artifact of budget refilling, not blind spots | **Fixed** | Policy B default rate (15.98%) falls inside placebo intervals (Random 16.01%, APR-matched 16.08%) |
+| **P0-3** | High | `scripts/analyze_decision_swaps.py` | EXP11 risk reduction was an artifact of budget refilling, not blind spots | **Fixed** | Policy B default rate (15.98%) falls inside placebo intervals (Random 16.01%, APR-matched 16.08%) |
 | **P0-4** | High | `scripts/train_gnn.py` | Cohort graph calibration lacked non-graph macro and shuffled controls | **Fixed** | Arm B calibration gain confirmed: outperforms macro default ($\Delta\text{ECE} = -0.0071$, $p < 0.0001$) and month-shuffled keys ($\Delta\text{ECE} = -0.0044$, $p < 0.0001$) |
 | **P1-5** | High | `scripts/analyze_deployment_realism.py` | Benchmark assumed mature labels for loans immature at deployment cutoff | **Quantified** | Deployment-realistic retraining: test AUC $0.6690 \to 0.6478$ ($\Delta = -0.0212$); ECE surges $0.0105 \to 0.0374$ ($+256\%$) |
 | **P1-6a** | Medium | `models/calibration.py` | EXP02 calibration gain reported without base-rate decomposition | **Fixed** | Intercept-only baseline proves 101.3% of ECE reduction is base-rate shift ($\bar{y}: 12.7\% \to 14.1\%$) with unit slope |
@@ -47,8 +51,8 @@ $$\Delta_2 = |\text{total\_pymnt} - (\text{total\_rec\_prncp} + \text{total\_rec
 - Corrected `realised_profit` to:
   $$\text{profit} = \text{total\_pymnt} - \text{collection\_recovery\_fee} - \text{funded\_amnt}$$
 - Corrected `realised_return` accordingly.
-- Added automated unit test in `tests/test_expected_loss.py::test_realised_profit_accounting_identity_no_double_counting` verifying that no recoveries are added when `total_pymnt` equals component sum.
-- Recomputed all downstream economic artifacts (`exp03_summary.csv`, `exp06_budget_sweep.csv`, `exp11_swaps.csv`, `exp11_swaps.md`).
+- Added automated unit test in `tests/test_decision.py::test_realised_profit_never_double_counts_recoveries` verifying that no recoveries are added when `total_pymnt` equals component sum.
+- Recomputed all downstream economic artifacts (`exp06_rl_exp03_summary.csv`, `exp06_rl_exp06_sweep.csv`, `exp11_swaps_portfolios.csv`, `exp11_swaps.md`).
 
 #### Headline Impact
 - **2015 Test Window (283,026 loans):**
@@ -81,7 +85,7 @@ The test set represents the unseen out-of-time production environment. Computing
 - Separated the policy into two distinct benchmarks:
   1. **Deployable Analytical Benchmark (`expected_profit(lambda=...)`):** Fitted strictly on the **validation window** (`train_pool`, July 2014 -- Dec 2014, $N=90,615$), representing the parameter setting a risk officer would configure at deployment time.
   2. **Diagnostic, formerly called `oracle_ceiling(lambda=...)` (now `expected_profit(lambda_eval_pool=...)`):** Fitted on the evaluation pool solely to show what a clairvoyant lambda would do. It is **not an upper bound**: lambda is applied to predicted profit that is over-dispersed relative to realised profit, and in the v3 runs this policy scores below the myopic rule and the 15% threshold in the capital-constrained conditions (README EXP06).
-- Added automated unit test in `tests/test_policy.py::test_analytical_policy_uses_validation_split_not_test` asserting that the evaluated analytical policy parameters depend only on validation data.
+- Added automated unit test in `tests/test_simulation.py::test_shadow_price_validation_split_separation` asserting that the evaluated analytical policy parameters depend only on validation data.
 
 #### Headline Impact
 At 60% capital budget ($1.004B demand):
@@ -112,7 +116,7 @@ We implemented two rigorous placebo controls with 200 bootstrap draws at the ide
    - Policy B default rate (15.98%) touches the boundary ($p = 0.08$).
 
 #### Remediation & Falsification
-- Updated `results/reports/exp11_swaps.md` and `results/tables/exp11_swaps.csv` with full placebo distributions.
+- Updated `results/reports/exp11_swaps.md` and `results/tables/exp11_swaps_portfolios.csv` with full placebo distributions.
 - Explicitly falsified the claim of "risk reduction at constant profitability": neither profit improvement nor risk reduction is attributable to the blind-spot signals in portfolio allocation.
 - Maintained the legitimate finding: autoencoder reconstruction error is a valid *diagnostic* monitor of conditional miscalibration across deciles (EXP08), but cannot be naively transformed into an active allocation filter.
 
@@ -141,8 +145,8 @@ We implemented two non-graph control arms and evaluated them via 2,000 paired bo
 
 #### Remediation
 - Integrated control arms and paired bootstrap tests into `scripts/train_gnn.py`.
-- Added unit test in `tests/test_graph_leakage.py::test_paired_bootstrap_calibration_comparison_smoke`.
-- The calibration advantage of time-respecting cohort aggregates is statistically confirmed: cohort default rates capture localized socio-economic shocks that macro-level indicators cannot reproduce.
+- Added unit test in `tests/test_graph_leakage.py::test_macro_default_rate_and_shuffled_controls_interface`.
+- The calibration advantage of time-respecting cohort aggregates survives both controls (superseded by the five-seed analysis in the README: the shuffled-key control also lowers ECE, so part of the gain is not specific to real cohort membership).
 
 ---
 
@@ -174,9 +178,9 @@ Out-of-time benchmarks that rely on retroactively resolved loan outcomes flatter
 ## Automated Test Coverage & Verification
 
 All fixes and safeguards are permanently enforced via regression tests:
-- `tests/test_expected_loss.py`: Validates non-negative cashflow identities and prevents double-counting of recoveries.
-- `tests/test_policy.py`: Enforces validation-only parameter estimation for analytical decision policies.
+- `tests/test_decision.py`: Validates non-negative cashflow identities and prevents double-counting of recoveries.
+- `tests/test_simulation.py`: Enforces validation-only parameter estimation for analytical decision policies.
 - `tests/test_graph_leakage.py`: Tests non-graph controls and paired bootstrap calibration metrics.
 - `tests/test_pipeline.py`: Validates deployment realism evaluation pipelines and stratification invariants.
 
-Total test suite: **161 passing tests** across tabular, graph, simulation, calibration, and RL modules.
+The whole suite passes on a fresh clone (see `docs/guide/07_TESTING.md` for coverage by module).

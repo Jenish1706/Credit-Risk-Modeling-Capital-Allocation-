@@ -13,8 +13,9 @@ synthetic generator at a size (12,000 loans) that keeps the whole suite fast; th
 1. **A test should fail before the fix and pass after.** Every audit fix in this repository has a
    regression test written first (for example the byte-identical-parameters test for
    evaluation-time learning).
-2. **Leakage rules raise; they do not warn.** `assert_no_leakage`, `assert_selection_window` and
-   `assert_no_future_edges` are exercised by planting a violation and checking it is caught.
+2. **Leakage rules raise; they do not warn.** `assert_no_leakage` and `assert_no_future_edges` are exercised by planting a violation and checking it
+   is caught, and the selection functions are exercised by poisoning the holdout
+   (`tests/test_selection_windows.py`).
 3. **Rendered documentation is tested.** The README and the guide blocks are regenerated from the
    artifacts and compared; a hand-edited number cannot survive.
 
@@ -22,6 +23,7 @@ synthetic generator at a size (12,000 loans) that keeps the whole suite fast; th
 
 | Test file | Covers |
 |---|---|
+| [`tests/test_selection_windows.py`](../../tests/test_selection_windows.py) | the calibrator choice and flag cut-points read only 2015-01…06 rows: replacing every holdout label and prediction changes nothing |
 | [`tests/test_leakage.py`](../../tests/test_leakage.py) | the deny-list and its enforcement, primary vs `with_lc_grade` feature sets, train-only statistics, the availability guard, split non-overlap and temporal ordering, the H1/H2 window masks and `assert_selection_window`, the windowed conditional test deciding on H1 |
 | [`tests/test_graph_leakage.py`](../../tests/test_graph_leakage.py) | no future edges (strictly earlier, not merely not later), no self-loops, padding masked, lookback enforced, a planted violation caught, the label information set being strictly smaller than the feature set, shrinkage and evidence weights, the macro and shuffled controls, and that an ungated cohort rate leaks measurably |
 | [`tests/test_models.py`](../../tests/test_models.py) | AUC blind to calibration, slope detects over-confidence, the intercept-only baseline isolating a base-rate shift, O/E direction, KS against a manual computation, calibrators fixing a distorted model and preserving ranking, feature-builder behaviour (indicators, unseen levels, disk round trip), logistic and boosting baselines |

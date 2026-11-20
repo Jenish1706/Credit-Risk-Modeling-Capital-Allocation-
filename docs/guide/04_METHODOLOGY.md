@@ -16,10 +16,14 @@ results themselves are in [09_RESULTS_AND_LIMITATIONS.md](09_RESULTS_AND_LIMITAT
 | test (full 2015) | H1 plus H2 | a labelled continuity column next to the headline |
 | monitor | 2016-01 to 2018-12 | unlabelled drift monitoring |
 
-Counts and default rates are rendered in [03_DATA.md](03_DATA.md). The rule is enforced in code:
+Counts and default rates are rendered in [03_DATA.md](03_DATA.md). The rule is enforced in the functions that make each selection, which take the issue period and
+read only the 2015-01…06 rows: `select_calibrator_on_window`
+([`models/calibration.py`](../../src/credit_risk/models/calibration.py)), `flag_cutpoints` and
+`conditional_by_window` ([`decision/blindspot.py`](../../src/credit_risk/decision/blindspot.py)), built on
 `test_window_masks` and `assert_selection_window` in
-[`data/splits.py`](../../src/credit_risk/data/splits.py), called by every script that selects
-something, and covered by `tests/test_leakage.py`.
+[`data/splits.py`](../../src/credit_risk/data/splits.py). `tests/test_selection_windows.py` poisons the
+holdout (every label and prediction replaced) and checks no selection moves; the scripts' own assertions
+only confirm the frame they build ends at 2015-06.
 
 **Why two halves of 2015.** An earlier version chose the production calibrator, the KEEP/REJECT
 verdicts and the flag cut-points on the same book the headlines were reported on, so those
@@ -65,7 +69,7 @@ second column.
 | Comparison | Test | Why this one |
 |---|---|---|
 | Two policies on the same simulated episodes | paired bootstrap of per-episode differences (10,000 resamples, 30 episodes) | the episodes share applicants and outcome draws, so pairing removes shared noise |
-| Two rules on the real book | paired bootstrap over loans of the per-loan profit difference (2,000 resamples) | loans are the unit; both rules see the same loans |
+| Two rules on the real book | paired bootstrap over loans of the per-loan profit difference (10,000 resamples, `evaluation.n_bootstrap`) | loans are the unit; both rules see the same loans |
 | ECE or O/E gap between two models | paired bootstrap on the same test loans (2,000 resamples) | ECE has no closed-form interval; pairing matters because both arms score identical loans |
 | Model-fit variance | five LightGBM seeds per arm; mean and standard deviation across seeds, bootstrap within each seed | a single fit cannot separate a real gain from fit-to-fit noise |
 | Signal survives PD control | exact two-sided binomial sign test across PD deciles | needs no distributional assumption about decile gaps; conservative with ten strata |
@@ -109,7 +113,7 @@ so every approved loan earns the return it really earned and the simulator conta
 outcome. A second, labelled sensitivity run adds 0.5x and 1.5x exposure actions; their outcomes at
 non-observed exposures use a model coupling and are not measurements. Learners train on the
 validation pool for 400 (Q-learning) or 120 (bandit) episodes and are frozen during evaluation.
-Costs: 3% annual cost of funds over a derived 1.55-year weighted-average life, $150 fixed plus 1%
+Costs: 3% annual cost of funds over a 1.55-year weighted-average life (the amortisation schedule gives about 1.6 years), $150 fixed plus 1%
 variable operating cost. The full assumption catalogue is in [ASSUMPTIONS.md](../ASSUMPTIONS.md) and
 the formulation in [RL_FORMULATION.md](../RL_FORMULATION.md).
 
@@ -119,4 +123,5 @@ the formulation in [RL_FORMULATION.md](../RL_FORMULATION.md).
   synthetic), and synthetic results are refused as findings.
 - Every number in the README and in embedded guide blocks is rendered from `results/tables/` by
   `scripts/render_readme.py`; a test fails if a hand edit drifts from the artifacts.
-- Selection windows are asserted in code, not described in prose.
+- Selection windows are enforced by selection functions that read only the selection rows, and tested by
+  poisoning the holdout.

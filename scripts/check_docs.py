@@ -5,7 +5,8 @@
 
 1. Every relative link in README.md and docs/ resolves to a file or directory.
 2. Every repository path named in backticks in docs/guide/05_CODE_WALKTHROUGH.md exists.
-3. Every function, method or class named in backticks with a call or class shape in the guide pages
+3. Every path or test name in backticks in any markdown file (except the historical audit report) exists.
+4. Every function, method or class named in backticks with a call or class shape in the guide pages
    that describe code (01, 05, 07) is defined somewhere in src/ or scripts/.
 
 Exit status is non-zero when anything is missing, and each problem is printed with its file.
@@ -61,6 +62,39 @@ def missing_paths() -> list[str]:
     return problems
 
 
+REPO_PATH = re.compile(r"^(?:scripts|src|tests|configs|docs|results/tables|results/reports)/[\w./\-]+$")
+#: Documents that describe superseded history may name files that no longer exist.
+HISTORICAL = {"AUDIT_REPORT.md"}
+
+
+def missing_repository_references() -> list[str]:
+    """Every path-like or test-name token in backticks, in every markdown file, must exist."""
+    test_names = _test_function_names()
+    problems = []
+    for md in markdown_files():
+        if md.name in HISTORICAL:
+            continue
+        for token in BACKTICK.findall(md.read_text(encoding="utf-8")):
+            token = token.strip()
+            path_part, _, func = token.partition("::")
+            if REPO_PATH.match(path_part) and "*" not in path_part and "{" not in path_part:
+                if not (ROOT / path_part).exists():
+                    problems.append(f"{md.relative_to(ROOT)}: path does not exist -> {token}")
+                    continue
+                if func and func.startswith("test_") and func not in test_names:
+                    problems.append(f"{md.relative_to(ROOT)}: test does not exist -> {token}")
+    return problems
+
+
+def _test_function_names() -> set[str]:
+    names: set[str] = set()
+    for path in (ROOT / "tests").glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.FunctionDef):
+                names.add(node.name)
+    return names
+
+
 def defined_names() -> set[str]:
     names: set[str] = set()
     for path in [*(ROOT / "src").rglob("*.py"), *(ROOT / "scripts").glob("*.py"), *(ROOT / "tests").glob("*.py")]:
@@ -92,7 +126,7 @@ def missing_functions() -> list[str]:
 
 
 def main() -> int:
-    problems = [*broken_links(), *missing_paths(), *missing_functions()]
+    problems = [*broken_links(), *missing_paths(), *missing_functions(), *missing_repository_references()]
     for p in problems:
         print(p)
     print(f"{len(problems)} problem(s) found")
